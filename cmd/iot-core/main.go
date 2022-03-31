@@ -4,13 +4,17 @@ import (
 	"context"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/tracing"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"go.opentelemetry.io/otel"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
+
+var tracer = otel.Tracer("iot-core")
 
 func main() {
 	serviceName := "iot-core"
@@ -32,10 +36,18 @@ func main() {
 
 	needToDecideThis := "application/json"
 	messenger.RegisterCommandHandler(needToDecideThis, commandHandler)
+
+	for {
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func commandHandler(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger zerolog.Logger) error {
+	ctx, span := tracer.Start(ctx, "rcv-cmd")
+	defer span.End()
+
 	logger.Info().Str("body", string(wrapper.Body())).Msgf("received command")
+
 	return nil
 }
 
