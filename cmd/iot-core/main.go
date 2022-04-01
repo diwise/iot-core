@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"runtime/debug"
 	"strings"
 	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/tracing"
+	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"go.opentelemetry.io/otel"
 
@@ -35,20 +37,44 @@ func main() {
 	messenger, err := messaging.Initialize(config)
 
 	needToDecideThis := "application/json"
-	messenger.RegisterCommandHandler(needToDecideThis, commandHandler)
+	messenger.RegisterCommandHandler(needToDecideThis, newCommandHandler(messenger))
 
 	for {
 		time.Sleep(1 * time.Second)
 	}
 }
 
-func commandHandler(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger zerolog.Logger) error {
-	ctx, span := tracer.Start(ctx, "rcv-cmd")
-	defer span.End()
+func newCommandHandler(messenger messaging.MsgContext) messaging.CommandHandler {
+	return func(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger zerolog.Logger) error {
+		var err error
+		ctx, span := tracer.Start(ctx, "rcv-cmd")
+		defer func() {
+			if err != nil {
+				span.RecordError(err)
+			}
+			span.End()
+		}()
 
-	logger.Info().Str("body", string(wrapper.Body())).Msgf("received command")
+		cmd := struct {
+			InternalID  string  `json:"internalID"`
+			Type        string  `json:"type"`
+			SensorValue float64 `json:"sensorValue"`
+		}{}
 
-	return nil
+		body := wrapper.Body()
+		json.Unmarshal(body, &cmd)
+
+		logger.Info().Str("body", string(wrapper.Body())).Msgf("received command")
+
+		msg := &events.MessageAccepted{
+			Sensor:      cmd.InternalID,
+			Type:        cmd.Type,
+			SensorValue: cmd.SensorValue,
+		}
+		err = messenger.PublishOnTopic(ctx, msg)
+
+		return err
+	}
 }
 
 func version() string {
