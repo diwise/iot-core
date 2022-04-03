@@ -54,8 +54,8 @@ github.com/cncf/xds/go v0.0.0-20211011173535-cb28da3451f1/go.mod h1:eXthEFrGJvWH
 github.com/coreos/go-systemd/v22 v22.3.2/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/diwise/messaging-golang v0.0.0-20220330092044-1e008f2e4f03 h1:EOu2vbTsqIupAp8apB0AfMNLNNWZra6ASF8XEvdZjzM=
-github.com/diwise/messaging-golang v0.0.0-20220330092044-1e008f2e4f03/go.mod h1:pHvhFWcSLMct965DpgubvuxdKjdF1fm/Y6rFkz4dHtg=
+github.com/diwise/messaging-golang v0.0.0-20220403161344-db4efa1debf8 h1:xze5eCGiVbaUd7bLbet5FR4IkbaIQqBBxdTms0VhPCE=
+github.com/diwise/messaging-golang v0.0.0-20220403161344-db4efa1debf8/go.mod h1:pHvhFWcSLMct965DpgubvuxdKjdF1fm/Y6rFkz4dHtg=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=

@@ -4,28 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"runtime/debug"
-	"strings"
 	"time"
 
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/logging"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/tracing"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"go.opentelemetry.io/otel"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
-var tracer = otel.Tracer("iot-core")
+const serviceName string = "iot-core"
+
+var tracer = otel.Tracer(serviceName)
 
 func main() {
-	serviceName := "iot-core"
 	serviceVersion := version()
 
-	logger := log.With().Str("service", strings.ToLower(serviceName)).Str("version", serviceVersion).Logger()
+	ctx, logger := logging.NewLogger(context.Background(), serviceName, serviceVersion)
 	logger.Info().Msg("starting up ...")
-
-	ctx := context.Background()
 
 	cleanup, err := tracing.Init(ctx, logger, serviceName, serviceVersion)
 	if err != nil {
@@ -64,7 +62,7 @@ func newCommandHandler(messenger messaging.MsgContext) messaging.CommandHandler 
 		body := wrapper.Body()
 		json.Unmarshal(body, &cmd)
 
-		logger.Info().Str("body", string(wrapper.Body())).Msgf("received command")
+		// TODO: Validate, process and enrich data
 
 		msg := &events.MessageAccepted{
 			Sensor:      cmd.InternalID,
