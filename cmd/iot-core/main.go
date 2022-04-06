@@ -64,12 +64,16 @@ func newCommandHandler(messenger messaging.MsgContext) messaging.CommandHandler 
 
 		// TODO: Validate, process and enrich data
 
-		msg := &events.MessageAccepted{
-			Sensor:      cmd.InternalID,
-			Type:        cmd.Type,
-			SensorValue: cmd.SensorValue,
+		msg := events.NewMessageAccepted(
+			cmd.InternalID, "temperature/water",
+			cmd.Type, cmd.SensorValue,
+		).AtLocation(62.39160, 17.30723)
+
+		logger.Info().Msgf("publishing message to %s", msg.TopicName())
+		err = messenger.PublishOnTopic(ctx, &msg)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to publish message")
 		}
-		err = messenger.PublishOnTopic(ctx, msg)
 
 		return err
 	}
