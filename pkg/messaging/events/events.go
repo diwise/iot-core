@@ -1,6 +1,8 @@
 package events
 
 import (
+	"time"
+
 	"github.com/diwise/iot-core/pkg/messaging/topics"
 )
 
@@ -12,6 +14,7 @@ type location struct {
 type MessageAccepted struct {
 	Sensor     string `json:"sensorID"`
 	SensorType string `json:"sensorType"`
+	Timestamp  string `json:"timestamp"`
 
 	Location *location `json:"location,omitempty"`
 
@@ -23,6 +26,7 @@ func NewMessageAccepted(sensor, sensorType, valueType string, value float64) *Me
 	msg := &MessageAccepted{
 		Sensor:     sensor,
 		SensorType: sensorType,
+		Timestamp:  time.Now().UTC().Format(time.RFC3339),
 
 		Type:        valueType,
 		SensorValue: value,
