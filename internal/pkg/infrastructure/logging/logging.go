@@ -25,7 +25,7 @@ func NewContextWithLogger(ctx context.Context, logger zerolog.Logger) context.Co
 	return ctx
 }
 
-func GetLoggerFromContext(ctx context.Context) zerolog.Logger {
+func GetFromContext(ctx context.Context) zerolog.Logger {
 	logger, ok := ctx.Value(loggerCtxKey).(zerolog.Logger)
 
 	if !ok {

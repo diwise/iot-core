@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"runtime/debug"
 	"time"
 
+	"github.com/diwise/iot-core/internal/pkg/domain"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/logging"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/tracing"
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -34,24 +36,22 @@ func main() {
 	config := messaging.LoadConfiguration(serviceName, logger)
 	messenger, err := messaging.Initialize(config)
 
+	dmURL := os.Getenv("DEV_MGMT_URL")
+	dmClient := domain.NewDeviceManagementClient(dmURL)
+
 	needToDecideThis := "application/json"
-	messenger.RegisterCommandHandler(needToDecideThis, newCommandHandler(messenger))
+	messenger.RegisterCommandHandler(needToDecideThis, newCommandHandler(messenger, dmClient))
 
 	for {
 		time.Sleep(1 * time.Second)
 	}
 }
 
-func newCommandHandler(messenger messaging.MsgContext) messaging.CommandHandler {
+func newCommandHandler(messenger messaging.MsgContext, dmClient domain.DeviceManagementClient) messaging.CommandHandler {
 	return func(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger zerolog.Logger) error {
 		var err error
 		ctx, span := tracer.Start(ctx, "rcv-cmd")
-		defer func() {
-			if err != nil {
-				span.RecordError(err)
-			}
-			span.End()
-		}()
+		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
 		cmd := struct {
 			InternalID  string  `json:"internalID"`
@@ -64,10 +64,12 @@ func newCommandHandler(messenger messaging.MsgContext) messaging.CommandHandler 
 
 		// TODO: Validate, process and enrich data
 
+		device, err := dmClient.FindDeviceFromInternalID(ctx, cmd.InternalID)
+
 		msg := events.NewMessageAccepted(
-			cmd.InternalID, "temperature/water",
+			device.ID(), "temperature/"+device.Environment(),
 			cmd.Type, cmd.SensorValue,
-		).AtLocation(62.39160, 17.30723)
+		).AtLocation(device.Latitude(), device.Longitude())
 
 		logger.Info().Msgf("publishing message to %s", msg.TopicName())
 		err = messenger.PublishOnTopic(ctx, &msg)
