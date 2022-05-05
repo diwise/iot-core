@@ -12,6 +12,7 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/tracing"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/farshidtz/senml/v2"
 	"go.opentelemetry.io/otel"
 
 	"github.com/rs/zerolog"
@@ -35,6 +36,9 @@ func main() {
 
 	config := messaging.LoadConfiguration(serviceName, logger)
 	messenger, err := messaging.Initialize(config)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to init messaging")
+	}
 
 	dmURL := os.Getenv("DEV_MGMT_URL")
 	dmClient := domain.NewDeviceManagementClient(dmURL)
@@ -53,32 +57,55 @@ func newCommandHandler(messenger messaging.MsgContext, dmClient domain.DeviceMan
 		ctx, span := tracer.Start(ctx, "rcv-cmd")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
-		cmd := struct {
-			InternalID  string  `json:"internalID"`
-			Type        string  `json:"type"`
-			SensorValue float64 `json:"sensorValue"`
-		}{}
-
+		var pack senml.Pack
 		body := wrapper.Body()
-		json.Unmarshal(body, &cmd)
+		err = json.Unmarshal(body, &pack)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to decode senML message from json")
+			return err
+		}
+
+		if err := pack.Validate(); err != nil {
+			logger.Error().Err(err).Msg("failed to validate senML message")
+			return err
+		}
+
+		internalID := getInternalIDFromPack(pack)				
+		device, err := dmClient.FindDeviceFromInternalID(ctx, internalID)
+		if err != nil {
+			return err
+		}
 
 		// TODO: Validate, process and enrich data
 
-		device, err := dmClient.FindDeviceFromInternalID(ctx, cmd.InternalID)
+		pack = enrichEnv(pack, device.Environment())
 
-		msg := events.NewMessageAccepted(
-			device.ID(), "temperature/"+device.Environment(),
-			cmd.Type, cmd.SensorValue,
-		).AtLocation(device.Latitude(), device.Longitude())
+		msg := events.NewMessageAccepted(device.ID(), pack).AtLocation(device.Latitude(), device.Longitude())
 
 		logger.Info().Msgf("publishing message to %s", msg.TopicName())
 		err = messenger.PublishOnTopic(ctx, &msg)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to publish message")
+			return err
 		}
 
-		return err
+		return nil
 	}
+}
+
+func enrichEnv(p senml.Pack, env string) senml.Pack {
+	envRec := &senml.Record{
+		Name:        "environment",
+		StringValue: env,
+	}
+
+	p = append(p, *envRec)
+
+	return p
+}
+
+func getInternalIDFromPack(p senml.Pack) string {
+	return p[0].StringValue
 }
 
 func version() string {

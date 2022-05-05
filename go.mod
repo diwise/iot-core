@@ -14,7 +14,15 @@ require (
 )
 
 require (
+	github.com/fxamacker/cbor/v2 v2.2.0 // indirect
+	github.com/ugorji/go/codec v1.2.7 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
+)
+
+require (
 	github.com/cenkalti/backoff/v4 v4.1.2 // indirect
+	github.com/farshidtz/senml v1.0.1
+	github.com/farshidtz/senml/v2 v2.0.0
 	github.com/felixge/httpsnoop v1.0.2 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
