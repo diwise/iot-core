@@ -2,19 +2,18 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"os"
-	"runtime/debug"
 	"time"
 
+	"github.com/diwise/iot-core/internal/application"
+	"github.com/diwise/iot-core/internal/messageprocessor"
 	"github.com/diwise/iot-core/internal/pkg/domain"
-	"github.com/diwise/iot-core/internal/pkg/infrastructure/logging"
-	"github.com/diwise/iot-core/internal/pkg/infrastructure/tracing"
-	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
-	"go.opentelemetry.io/otel"
-
+	"github.com/diwise/service-chassis/pkg/infrastructure/buildinfo"
+	"github.com/diwise/service-chassis/pkg/infrastructure/env"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
 )
 
 const serviceName string = "iot-core"
@@ -22,81 +21,49 @@ const serviceName string = "iot-core"
 var tracer = otel.Tracer(serviceName)
 
 func main() {
-	serviceVersion := version()
+	serviceVersion := buildinfo.SourceVersion()
+	_, logger, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
+	defer cleanup()	
 
-	ctx, logger := logging.NewLogger(context.Background(), serviceName, serviceVersion)
-	logger.Info().Msg("starting up ...")
-
-	cleanup, err := tracing.Init(ctx, logger, serviceName, serviceVersion)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to init tracing")
-	}
-	defer cleanup()
+	dmURL := env.GetVariableOrDie(logger, "DEV_MGMT_URL", "url to iot-device-mgmt")
+	dmClient := domain.NewDeviceManagementClient(dmURL)
+	m := messageprocessor.NewMessageProcessor(dmClient)
 
 	config := messaging.LoadConfiguration(serviceName, logger)
 	messenger, err := messaging.Initialize(config)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to init messaging")
+	}
 
-	dmURL := os.Getenv("DEV_MGMT_URL")
-	dmClient := domain.NewDeviceManagementClient(dmURL)
+	app := application.NewIoTCoreApp(serviceName, m, logger)
 
 	needToDecideThis := "application/json"
-	messenger.RegisterCommandHandler(needToDecideThis, newCommandHandler(messenger, dmClient))
+	messenger.RegisterCommandHandler(needToDecideThis, newCommandHandler(messenger, m, app))
 
 	for {
 		time.Sleep(1 * time.Second)
 	}
 }
 
-func newCommandHandler(messenger messaging.MsgContext, dmClient domain.DeviceManagementClient) messaging.CommandHandler {
+func newCommandHandler(messenger messaging.MsgContext, m messageprocessor.MessageProcessor, app application.IoTCoreApp) messaging.CommandHandler {
 	return func(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger zerolog.Logger) error {
 		var err error
+
 		ctx, span := tracer.Start(ctx, "rcv-cmd")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
-		cmd := struct {
-			InternalID  string  `json:"internalID"`
-			Type        string  `json:"type"`
-			SensorValue float64 `json:"sensorValue"`
-		}{}
-
-		body := wrapper.Body()
-		json.Unmarshal(body, &cmd)
-
-		// TODO: Validate, process and enrich data
-
-		device, err := dmClient.FindDeviceFromInternalID(ctx, cmd.InternalID)
-
-		msg := events.NewMessageAccepted(
-			device.ID(), "temperature/"+device.Environment(),
-			cmd.Type, cmd.SensorValue,
-		).AtLocation(device.Latitude(), device.Longitude())
-
-		logger.Info().Msgf("publishing message to %s", msg.TopicName())
-		err = messenger.PublishOnTopic(ctx, &msg)
+		e, err := app.MessageAccepted(ctx, wrapper.Body())
 		if err != nil {
-			logger.Error().Err(err).Msg("failed to publish message")
+			return err
 		}
 
-		return err
-	}
-}
+		logger.Info().Msgf("publishing message to %s", e.TopicName())
+		err = messenger.PublishOnTopic(ctx, e)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to publish message")
+			return err
+		}
 
-func version() string {
-	buildInfo, ok := debug.ReadBuildInfo()
-	if !ok {
-		return "unknown"
+		return nil
 	}
-
-	buildSettings := buildInfo.Settings
-	infoMap := map[string]string{}
-	for _, s := range buildSettings {
-		infoMap[s.Key] = s.Value
-	}
-
-	sha := infoMap["vcs.revision"]
-	if infoMap["vcs.modified"] == "true" {
-		sha += "+"
-	}
-
-	return sha
 }

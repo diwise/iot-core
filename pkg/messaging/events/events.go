@@ -4,32 +4,21 @@ import (
 	"time"
 
 	"github.com/diwise/iot-core/pkg/messaging/topics"
+	"github.com/farshidtz/senml/v2"	
 )
 
-type location struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
 type MessageAccepted struct {
-	Sensor     string `json:"sensorID"`
-	SensorType string `json:"sensorType"`
-	Timestamp  string `json:"timestamp"`
-
-	Location *location `json:"location,omitempty"`
-
-	Type        string  `json:"type"`
-	SensorValue float64 `json:"sensorValue"`
+	Sensor    string     `json:"sensorID"`
+	Pack      senml.Pack `json:"pack"`
+	Timestamp string     `json:"timestamp"`
 }
 
-func NewMessageAccepted(sensor, sensorType, valueType string, value float64) *MessageAccepted {
+func NewMessageAccepted(sensor string, pack senml.Pack) *MessageAccepted {
+	
 	msg := &MessageAccepted{
-		Sensor:     sensor,
-		SensorType: sensorType,
-		Timestamp:  time.Now().UTC().Format(time.RFC3339),
-
-		Type:        valueType,
-		SensorValue: value,
+		Sensor:    sensor,
+		Pack:      pack,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 	return msg
 }
@@ -43,29 +32,47 @@ func (m *MessageAccepted) TopicName() string {
 }
 
 func (m MessageAccepted) AtLocation(latitude, longitude float64) MessageAccepted {
-	m.Location = &location{
-		Latitude:  latitude,
-		Longitude: longitude,
+	if m.IsLocated() {
+		return m
 	}
+
+	if m.Latitude() == 0 {
+		lat := &senml.Record{
+			Unit:  senml.UnitLat,
+			Value: &latitude,
+		}
+		m.Pack = append(m.Pack, *lat)
+	}
+
+	if m.Longitude() == 0 {
+		lon := &senml.Record{
+			Unit:  senml.UnitLon,
+			Value: &latitude,
+		}
+		m.Pack = append(m.Pack, *lon)
+	}
+
 	return m
 }
 
 func (m MessageAccepted) IsLocated() bool {
-	return m.Location != nil
+	return m.Latitude() != 0 && m.Longitude() != 0
 }
 
 func (m MessageAccepted) Latitude() float64 {
-	if m.Location == nil {
-		return 0
+	for _, r := range m.Pack {
+		if r.Unit == senml.UnitLat {
+			return *r.Value
+		}
 	}
-
-	return m.Location.Latitude
+	return 0
 }
 
 func (m MessageAccepted) Longitude() float64 {
-	if m.Location == nil {
-		return 0
+	for _, r := range m.Pack {
+		if r.Unit == senml.UnitLon {
+			return *r.Value
+		}
 	}
-
-	return m.Location.Longitude
+	return 0
 }

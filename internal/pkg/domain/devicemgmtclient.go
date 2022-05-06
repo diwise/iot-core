@@ -7,11 +7,11 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/diwise/iot-core/internal/pkg/infrastructure/logging"
-	"github.com/diwise/iot-core/internal/pkg/infrastructure/tracing"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel"
 )
+
+//go:generate moq -rm -out devicemgmtclient_mock.go . DeviceManagementClient
 
 type DeviceManagementClient interface {
 	FindDeviceFromInternalID(ctx context.Context, deviceID string) (Device, error)
@@ -21,7 +21,6 @@ type devManagementClient struct {
 	url string
 }
 
-var tracer = otel.Tracer("dmc-client")
 
 func NewDeviceManagementClient(devMgmtUrl string) DeviceManagementClient {
 	dmc := &devManagementClient{
@@ -31,10 +30,6 @@ func NewDeviceManagementClient(devMgmtUrl string) DeviceManagementClient {
 }
 
 func (dmc *devManagementClient) FindDeviceFromInternalID(ctx context.Context, deviceID string) (Device, error) {
-	var err error
-	ctx, span := tracer.Start(ctx, "find-device")
-	defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
-
 	log := logging.GetFromContext(ctx)
 
 	log.Info().Msgf("looking up properties for device %s", deviceID)
@@ -92,6 +87,15 @@ type device struct {
 	Long     float64  `json:"longitude"`
 	Env      string   `json:"environment"`
 	Types_   []string `json:"types"`
+}
+
+func NewDevice(id, env string, lat, long float64) Device {
+	return &device{
+		Identity: id,
+		Env: env,
+		Lat: lat,
+		Long: long,
+	}
 }
 
 func (d *device) ID() string {
