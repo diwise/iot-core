@@ -4,6 +4,8 @@ go 1.18
 
 require (
 	github.com/diwise/messaging-golang v0.0.0-20220413073613-1dcf3cdf0dcd
+	github.com/go-chi/chi/v5 v5.0.7
+	github.com/rs/cors v1.8.2
 	github.com/rs/zerolog v1.26.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.32.0
 	go.opentelemetry.io/otel v1.7.0

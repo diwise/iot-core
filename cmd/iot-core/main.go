@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"time"
+	"net/http"
 
 	"github.com/diwise/iot-core/internal/application"
 	"github.com/diwise/iot-core/internal/messageprocessor"
@@ -12,6 +12,8 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 )
@@ -23,7 +25,7 @@ var tracer = otel.Tracer(serviceName)
 func main() {
 	serviceVersion := buildinfo.SourceVersion()
 	_, logger, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
-	defer cleanup()	
+	defer cleanup()
 
 	dmURL := env.GetVariableOrDie(logger, "DEV_MGMT_URL", "url to iot-device-mgmt")
 	dmClient := domain.NewDeviceManagementClient(dmURL)
@@ -40,9 +42,7 @@ func main() {
 	needToDecideThis := "application/json"
 	messenger.RegisterCommandHandler(needToDecideThis, newCommandHandler(messenger, m, app))
 
-	for {
-		time.Sleep(1 * time.Second)
-	}
+	setupRouterAndWaitForConnections(logger)
 }
 
 func newCommandHandler(messenger messaging.MsgContext, m messageprocessor.MessageProcessor, app application.IoTCoreApp) messaging.CommandHandler {
@@ -65,5 +65,23 @@ func newCommandHandler(messenger messaging.MsgContext, m messageprocessor.Messag
 		}
 
 		return nil
+	}
+}
+
+func setupRouterAndWaitForConnections(logger zerolog.Logger) {
+	r := chi.NewRouter()
+	r.Use(cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowCredentials: true,
+		Debug:            false,
+	}).Handler)
+
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	err := http.ListenAndServe(":8080", r)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to start router")
 	}
 }
