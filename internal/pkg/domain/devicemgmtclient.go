@@ -89,9 +89,12 @@ type device struct {
 	Types_   []string `json:"types"`
 }
 
-func NewDevice(id string) Device {
+func NewDevice(id, env string, lat, long float64) Device {
 	return &device{
 		Identity: id,
+		Env: env,
+		Lat: lat,
+		Long: long,
 	}
 }
 

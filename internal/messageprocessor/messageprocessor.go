@@ -27,10 +27,10 @@ func NewMessageProcessor(d domain.DeviceManagementClient) MessageProcessor {
 
 func (m *messageProcessor) ProcessMessage(ctx context.Context, pack senml.Pack) (*events.MessageAccepted, error) {
 
-	internalID := getInternalIDFromPack(pack)	
+	internalID := getInternalIDFromPack(pack)
 	if internalID == "" {
 		return nil, fmt.Errorf("unable to get internalID from pack")
-	}			
+	}
 
 	device, err := m.deviceManagementClient.FindDeviceFromInternalID(ctx, internalID)
 	if err != nil {
@@ -41,7 +41,7 @@ func (m *messageProcessor) ProcessMessage(ctx context.Context, pack senml.Pack) 
 
 	pack = enrichEnv(pack, device.Environment())
 
-	msg := events.NewMessageAccepted(device.ID(), pack).AtLocation(device.Latitude(), device.Longitude())	
+	msg := events.NewMessageAccepted(device.ID(), pack).AtLocation(device.Latitude(), device.Longitude())
 
 	return &msg, nil
 }
@@ -52,7 +52,7 @@ func enrichEnv(p senml.Pack, env string) senml.Pack {
 	}
 
 	envRec := &senml.Record{
-		Name:        "environment",
+		Name:        "env",
 		StringValue: env,
 	}
 
@@ -65,7 +65,7 @@ func getInternalIDFromPack(p senml.Pack) string {
 	if len(p) == 0 {
 		return ""
 	}
-	
+
 	if p[0].Name == "0" {
 		return p[0].StringValue
 	}

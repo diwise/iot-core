@@ -28,7 +28,7 @@ func testSetup(t *testing.T) (*is.I, *domain.DeviceManagementClientMock, zerolog
 
 	dmc := &domain.DeviceManagementClientMock{
 		FindDeviceFromInternalIDFunc: func(ctx context.Context, deviceID string) (domain.Device, error) {
-			return domain.NewDevice("internalID"), nil
+			return domain.NewDevice("internalID", "water", 16, 32), nil
 		},
 	}
 
