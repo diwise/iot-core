@@ -23,9 +23,7 @@ var tracer = otel.Tracer(serviceName)
 func main() {
 	serviceVersion := buildinfo.SourceVersion()
 	_, logger, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
-	defer cleanup()
-
-	logger.Info().Msg("starting up ...")
+	defer cleanup()	
 
 	dmURL := env.GetVariableOrDie(logger, "DEV_MGMT_URL", "url to iot-device-mgmt")
 	dmClient := domain.NewDeviceManagementClient(dmURL)
