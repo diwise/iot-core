@@ -35,5 +35,4 @@ func testSetup(t *testing.T) (*is.I, *domain.DeviceManagementClientMock, zerolog
 	return is, dmc, zerolog.Logger{}
 }
 
-
-const co2 string = `[{"bn":"urn:oma:lwm2m:ext:3428","n":"0","vs":"internalID"},{"n":"CO2","v":22}]`
+const co2 string = `[{"bn":"urn:oma:lwm2m:ext:3428","n":"0","vs":"internalID","bt":1234567},{"n":"CO2","v":22}]`

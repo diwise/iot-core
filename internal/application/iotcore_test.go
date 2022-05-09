@@ -25,7 +25,7 @@ func testSetup(t *testing.T) (*is.I, *messageprocessor.MessageProcessorMock, zer
 	is := is.New(t)
 
 	m := &messageprocessor.MessageProcessorMock{
-		ProcessMessageFunc: func(ctx context.Context, pack senml.Pack) (*events.MessageAccepted, error){			
+		ProcessMessageFunc: func(ctx context.Context, pack senml.Pack) (*events.MessageAccepted, error) {
 			return events.NewMessageAccepted("internalID", pack), nil
 		},
 	}
@@ -33,4 +33,4 @@ func testSetup(t *testing.T) (*is.I, *messageprocessor.MessageProcessorMock, zer
 	return is, m, zerolog.Logger{}
 }
 
-const co2 string = `[{"bn":"urn:oma:lwm2m:ext:3428","n":"0","vs":"internalID"},{"n":"CO2","v":22}]`
+const co2 string = `{"Msg":"W3siYm4iOiJ1cm46b21hOmx3bTJtOmV4dDozNDI4IiwiYnQiOjE2NTIwOTU5MDQsIm4iOiIwIiwidnMiOiJpbnRlcm4tYTgxNzU4ZmZmZTA1ZTZmYiJ9LHsibiI6IkNPMiIsInYiOjYyNX1d"}`
