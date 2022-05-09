@@ -32,6 +32,10 @@ type MessageReceived struct {
 	Timestamp string     `json:"timestamp"`
 }
 
+func (m *MessageReceived) ContentType() string {
+	return "application/json"
+}
+
 func (a *iotCoreApp) MessageAccepted(ctx context.Context, msg []byte) (*events.MessageAccepted, error) {
 
 	rcvdMsg := MessageReceived{}
