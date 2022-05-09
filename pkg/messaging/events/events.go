@@ -4,8 +4,18 @@ import (
 	"time"
 
 	"github.com/diwise/iot-core/pkg/messaging/topics"
-	"github.com/farshidtz/senml/v2"	
+	"github.com/farshidtz/senml/v2"
 )
+
+type MessageReceived struct {
+	Device    string     `json:"deviceID"`
+	Pack      senml.Pack `json:"pack"`
+	Timestamp string     `json:"timestamp"`
+}
+
+func (m *MessageReceived) ContentType() string {
+	return "application/json"
+}
 
 type MessageAccepted struct {
 	Sensor    string     `json:"sensorID"`
@@ -14,7 +24,7 @@ type MessageAccepted struct {
 }
 
 func NewMessageAccepted(sensor string, pack senml.Pack) *MessageAccepted {
-	
+
 	msg := &MessageAccepted{
 		Sensor:    sensor,
 		Pack:      pack,

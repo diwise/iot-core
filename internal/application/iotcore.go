@@ -6,7 +6,6 @@ import (
 
 	"github.com/diwise/iot-core/internal/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
-	"github.com/farshidtz/senml/v2"
 	"github.com/rs/zerolog"
 )
 
@@ -26,19 +25,9 @@ func NewIoTCoreApp(serviceName string, m messageprocessor.MessageProcessor, logg
 	}
 }
 
-type MessageReceived struct {
-	Device    string     `json:"deviceID"`
-	Pack      senml.Pack `json:"pack"`
-	Timestamp string     `json:"timestamp"`
-}
-
-func (m *MessageReceived) ContentType() string {
-	return "application/json"
-}
-
 func (a *iotCoreApp) MessageAccepted(ctx context.Context, msg []byte) (*events.MessageAccepted, error) {
 
-	rcvdMsg := MessageReceived{}
+	rcvdMsg := events.MessageReceived{}
 
 	err := json.Unmarshal(msg, &rcvdMsg)
 	if err != nil {
