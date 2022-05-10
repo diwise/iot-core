@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func TestThat(t *testing.T) {
+func TestThatProcessMessageReadsSenMLPackProperly(t *testing.T) {
 	is, d, _ := testSetup(t)
 
 	pack, _ := codec.DecodeJSON([]byte(co2))
