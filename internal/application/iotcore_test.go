@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/diwise/iot-core/internal/messageprocessor"
@@ -11,26 +12,38 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func TestThat(t *testing.T) {
-	is, m, log := testSetup(t)
+func TestThatMessageAcceptedReturnsProperMessageAccepted(t *testing.T) {
+	is, m, msgRcvd := testSetup(t)
 
-	app := NewIoTCoreApp("", m, log)
-	e, err := app.MessageAccepted(context.Background(), []byte(co2))
+	bytes, err := json.Marshal(msgRcvd)
+
+	app := NewIoTCoreApp("", m, zerolog.Logger{})
+	e, err := app.MessageAccepted(context.Background(), bytes)
 
 	is.NoErr(err)
 	is.True(e != nil)
+	is.Equal(e.Pack[0].BaseName, "urn:oma:lwm2m:ext:3428")
 }
 
-func testSetup(t *testing.T) (*is.I, *messageprocessor.MessageProcessorMock, zerolog.Logger) {
+func testSetup(t *testing.T) (*is.I, *messageprocessor.MessageProcessorMock, events.MessageReceived) {
 	is := is.New(t)
 
 	m := &messageprocessor.MessageProcessorMock{
-		ProcessMessageFunc: func(ctx context.Context, pack senml.Pack) (*events.MessageAccepted, error){			
+		ProcessMessageFunc: func(ctx context.Context, pack senml.Pack) (*events.MessageAccepted, error) {
 			return events.NewMessageAccepted("internalID", pack), nil
 		},
 	}
 
-	return is, m, zerolog.Logger{}
-}
+	val := 22.0
 
-const co2 string = `[{"bn":"urn:oma:lwm2m:ext:3428","n":"0","vs":"internalID"},{"n":"CO2","v":22}]`
+	msgRcvd := events.MessageReceived{
+		Device: "deviceID",
+		Pack: senml.Pack{
+			{BaseName: "urn:oma:lwm2m:ext:3428", Name: "0", StringValue: "internalID", BaseTime: 1234567},
+			{Name: "CO2", Value: &val},
+		},
+		Timestamp: "",
+	}
+
+	return is, m, msgRcvd
+}
