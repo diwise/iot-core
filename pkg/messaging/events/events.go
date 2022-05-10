@@ -57,7 +57,7 @@ func (m MessageAccepted) AtLocation(latitude, longitude float64) MessageAccepted
 	if m.Longitude() == 0 {
 		lon := &senml.Record{
 			Unit:  senml.UnitLon,
-			Value: &latitude,
+			Value: &longitude,
 		}
 		m.Pack = append(m.Pack, *lon)
 	}
