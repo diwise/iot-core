@@ -1,6 +1,7 @@
 package events
 
-import (
+import (	
+	"strings"
 	"time"
 
 	"github.com/diwise/iot-core/pkg/messaging/topics"
@@ -85,4 +86,39 @@ func (m MessageAccepted) Longitude() float64 {
 		}
 	}
 	return 0
+}
+
+func (m MessageAccepted) GetFloat64(name string) (float64, bool) {
+	for _, r := range m.Pack {
+		if strings.EqualFold(r.Name, name) {
+			return *r.Value, true
+		}
+	}
+	return 0, false
+}
+
+func (m MessageAccepted) GetString(name string) (string, bool) {
+	for _, r := range m.Pack {
+		if strings.EqualFold(r.Name, name) {
+			return r.StringValue, true
+		}
+	}
+	return "", false
+}
+
+func (m MessageAccepted) GetBool(name string) (bool, bool) {
+	for _, r := range m.Pack {
+		if strings.EqualFold(r.Name, name) {
+			return *r.BoolValue, true
+		}
+	}
+	return false, false
+}
+
+func (m MessageAccepted) BaseName() string {
+	return m.Pack[0].BaseName
+}
+
+func (m MessageAccepted) BaseTime() float64 {
+	return m.Pack[0].BaseTime
 }
