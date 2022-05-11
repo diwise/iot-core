@@ -1,6 +1,6 @@
 package events
 
-import (	
+import (
 	"strings"
 	"time"
 
@@ -91,7 +91,10 @@ func (m MessageAccepted) Longitude() float64 {
 func (m MessageAccepted) GetFloat64(name string) (float64, bool) {
 	for _, r := range m.Pack {
 		if strings.EqualFold(r.Name, name) {
-			return *r.Value, true
+			if r.Value != nil {
+				return *r.Value, true
+			}
+			return 0, false
 		}
 	}
 	return 0, false
@@ -109,7 +112,10 @@ func (m MessageAccepted) GetString(name string) (string, bool) {
 func (m MessageAccepted) GetBool(name string) (bool, bool) {
 	for _, r := range m.Pack {
 		if strings.EqualFold(r.Name, name) {
-			return *r.BoolValue, true
+			if r.BoolValue != nil {
+				return *r.BoolValue, true
+			}
+			return false, false
 		}
 	}
 	return false, false
