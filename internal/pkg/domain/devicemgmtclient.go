@@ -21,7 +21,6 @@ type devManagementClient struct {
 	url string
 }
 
-
 func NewDeviceManagementClient(devMgmtUrl string) DeviceManagementClient {
 	dmc := &devManagementClient{
 		url: devMgmtUrl,
@@ -92,9 +91,9 @@ type device struct {
 func NewDevice(id, env string, lat, long float64) Device {
 	return &device{
 		Identity: id,
-		Env: env,
-		Lat: lat,
-		Long: long,
+		Env:      env,
+		Lat:      lat,
+		Long:     long,
 	}
 }
 
