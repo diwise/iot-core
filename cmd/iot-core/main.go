@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/diwise/iot-core/internal/application"
 	"github.com/diwise/iot-core/internal/messageprocessor"
 	"github.com/diwise/iot-core/internal/pkg/domain"
+	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/buildinfo"
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
@@ -52,7 +54,14 @@ func newCommandHandler(messenger messaging.MsgContext, m messageprocessor.Messag
 		ctx, span := tracer.Start(ctx, "rcv-cmd")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
-		e, err := app.MessageAccepted(ctx, wrapper.Body())
+		rcvdMsg := events.MessageReceived{}
+		err = json.Unmarshal(wrapper.Body(), &rcvdMsg)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to decode message from json")
+			return err
+		}
+
+		e, err := app.MessageAccepted(ctx, rcvdMsg)
 		if err != nil {
 			return err
 		}

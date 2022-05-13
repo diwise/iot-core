@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/diwise/iot-core/internal/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -10,7 +9,7 @@ import (
 )
 
 type IoTCoreApp interface {
-	MessageAccepted(ctx context.Context, msg []byte) (*events.MessageAccepted, error)
+	MessageAccepted(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
 }
 
 type iotCoreApp struct {
@@ -25,15 +24,7 @@ func NewIoTCoreApp(serviceName string, m messageprocessor.MessageProcessor, logg
 	}
 }
 
-func (a *iotCoreApp) MessageAccepted(ctx context.Context, msg []byte) (*events.MessageAccepted, error) {
-
-	rcvdMsg := events.MessageReceived{}
-
-	err := json.Unmarshal(msg, &rcvdMsg)
-	if err != nil {
-		a.log.Error().Err(err).Msg("failed to decode message from json")
-		return nil, err
-	}
+func (a *iotCoreApp) MessageAccepted(ctx context.Context, rcvdMsg events.MessageReceived) (*events.MessageAccepted, error) {
 
 	if err := rcvdMsg.Pack.Validate(); err != nil {
 		a.log.Error().Err(err).Msg("failed to validate senML message")

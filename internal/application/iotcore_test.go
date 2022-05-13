@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/diwise/iot-core/internal/messageprocessor"
@@ -15,10 +14,8 @@ import (
 func TestThatMessageAcceptedReturnsProperMessageAccepted(t *testing.T) {
 	is, m, msgRcvd := testSetup(t)
 
-	bytes, err := json.Marshal(msgRcvd)
-
 	app := NewIoTCoreApp("", m, zerolog.Logger{})
-	e, err := app.MessageAccepted(context.Background(), bytes)
+	e, err := app.MessageAccepted(context.Background(), msgRcvd)
 
 	is.NoErr(err)
 	is.True(e != nil)
