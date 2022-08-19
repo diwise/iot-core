@@ -7,8 +7,8 @@ import (
 
 	"github.com/diwise/iot-core/internal/application"
 	"github.com/diwise/iot-core/internal/messageprocessor"
-	"github.com/diwise/iot-core/internal/pkg/domain"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/buildinfo"
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
@@ -26,11 +26,19 @@ var tracer = otel.Tracer(serviceName)
 
 func main() {
 	serviceVersion := buildinfo.SourceVersion()
-	_, logger, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
+	ctx, logger, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
 	defer cleanup()
 
 	dmURL := env.GetVariableOrDie(logger, "DEV_MGMT_URL", "url to iot-device-mgmt")
-	dmClient := domain.NewDeviceManagementClient(dmURL)
+	tokenURL := env.GetVariableOrDie(logger, "OAUTH2_TOKEN_URL", "a valid oauth2 token URL")
+	clientID := env.GetVariableOrDie(logger, "OAUTH2_CLIENT_ID", "a valid oauth2 client id")
+	clientSecret := env.GetVariableOrDie(logger, "OAUTH2_CLIENT_SECRET", "a valid oauth2 client secret")
+
+	dmClient, err := client.New(ctx, dmURL, tokenURL, clientID, clientSecret)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to create device managagement client")
+	}
+
 	m := messageprocessor.NewMessageProcessor(dmClient)
 
 	config := messaging.LoadConfiguration(serviceName, logger)

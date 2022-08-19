@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/diwise/iot-core/internal/pkg/domain"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/farshidtz/senml/v2"
 )
 
@@ -16,10 +16,10 @@ type MessageProcessor interface {
 }
 
 type messageProcessor struct {
-	deviceManagementClient domain.DeviceManagementClient
+	deviceManagementClient client.DeviceManagementClient
 }
 
-func NewMessageProcessor(d domain.DeviceManagementClient) MessageProcessor {
+func NewMessageProcessor(d client.DeviceManagementClient) MessageProcessor {
 	return &messageProcessor{
 		deviceManagementClient: d,
 	}
