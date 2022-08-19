@@ -6,4 +6,5 @@ const (
 	Presence    string = lwm2mPrefix + "3302"
 	Temperature string = lwm2mPrefix + "3303"
 	AirQuality  string = lwm2mPrefix + "3428"
+	Watermeter  string = lwm2mPrefix + "3424"
 )
