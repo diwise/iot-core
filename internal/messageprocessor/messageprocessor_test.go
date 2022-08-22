@@ -4,7 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/diwise/iot-core/internal/pkg/domain"
+	"github.com/diwise/iot-device-mgmt/pkg/client"
+	dmctest "github.com/diwise/iot-device-mgmt/pkg/test"
 	"github.com/farshidtz/senml/v2/codec"
 	"github.com/matryer/is"
 	"github.com/rs/zerolog"
@@ -23,12 +24,18 @@ func TestThatProcessMessageReadsSenMLPackProperly(t *testing.T) {
 	is.True(msg.Sensor == "internalID")
 }
 
-func testSetup(t *testing.T) (*is.I, *domain.DeviceManagementClientMock, zerolog.Logger) {
+func testSetup(t *testing.T) (*is.I, *dmctest.DeviceManagementClientMock, zerolog.Logger) {
 	is := is.New(t)
 
-	dmc := &domain.DeviceManagementClientMock{
-		FindDeviceFromInternalIDFunc: func(ctx context.Context, deviceID string) (domain.Device, error) {
-			return domain.NewDevice("internalID", "water", 16, 32), nil
+	dmc := &dmctest.DeviceManagementClientMock{
+		FindDeviceFromInternalIDFunc: func(ctx context.Context, deviceID string) (client.Device, error) {
+			res := &dmctest.DeviceMock{
+				IDFunc:          func() string { return "internalID" },
+				EnvironmentFunc: func() string { return "water" },
+				LongitudeFunc:   func() float64 { return 16 },
+				LatitudeFunc:    func() float64 { return 32 },
+			}
+			return res, nil
 		},
 	}
 
