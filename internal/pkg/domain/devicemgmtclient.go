@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
@@ -55,7 +55,7 @@ func (dmc *devManagementClient) FindDeviceFromInternalID(ctx context.Context, de
 		return nil, fmt.Errorf("request failed, no device found")
 	}
 
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Error().Msgf("failed to read response body: %s", err.Error())
 		return nil, err
