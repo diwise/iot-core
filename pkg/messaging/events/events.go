@@ -121,6 +121,14 @@ func (m MessageAccepted) GetBool(name string) (bool, bool) {
 	return false, false
 }
 
+func (m MessageAccepted) Tenant() string {
+	if s, ok := m.GetString("tenant"); ok {
+		return s
+	}
+
+	return ""
+}
+
 func (m MessageAccepted) BaseName() string {
 	return m.Pack[0].BaseName
 }

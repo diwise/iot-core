@@ -40,6 +40,7 @@ func (m *messageProcessor) ProcessMessage(ctx context.Context, pack senml.Pack) 
 	// TODO: Validate, process and enrich data
 
 	pack = enrichEnv(pack, device.Environment())
+	pack = enrichTenant(pack, device.Tenant())
 
 	msg := events.NewMessageAccepted(device.ID(), pack).AtLocation(device.Latitude(), device.Longitude())
 
@@ -54,6 +55,21 @@ func enrichEnv(p senml.Pack, env string) senml.Pack {
 	envRec := &senml.Record{
 		Name:        "env",
 		StringValue: env,
+	}
+
+	p = append(p, *envRec)
+
+	return p
+}
+
+func enrichTenant(p senml.Pack, tenant string) senml.Pack {
+	if tenant == "" {
+		return p
+	}
+
+	envRec := &senml.Record{
+		Name:        "tenant",
+		StringValue: tenant,
 	}
 
 	p = append(p, *envRec)
