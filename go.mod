@@ -1,8 +1,9 @@
-module github.com/diwise/iot-core
+module github.com/mats-dahlberg-goteborg/iot-core
 
 go 1.18
 
 require (
+	github.com/diwise/iot-core v0.0.0-20220830121631-bb75768c697a
 	github.com/diwise/iot-device-mgmt v0.0.0-20220830120854-88ad99f95f95
 	github.com/diwise/messaging-golang v0.0.0-20220413073613-1dcf3cdf0dcd
 	github.com/go-chi/chi/v5 v5.0.7
