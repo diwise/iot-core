@@ -1,4 +1,4 @@
-FROM golang:1.18 AS builder
+FROM golang:1.19 AS builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -9,8 +9,6 @@ COPY go.sum .
 RUN go mod download
 
 COPY . .
-
-RUN go test -v ./...
 
 WORKDIR /app/cmd/iot-core
 
