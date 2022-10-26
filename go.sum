@@ -78,6 +78,8 @@ github.com/diwise/service-chassis v0.0.0-20220609153321-22f72f7f5e21 h1:slCX3+Ni
 github.com/diwise/service-chassis v0.0.0-20220609153321-22f72f7f5e21/go.mod h1:qx+MPhTkgmRCAAaqX66aaglFZHMA8/JoAHbT4dYJuGA=
 github.com/diwise/service-chassis v0.0.0-20221013074522-f4d18d4595e0 h1:RuOzgJfZ7dKeQcTTZ3J1GfA4Y5ep3pS3A3w5fRhIrFw=
 github.com/diwise/service-chassis v0.0.0-20221013074522-f4d18d4595e0/go.mod h1:6mt0ltudljnv3ok6R2sI1yC2OCkFG3El4PbydXuJlMM=
+github.com/diwise/service-chassis v0.0.0-20221025192458-3038fdabe7c7 h1:RL/rTYSHfw9k+jaYkZwy8PyBVOPlTgI5AniezhxJ/WA=
+github.com/diwise/service-chassis v0.0.0-20221025192458-3038fdabe7c7/go.mod h1:46gzeb8xfqcfPO257IrJERaYpNLrEVNOVQ/9rfGgGB0=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
@@ -654,6 +656,8 @@ google.golang.org/genproto v0.0.0-20220829175752-36a9c930ecbf h1:Q5xNKbTSFwkuaaG
 google.golang.org/genproto v0.0.0-20220829175752-36a9c930ecbf/go.mod h1:dbqgFATTzChvnt+ujMdZwITVAJHFtfyN1qUhDqEiIlk=
 google.golang.org/genproto v0.0.0-20221024183307-1bc688fe9f3e h1:S9GbmC1iCgvbLyAokVCwiO6tVIrU9Y7c5oMx1V/ki/Y=
 google.golang.org/genproto v0.0.0-20221024183307-1bc688fe9f3e/go.mod h1:9qHF0xnpdSfF6knlcsnpzUu5y+rpwgbvsyGAZPBMg4s=
+google.golang.org/genproto v0.0.0-20221025140454-527a21cfbd71 h1:GEgb2jF5zxsFJpJfg9RoDDWm7tiwc/DDSTE2BtLUkXU=
+google.golang.org/genproto v0.0.0-20221025140454-527a21cfbd71/go.mod h1:9qHF0xnpdSfF6knlcsnpzUu5y+rpwgbvsyGAZPBMg4s=
 google.golang.org/grpc v1.19.0/go.mod h1:mqu4LbDTu4XGKhr4mRzUsmM4RtVoemTSY81AxZiDr8c=
 google.golang.org/grpc v1.20.1/go.mod h1:10oTOabMzJvdu6/UiuZezV6QK5dSlG84ov/aaiqXj38=
 google.golang.org/grpc v1.21.1/go.mod h1:oYelfM1adQP15Ek0mdvEgi9Df8B9CZIaU1084ijfRaM=
