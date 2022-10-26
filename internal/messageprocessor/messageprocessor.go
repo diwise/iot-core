@@ -2,14 +2,11 @@ package messageprocessor
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/farshidtz/senml/v2"
-
-	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 //go:generate moq -rm -out messageprocessor_mock.go . MessageProcessor
@@ -46,16 +43,7 @@ func (m *messageProcessor) ProcessMessage(ctx context.Context, pack senml.Pack) 
 
 	msg := events.NewMessageAccepted(device.ID(), pack).AtLocation(device.Latitude(), device.Longitude())
 
-	dump(ctx, msg)
-
 	return &msg, nil
-}
-
-func dump(ctx context.Context, m events.MessageAccepted) {
-	if b, err := json.Marshal(m); err == nil {
-		log := logging.GetFromContext(ctx)
-		log.Debug().Msgf("MessageAccepted: %s", string(b))
-	}
 }
 
 func enrichEnv(p senml.Pack, env string) senml.Pack {
