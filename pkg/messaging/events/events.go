@@ -18,20 +18,32 @@ func (m *MessageReceived) ContentType() string {
 	return "application/json"
 }
 
+func (m MessageReceived) DeviceID() string {
+	if m.Pack[0].Name == "0" {
+		return m.Pack[0].StringValue
+	}
+
+	return ""
+}
+
+type MessageAcceptedDecoratorFunc func(m *MessageAccepted)
 type MessageAccepted struct {
 	Sensor    string     `json:"sensorID"`
 	Pack      senml.Pack `json:"pack"`
 	Timestamp string     `json:"timestamp"`
 }
 
-func NewMessageAccepted(sensor string, pack senml.Pack) *MessageAccepted {
-
-	msg := &MessageAccepted{
-		Sensor:    sensor,
-		Pack:      pack,
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
+func NewMessageAccepted(sensorID string, decorators ...MessageAcceptedDecoratorFunc) *MessageAccepted {
+	m := &MessageAccepted{
+		Sensor:    sensorID,
+		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
 	}
-	return msg
+
+	for _, d := range decorators {
+		d(m)
+	}
+
+	return m
 }
 
 func (m *MessageAccepted) ContentType() string {
@@ -42,32 +54,75 @@ func (m *MessageAccepted) TopicName() string {
 	return topics.MessageAccepted
 }
 
-func (m MessageAccepted) AtLocation(latitude, longitude float64) MessageAccepted {
-	if m.IsLocated() {
-		return m
-	}
+func Rec(n, vs string, v *float64, vb *bool) MessageAcceptedDecoratorFunc {
+	return func(m *MessageAccepted) {
+		for _, r := range m.Pack {
+			if strings.EqualFold(r.Name, n) {
+				r.StringValue = vs
+				r.Value = v
+				r.BoolValue = vb
+				return
+			}
+		}
 
-	if m.Latitude() == 0 {
+		rec := senml.Record{
+			Name:        n,
+			StringValue: vs,
+			Value:       v,
+			BoolValue:   vb,
+		}
+
+		m.Pack = append(m.Pack, rec)
+	}
+}
+
+func Lat(t float64) MessageAcceptedDecoratorFunc {
+	return func(m *MessageAccepted) {
+		for _, r := range m.Pack {
+			if r.Unit == senml.UnitLat {
+				r.Value = &t
+				return
+			}
+		}
+
 		lat := &senml.Record{
 			Unit:  senml.UnitLat,
-			Value: &latitude,
+			Value: &t,
 		}
 		m.Pack = append(m.Pack, *lat)
 	}
-
-	if m.Longitude() == 0 {
-		lon := &senml.Record{
-			Unit:  senml.UnitLon,
-			Value: &longitude,
-		}
-		m.Pack = append(m.Pack, *lon)
-	}
-
-	return m
 }
 
-func (m MessageAccepted) IsLocated() bool {
-	return m.Latitude() != 0 && m.Longitude() != 0
+func Lon(t float64) MessageAcceptedDecoratorFunc {
+	return func(m *MessageAccepted) {
+		for _, r := range m.Pack {
+			if r.Unit == senml.UnitLon {
+				r.Value = &t
+				return
+			}
+		}
+
+		lat := &senml.Record{
+			Unit:  senml.UnitLon,
+			Value: &t,
+		}
+		m.Pack = append(m.Pack, *lat)
+	}
+}
+
+func Environment(e string) MessageAcceptedDecoratorFunc {
+	if strings.EqualFold(e, "") {
+		return func(m *MessageAccepted) {}
+	}
+
+	return Rec("env", e, nil, nil)
+}
+
+func Tenant(t string) MessageAcceptedDecoratorFunc {
+	if strings.EqualFold(t, "") {
+		t = "default"
+	}
+	return Rec("tenant", t, nil, nil)
 }
 
 func (m MessageAccepted) Latitude() float64 {
@@ -86,6 +141,10 @@ func (m MessageAccepted) Longitude() float64 {
 		}
 	}
 	return 0
+}
+
+func (m MessageAccepted) HasLocation() bool {
+	return m.Latitude() != 0 || m.Longitude() != 0
 }
 
 func (m MessageAccepted) GetFloat64(name string) (float64, bool) {
