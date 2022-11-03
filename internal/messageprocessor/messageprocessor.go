@@ -31,7 +31,7 @@ func (m *messageProcessor) ProcessMessage(ctx context.Context, msg events.Messag
 
 	device, err := m.deviceManagementClient.FindDeviceFromInternalID(ctx, msg.DeviceID())
 	if err != nil {
-		return nil, fmt.Errorf("could not find device from internalID %s, %w", msg.DeviceID(), err)
+		return nil, fmt.Errorf("could not find device with internalID %s, %w", msg.DeviceID(), err)
 	}
 
 	return events.NewMessageAccepted(device.ID(),

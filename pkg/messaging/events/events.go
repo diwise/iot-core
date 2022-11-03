@@ -26,14 +26,14 @@ func (m MessageReceived) DeviceID() string {
 	return ""
 }
 
-type MessageAcceptedDecoratorFunc func(m *MessageAccepted)
+type EventDecoratorFunc func(m *MessageAccepted)
 type MessageAccepted struct {
 	Sensor    string     `json:"sensorID"`
 	Pack      senml.Pack `json:"pack"`
 	Timestamp string     `json:"timestamp"`
 }
 
-func NewMessageAccepted(sensorID string, decorators ...MessageAcceptedDecoratorFunc) *MessageAccepted {
+func NewMessageAccepted(sensorID string, decorators ...EventDecoratorFunc) *MessageAccepted {
 	m := &MessageAccepted{
 		Sensor:    sensorID,
 		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
@@ -54,7 +54,7 @@ func (m *MessageAccepted) TopicName() string {
 	return topics.MessageAccepted
 }
 
-func Rec(n, vs string, v *float64, vb *bool) MessageAcceptedDecoratorFunc {
+func Rec(n, vs string, v *float64, vb *bool) EventDecoratorFunc {
 	return func(m *MessageAccepted) {
 		for _, r := range m.Pack {
 			if strings.EqualFold(r.Name, n) {
@@ -76,7 +76,7 @@ func Rec(n, vs string, v *float64, vb *bool) MessageAcceptedDecoratorFunc {
 	}
 }
 
-func Lat(t float64) MessageAcceptedDecoratorFunc {
+func Lat(t float64) EventDecoratorFunc {
 	return func(m *MessageAccepted) {
 		for _, r := range m.Pack {
 			if r.Unit == senml.UnitLat {
@@ -89,11 +89,12 @@ func Lat(t float64) MessageAcceptedDecoratorFunc {
 			Unit:  senml.UnitLat,
 			Value: &t,
 		}
+
 		m.Pack = append(m.Pack, *lat)
 	}
 }
 
-func Lon(t float64) MessageAcceptedDecoratorFunc {
+func Lon(t float64) EventDecoratorFunc {
 	return func(m *MessageAccepted) {
 		for _, r := range m.Pack {
 			if r.Unit == senml.UnitLon {
@@ -106,19 +107,19 @@ func Lon(t float64) MessageAcceptedDecoratorFunc {
 			Unit:  senml.UnitLon,
 			Value: &t,
 		}
+
 		m.Pack = append(m.Pack, *lat)
 	}
 }
 
-func Environment(e string) MessageAcceptedDecoratorFunc {
+func Environment(e string) EventDecoratorFunc {
 	if strings.EqualFold(e, "") {
 		return func(m *MessageAccepted) {}
 	}
-
 	return Rec("env", e, nil, nil)
 }
 
-func Tenant(t string) MessageAcceptedDecoratorFunc {
+func Tenant(t string) EventDecoratorFunc {
 	if strings.EqualFold(t, "") {
 		t = "default"
 	}

@@ -62,20 +62,20 @@ func newCommandHandler(messenger messaging.MsgContext, m messageprocessor.Messag
 		ctx, span := tracer.Start(ctx, "rcv-cmd")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
-		rcvdMsg := events.MessageReceived{}
-		err = json.Unmarshal(wrapper.Body(), &rcvdMsg)
+		messageReceived := events.MessageReceived{}
+		err = json.Unmarshal(wrapper.Body(), &messageReceived)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to decode message from json")
 			return err
 		}
 
-		e, err := app.MessageAccepted(ctx, rcvdMsg)
+		messageAccepted, err := app.MessageAccepted(ctx, messageReceived)
 		if err != nil {
 			return err
 		}
 
-		logger.Info().Msgf("publishing message to %s", e.TopicName())
-		err = messenger.PublishOnTopic(ctx, e)
+		logger.Info().Msgf("publishing message to %s", messageAccepted.TopicName())
+		err = messenger.PublishOnTopic(ctx, messageAccepted)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to publish message")
 			return err
