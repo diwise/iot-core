@@ -3,7 +3,9 @@ package messageprocessor
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
 	dmctest "github.com/diwise/iot-device-mgmt/pkg/test"
 	"github.com/farshidtz/senml/v2/codec"
@@ -17,7 +19,11 @@ func TestThatProcessMessageReadsSenMLPackProperly(t *testing.T) {
 	pack, _ := codec.DecodeJSON([]byte(co2))
 
 	m := NewMessageProcessor(d)
-	msg, err := m.ProcessMessage(context.Background(), pack)
+	msg, err := m.ProcessMessage(context.Background(), events.MessageReceived{
+		Device:    "devID",
+		Pack:      pack,
+		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+	})
 
 	is.True(msg != nil)
 	is.NoErr(err)

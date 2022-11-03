@@ -6,7 +6,6 @@ package messageprocessor
 import (
 	"context"
 	"github.com/diwise/iot-core/pkg/messaging/events"
-	"github.com/farshidtz/senml/v2"
 	"sync"
 )
 
@@ -16,22 +15,22 @@ var _ MessageProcessor = &MessageProcessorMock{}
 
 // MessageProcessorMock is a mock implementation of MessageProcessor.
 //
-// 	func TestSomethingThatUsesMessageProcessor(t *testing.T) {
+//	func TestSomethingThatUsesMessageProcessor(t *testing.T) {
 //
-// 		// make and configure a mocked MessageProcessor
-// 		mockedMessageProcessor := &MessageProcessorMock{
-// 			ProcessMessageFunc: func(ctx context.Context, pack senml.Pack) (*events.MessageAccepted, error) {
-// 				panic("mock out the ProcessMessage method")
-// 			},
-// 		}
+//		// make and configure a mocked MessageProcessor
+//		mockedMessageProcessor := &MessageProcessorMock{
+//			ProcessMessageFunc: func(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
+//				panic("mock out the ProcessMessage method")
+//			},
+//		}
 //
-// 		// use mockedMessageProcessor in code that requires MessageProcessor
-// 		// and then make assertions.
+//		// use mockedMessageProcessor in code that requires MessageProcessor
+//		// and then make assertions.
 //
-// 	}
+//	}
 type MessageProcessorMock struct {
 	// ProcessMessageFunc mocks the ProcessMessage method.
-	ProcessMessageFunc func(ctx context.Context, pack senml.Pack) (*events.MessageAccepted, error)
+	ProcessMessageFunc func(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -39,41 +38,42 @@ type MessageProcessorMock struct {
 		ProcessMessage []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// Pack is the pack argument value.
-			Pack senml.Pack
+			// Msg is the msg argument value.
+			Msg events.MessageReceived
 		}
 	}
 	lockProcessMessage sync.RWMutex
 }
 
 // ProcessMessage calls ProcessMessageFunc.
-func (mock *MessageProcessorMock) ProcessMessage(ctx context.Context, pack senml.Pack) (*events.MessageAccepted, error) {
+func (mock *MessageProcessorMock) ProcessMessage(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
 	if mock.ProcessMessageFunc == nil {
 		panic("MessageProcessorMock.ProcessMessageFunc: method is nil but MessageProcessor.ProcessMessage was just called")
 	}
 	callInfo := struct {
-		Ctx  context.Context
-		Pack senml.Pack
+		Ctx context.Context
+		Msg events.MessageReceived
 	}{
-		Ctx:  ctx,
-		Pack: pack,
+		Ctx: ctx,
+		Msg: msg,
 	}
 	mock.lockProcessMessage.Lock()
 	mock.calls.ProcessMessage = append(mock.calls.ProcessMessage, callInfo)
 	mock.lockProcessMessage.Unlock()
-	return mock.ProcessMessageFunc(ctx, pack)
+	return mock.ProcessMessageFunc(ctx, msg)
 }
 
 // ProcessMessageCalls gets all the calls that were made to ProcessMessage.
 // Check the length with:
-//     len(mockedMessageProcessor.ProcessMessageCalls())
+//
+//	len(mockedMessageProcessor.ProcessMessageCalls())
 func (mock *MessageProcessorMock) ProcessMessageCalls() []struct {
-	Ctx  context.Context
-	Pack senml.Pack
+	Ctx context.Context
+	Msg events.MessageReceived
 } {
 	var calls []struct {
-		Ctx  context.Context
-		Pack senml.Pack
+		Ctx context.Context
+		Msg events.MessageReceived
 	}
 	mock.lockProcessMessage.RLock()
 	calls = mock.calls.ProcessMessage

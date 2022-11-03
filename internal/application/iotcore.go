@@ -24,18 +24,11 @@ func NewIoTCoreApp(serviceName string, m messageprocessor.MessageProcessor, logg
 	}
 }
 
-func (a *iotCoreApp) MessageAccepted(ctx context.Context, rcvdMsg events.MessageReceived) (*events.MessageAccepted, error) {
-
-	if err := rcvdMsg.Pack.Validate(); err != nil {
-		a.log.Error().Err(err).Msg("failed to validate senML message")
-		return nil, err
-	}
-
-	e, err := a.messageProcessor.ProcessMessage(ctx, rcvdMsg.Pack)
-	if err != nil {
+func (a *iotCoreApp) MessageAccepted(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
+	if messageAccepted, err := a.messageProcessor.ProcessMessage(ctx, msg); err == nil {
+		return messageAccepted, nil
+	} else {
 		a.log.Error().Err(err).Msg("failed to process message")
 		return nil, err
 	}
-
-	return e, nil
 }
