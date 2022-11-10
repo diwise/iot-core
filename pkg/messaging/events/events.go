@@ -33,9 +33,10 @@ type MessageAccepted struct {
 	Timestamp string     `json:"timestamp"`
 }
 
-func NewMessageAccepted(sensorID string, decorators ...EventDecoratorFunc) *MessageAccepted {
+func NewMessageAccepted(sensorID string, pack senml.Pack, decorators ...EventDecoratorFunc) *MessageAccepted {
 	m := &MessageAccepted{
 		Sensor:    sensorID,
+		Pack: pack,
 		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
 	}
 

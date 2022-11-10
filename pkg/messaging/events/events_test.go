@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/farshidtz/senml/v2"
 	"github.com/matryer/is"
 )
 
@@ -14,7 +15,7 @@ func TestGetValuesFromPack(t *testing.T) {
 
 	dt := time.Date(2022, time.January, 1, 12, 0, 0, 0, time.UTC)
 
-	evt := NewMessageAccepted("sensor", Rec("withValues", "str", &v, &b, float64(dt.Unix()), nil))
+	evt := NewMessageAccepted("sensor", senml.Pack{}, Rec("withValues", "str", &v, &b, float64(dt.Unix()), nil))
 
 	b, ok := evt.GetBool("withValues")
 	is.True(ok)
@@ -34,7 +35,7 @@ func TestGetValuesFromPack(t *testing.T) {
 func TestNilValues(t *testing.T) {
 	is := testSetup(t)
 
-	evt := NewMessageAccepted("sensor", Rec("nil", "", nil, nil, 0, nil))
+	evt := NewMessageAccepted("sensor", senml.Pack{}, Rec("nil", "", nil, nil, 0, nil))
 	v, ok := evt.GetFloat64("nil")
 	is.True(!ok)
 	s, ok := evt.GetString("nil")
