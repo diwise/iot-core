@@ -6,6 +6,7 @@ import (
 
 	"github.com/diwise/iot-core/internal/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/farshidtz/senml/v2"
 	"github.com/matryer/is"
 	"github.com/rs/zerolog"
 )
@@ -26,7 +27,7 @@ func testSetup(t *testing.T) (*is.I, *messageprocessor.MessageProcessorMock) {
 
 	m := &messageprocessor.MessageProcessorMock{
 		ProcessMessageFunc: func(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
-			return events.NewMessageAccepted("internalID"), nil
+			return events.NewMessageAccepted("internalID", senml.Pack{}), nil
 		},
 	}
 
