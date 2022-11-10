@@ -2,6 +2,7 @@ package events
 
 import (
 	"testing"
+	"time"
 
 	"github.com/matryer/is"
 )
@@ -11,7 +12,9 @@ func TestGetValuesFromPack(t *testing.T) {
 	var v float64 = 1.0
 	var b bool = true
 
-	evt := NewMessageAccepted("sensor", Rec("withValues", "str", &v, &b))
+	dt := time.Date(2022,time.January,1,12,0,0,0,time.UTC)
+
+	evt := NewMessageAccepted("sensor", Rec("withValues", "str", &v, &b, float64(dt.Unix())))
 
 	b, ok := evt.GetBool("withValues")
 	is.True(ok)
@@ -19,16 +22,19 @@ func TestGetValuesFromPack(t *testing.T) {
 	is.True(ok)
 	str, ok := evt.GetString("withValues")
 	is.True(ok)
+	date, ok := evt.GetTime("withValues")
+	is.True(ok)
 
 	is.True(b)
 	is.Equal(v, 1.0)
 	is.Equal(str, "str")
+	is.Equal(float64(dt.Unix()), date)
 }
 
 func TestNilValues(t *testing.T) {
 	is := testSetup(t)
 
-	evt := NewMessageAccepted("sensor", Rec("nil", "", nil, nil))
+	evt := NewMessageAccepted("sensor", Rec("nil", "", nil, nil, 0))
 	v, ok := evt.GetFloat64("nil")
 	is.True(!ok)
 	s, ok := evt.GetString("nil")
