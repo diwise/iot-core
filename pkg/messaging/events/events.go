@@ -54,13 +54,14 @@ func (m *MessageAccepted) TopicName() string {
 	return topics.MessageAccepted
 }
 
-func Rec(n, vs string, v *float64, vb *bool) EventDecoratorFunc {
+func Rec(n, vs string, v *float64, vb *bool, t float64) EventDecoratorFunc {
 	return func(m *MessageAccepted) {
 		for _, r := range m.Pack {
 			if strings.EqualFold(r.Name, n) {
 				r.StringValue = vs
 				r.Value = v
 				r.BoolValue = vb
+				r.Time = t
 				return
 			}
 		}
@@ -70,6 +71,7 @@ func Rec(n, vs string, v *float64, vb *bool) EventDecoratorFunc {
 			StringValue: vs,
 			Value:       v,
 			BoolValue:   vb,
+			Time:        t,
 		}
 
 		m.Pack = append(m.Pack, rec)
@@ -116,14 +118,14 @@ func Environment(e string) EventDecoratorFunc {
 	if strings.EqualFold(e, "") {
 		return func(m *MessageAccepted) {}
 	}
-	return Rec("env", e, nil, nil)
+	return Rec("env", e, nil, nil, 0)
 }
 
 func Tenant(t string) EventDecoratorFunc {
 	if strings.EqualFold(t, "") {
 		t = "default"
 	}
-	return Rec("tenant", t, nil, nil)
+	return Rec("tenant", t, nil, nil, 0)
 }
 
 func (m MessageAccepted) Latitude() float64 {
@@ -179,6 +181,18 @@ func (m MessageAccepted) GetBool(name string) (bool, bool) {
 		}
 	}
 	return false, false
+}
+
+func (m MessageAccepted) GetTime(name string) (float64, bool) {
+	for _, r := range m.Pack {
+		if strings.EqualFold(r.Name, name) {
+			if r.Time != 0 {
+				return r.Time, true
+			}
+			return 0, false
+		}
+	}
+	return 0, false
 }
 
 func (m MessageAccepted) Tenant() string {
