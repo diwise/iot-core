@@ -54,7 +54,7 @@ func (m *MessageAccepted) TopicName() string {
 	return topics.MessageAccepted
 }
 
-func Rec(n, vs string, v *float64, vb *bool, t float64) EventDecoratorFunc {
+func Rec(n, vs string, v *float64, vb *bool, t float64, sum *float64) EventDecoratorFunc {
 	return func(m *MessageAccepted) {
 		for _, r := range m.Pack {
 			if strings.EqualFold(r.Name, n) {
@@ -62,6 +62,7 @@ func Rec(n, vs string, v *float64, vb *bool, t float64) EventDecoratorFunc {
 				r.Value = v
 				r.BoolValue = vb
 				r.Time = t
+				r.Sum = sum
 				return
 			}
 		}
@@ -72,6 +73,7 @@ func Rec(n, vs string, v *float64, vb *bool, t float64) EventDecoratorFunc {
 			Value:       v,
 			BoolValue:   vb,
 			Time:        t,
+			Sum:         sum,
 		}
 
 		m.Pack = append(m.Pack, rec)
@@ -118,14 +120,14 @@ func Environment(e string) EventDecoratorFunc {
 	if strings.EqualFold(e, "") {
 		return func(m *MessageAccepted) {}
 	}
-	return Rec("env", e, nil, nil, 0)
+	return Rec("env", e, nil, nil, 0, nil)
 }
 
 func Tenant(t string) EventDecoratorFunc {
 	if strings.EqualFold(t, "") {
 		t = "default"
 	}
-	return Rec("tenant", t, nil, nil, 0)
+	return Rec("tenant", t, nil, nil, 0, nil)
 }
 
 func (m MessageAccepted) Latitude() float64 {
