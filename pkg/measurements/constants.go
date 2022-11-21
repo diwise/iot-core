@@ -10,4 +10,5 @@ const (
 	SnowHeight           string = "SnowHeight"
 	Presence             string = "Presence"
 	CumulatedWaterVolume string = "CumulatedWaterVolume"
+	AtmosphericPressure  string = "AtmosphericPressure"
 )
