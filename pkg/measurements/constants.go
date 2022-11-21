@@ -9,7 +9,7 @@ const (
 	Light                string = "Light"
 	Motion               string = "Motion"
 	Presence             string = "Presence"
-	Presssure            string = "Pressure"
+	Pressure             string = "Pressure"
 	SnowHeight           string = "SnowHeight"
 	Temperature          string = "Temperature"
 )
