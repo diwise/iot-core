@@ -25,7 +25,7 @@ func NewIoTCoreApp(serviceName string, m messageprocessor.MessageProcessor, logg
 }
 
 func (a *iotCoreApp) MessageAccepted(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
-	if messageAccepted, err := a.messageProcessor.ProcessMessage(ctx, msg); err == nil {
+	if messageAccepted, err := a.messageProcessor.ProcessMessage(ctx, msg); err == nil {		
 		return messageAccepted, nil
 	} else {
 		a.log.Error().Err(err).Msg("failed to process message")
