@@ -1,6 +1,7 @@
 package measurements
 
 const (
+	AtmosphericPressure  string = "AtmosphericPressure"
 	BatteryLevel         string = "BatteryLevel"
 	Conductivity         string = "Conductivity"
 	CO2                  string = "CO2"
