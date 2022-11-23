@@ -1,16 +1,16 @@
 package measurements
 
 const (
+	AtmosphericPressure  string = "AtmosphericPressure"
 	BatteryLevel         string = "BatteryLevel"
-	Conductivity         string = "Conductivity"
 	CO2                  string = "CO2"
+	Conductivity         string = "Conductivity"
+	CumulatedWaterVolume string = "CumulatedWaterVolume"
 	Humidity             string = "Humidity"
 	Light                string = "Light"
 	Motion               string = "Motion"
 	Presence             string = "Presence"
-	CumulatedWaterVolume string = "CumulatedWaterVolume"
-	AtmosphericPressure  string = "AtmosphericPressure"
-	Presssure            string = "Pressure"
+	Pressure             string = "Pressure"
 	SnowHeight           string = "SnowHeight"
 	Temperature          string = "Temperature"
 )
