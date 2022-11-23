@@ -48,6 +48,28 @@ func TestNilValues(t *testing.T) {
 	is.True(!b)
 }
 
+func TestGetValuesFromPack2(t *testing.T) {
+	is := testSetup(t)
+	var v float64 = 1.0
+	var b bool = true
+	dt := time.Date(2022, time.January, 1, 12, 0, 0, 0, time.UTC)
+	baseRec := senml.Pack{
+		senml.Record{
+			Name: "0",
+			BaseName: "basename",
+		},
+	}
+
+	evt := NewMessageAccepted("sensor", baseRec, Rec("1", "str", &v, &b, float64(dt.Unix()), nil))
+
+	f, _ := Get[float64](*evt, "basename", 1)
+	is.Equal(1.0, f)
+	s, _ := Get[string](*evt, "basename", 1)
+	is.Equal(s, "str")
+	b2, _ := Get[bool](*evt, "basename", 1)
+	is.Equal(b2, true)	
+}
+
 func testSetup(t *testing.T) *is.I {
 	is := is.New(t)
 	return is

@@ -1,6 +1,8 @@
 package events
 
 import (
+	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -36,7 +38,7 @@ type MessageAccepted struct {
 func NewMessageAccepted(sensorID string, pack senml.Pack, decorators ...EventDecoratorFunc) *MessageAccepted {
 	m := &MessageAccepted{
 		Sensor:    sensorID,
-		Pack: pack,
+		Pack:      pack,
 		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
 	}
 
@@ -212,4 +214,29 @@ func (m MessageAccepted) BaseName() string {
 
 func (m MessageAccepted) BaseTime() float64 {
 	return m.Pack[0].BaseTime
+}
+
+func Get[T float64 | string | bool](m MessageAccepted, baseName string, id int) (T, bool) {
+	if strings.EqualFold(m.BaseName(), baseName) {
+		n := fmt.Sprint(id)
+		t := *new(T)
+
+		switch reflect.TypeOf(t).Kind() {
+		case reflect.Float64:
+			if v, ok := m.GetFloat64(n); ok {
+				return reflect.ValueOf(v).Interface().(T), true
+			}
+		case reflect.Bool:
+			if vb, ok := m.GetBool(n); ok {
+				return reflect.ValueOf(vb).Interface().(T), true
+			}
+		case reflect.String:
+			if vs, ok := m.GetString(n); ok {
+				return reflect.ValueOf(vs).Interface().(T), true
+			}
+		default:
+			return *new(T), false
+		}
+	}
+	return *new(T), false
 }
