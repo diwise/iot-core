@@ -224,15 +224,21 @@ func Get[T float64 | string | bool](m MessageAccepted, baseName string, id int) 
 		switch reflect.TypeOf(t).Kind() {
 		case reflect.Float64:
 			if v, ok := m.GetFloat64(n); ok {
-				return reflect.ValueOf(v).Interface().(T), true
+				if r, ok := reflect.ValueOf(v).Interface().(T); ok {
+					return r, true
+				}
 			}
 		case reflect.Bool:
 			if vb, ok := m.GetBool(n); ok {
-				return reflect.ValueOf(vb).Interface().(T), true
+				if r, ok := reflect.ValueOf(vb).Interface().(T); ok {
+					return r, true
+				}
 			}
 		case reflect.String:
 			if vs, ok := m.GetString(n); ok {
-				return reflect.ValueOf(vs).Interface().(T), true
+				if r, ok := reflect.ValueOf(vs).Interface().(T); ok {
+					return r, true
+				}
 			}
 		default:
 			return *new(T), false
