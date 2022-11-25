@@ -54,14 +54,8 @@ github.com/cncf/xds/go v0.0.0-20211011173535-cb28da3451f1/go.mod h1:eXthEFrGJvWH
 github.com/coreos/go-systemd/v22 v22.3.3-0.20220203105225-a9a7ef127534/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
-github.com/diwise/iot-device-mgmt v0.0.0-20221101222213-4920eac457a7 h1:UGM+NxeMde3txI4LqlLLQKSLyr0AKNstKdMzOuQ2m2c=
-github.com/diwise/iot-device-mgmt v0.0.0-20221101222213-4920eac457a7/go.mod h1:szHBDHD3ciuqI90fE1IsNvbYIeXwa3I44pIx1nLy2H8=
-github.com/diwise/iot-device-mgmt v0.0.0-20221117122221-a0dc19e8965f h1:32zRm6j0Iz3NZ199tixI1zWDUkWuRAYh1By86kEsR5o=
-github.com/diwise/iot-device-mgmt v0.0.0-20221117122221-a0dc19e8965f/go.mod h1:szHBDHD3ciuqI90fE1IsNvbYIeXwa3I44pIx1nLy2H8=
-github.com/diwise/iot-device-mgmt v0.0.0-20221118123411-125ba72645c4 h1:Xnhc9mjbyJ3DbHX4fRD+LWxyKOOAx4btjGT8ZgFsCLc=
-github.com/diwise/iot-device-mgmt v0.0.0-20221118123411-125ba72645c4/go.mod h1:szHBDHD3ciuqI90fE1IsNvbYIeXwa3I44pIx1nLy2H8=
-github.com/diwise/iot-device-mgmt v0.0.0-20221123140801-b89d66f53276 h1:vYbj27nHZnnig7ut6sfKaLkvkVm/idODPG6O4byI6Ss=
-github.com/diwise/iot-device-mgmt v0.0.0-20221123140801-b89d66f53276/go.mod h1:szHBDHD3ciuqI90fE1IsNvbYIeXwa3I44pIx1nLy2H8=
+github.com/diwise/iot-device-mgmt v0.0.0-20221123155633-d7a989e63fac h1:7IfFqEjg6Q8fVBCkX+mjifgKuFguJ2qNlisWhzdC4oY=
+github.com/diwise/iot-device-mgmt v0.0.0-20221123155633-d7a989e63fac/go.mod h1:szHBDHD3ciuqI90fE1IsNvbYIeXwa3I44pIx1nLy2H8=
 github.com/diwise/messaging-golang v0.0.0-20220923095330-874218800e05 h1:Z+oH58jdzH3wOIaxDKV7J+xCEpvGSnmteRz2RlqDajE=
 github.com/diwise/messaging-golang v0.0.0-20220923095330-874218800e05/go.mod h1:pHvhFWcSLMct965DpgubvuxdKjdF1fm/Y6rFkz4dHtg=
 github.com/diwise/service-chassis v0.0.0-20221025192458-3038fdabe7c7 h1:RL/rTYSHfw9k+jaYkZwy8PyBVOPlTgI5AniezhxJ/WA=

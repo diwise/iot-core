@@ -3,7 +3,7 @@ module github.com/diwise/iot-core
 go 1.19
 
 require (
-	github.com/diwise/iot-device-mgmt v0.0.0-20221123140801-b89d66f53276
+	github.com/diwise/iot-device-mgmt v0.0.0-20221123155633-d7a989e63fac
 	github.com/diwise/messaging-golang v0.0.0-20220923095330-874218800e05
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/rs/cors v1.8.2
