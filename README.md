@@ -1,9 +1,21 @@
 # iot-core
-A service for handling core functionality in the IoT platform. Enriches messages with metadata.
+A service for handling core functionality in the IoT platform. Enriches messages with metadata such as position and environment.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://github.com/diwise/iot-agent/blob/main/LICENSE)
 
 # Design
+
+```mermaid
+flowchart LR
+    iot-agent-->handler
+    handler --> iot-device-mgmt -- enrich --> handler
+    handler --pub--> rabbitMQ --sub--> iot-transform-fiware
+    handler --pub--> rabbitMQ --sub--> other
+    subgraph iot-core
+        handler   
+    end 
+```
+
 ## Dependencies  
  - [iot-device-mgmt](https://github.com/diwise/iot-device-mgmt)
  - [RabbitMQ](https://www.rabbitmq.com/)
@@ -13,6 +25,7 @@ A service for handling core functionality in the IoT platform. Enriches messages
 docker build -f deployments/Dockerfile . -t diwise/iot-core:latest
 ```
 ## Test
+Testing is best done using unit tests. For integration testing the preferred way is to use `docker-compose.yaml` found in repository [diwise](https://github.com/diwise/diwise) 
 
 # Configuration
 ## Environment variables
