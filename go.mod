@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/diwise/iot-device-mgmt v0.0.0-20221123155633-d7a989e63fac
-	github.com/diwise/messaging-golang v0.0.0-20220923095330-874218800e05
+	github.com/diwise/messaging-golang v0.0.0-20230112181152-6d313f5f9451
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/rs/cors v1.8.2
 	github.com/rs/zerolog v1.28.0
