@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/diwise/iot-core/internal/application"
-	"github.com/diwise/iot-core/internal/messageprocessor"
+	"github.com/diwise/iot-core/internal/pkg/application"
+	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/diwise/messaging-golang/pkg/messaging"
