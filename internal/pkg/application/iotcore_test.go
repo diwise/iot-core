@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/diwise/iot-core/internal/messageprocessor"
+	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/farshidtz/senml/v2"
 	"github.com/matryer/is"
