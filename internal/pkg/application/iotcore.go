@@ -8,23 +8,23 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type IoTCoreApp interface {
+type App interface {
 	MessageAccepted(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
 }
 
-type iotCoreApp struct {
+type app struct {
 	messageProcessor messageprocessor.MessageProcessor
 	log              zerolog.Logger
 }
 
-func NewIoTCoreApp(serviceName string, m messageprocessor.MessageProcessor, logger zerolog.Logger) IoTCoreApp {
-	return &iotCoreApp{
+func NewIoTCoreApp(serviceName string, m messageprocessor.MessageProcessor, logger zerolog.Logger) App {
+	return &app{
 		messageProcessor: m,
 		log:              logger,
 	}
 }
 
-func (a *iotCoreApp) MessageAccepted(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
+func (a *app) MessageAccepted(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
 	if messageAccepted, err := a.messageProcessor.ProcessMessage(ctx, msg); err == nil {
 		return messageAccepted, nil
 	} else {

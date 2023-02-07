@@ -55,7 +55,7 @@ func main() {
 	setupRouterAndWaitForConnections(logger)
 }
 
-func newCommandHandler(messenger messaging.MsgContext, m messageprocessor.MessageProcessor, app application.IoTCoreApp) messaging.CommandHandler {
+func newCommandHandler(messenger messaging.MsgContext, m messageprocessor.MessageProcessor, app application.App) messaging.CommandHandler {
 	return func(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger zerolog.Logger) error {
 		var err error
 
