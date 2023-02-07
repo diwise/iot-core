@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/diwise/iot-core/internal/pkg/application"
+	"github.com/diwise/iot-core/internal/pkg/application/features"
 	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
@@ -13,8 +14,10 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/buildinfo"
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
 	"github.com/go-chi/chi/v5"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
@@ -52,6 +55,14 @@ func main() {
 	needToDecideThis := "application/json"
 	messenger.RegisterCommandHandler(needToDecideThis, newCommandHandler(messenger, m, app))
 
+	freg, err := features.NewRegistry()
+	if err != nil {
+		logger.Fatal().Err(err).Msg("unable to create features registry")
+	}
+
+	routingKey := "message.accepted"
+	messenger.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(messenger, app, freg))
+
 	setupRouterAndWaitForConnections(logger)
 }
 
@@ -59,18 +70,19 @@ func newCommandHandler(messenger messaging.MsgContext, m messageprocessor.Messag
 	return func(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger zerolog.Logger) error {
 		var err error
 
-		ctx, span := tracer.Start(ctx, "rcv-cmd")
+		ctx, span := tracer.Start(ctx, "receive-command")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
-		messageReceived := events.MessageReceived{}
-		err = json.Unmarshal(wrapper.Body(), &messageReceived)
+		evt := events.MessageReceived{}
+		err = json.Unmarshal(wrapper.Body(), &evt)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to decode message from json")
 			return err
 		}
 
-		messageAccepted, err := app.MessageAccepted(ctx, messageReceived)
+		messageAccepted, err := app.MessageReceived(ctx, evt)
 		if err != nil {
+			logger.Error().Err(err).Msg("message not accepted")
 			return err
 		}
 
@@ -82,6 +94,24 @@ func newCommandHandler(messenger messaging.MsgContext, m messageprocessor.Messag
 		}
 
 		return nil
+	}
+}
+
+func newTopicMessageHandler(messenger messaging.MsgContext, app application.App, freg features.Registry) messaging.TopicMessageHandler {
+
+	return func(ctx context.Context, msg amqp.Delivery, logger zerolog.Logger) {
+		ctx = logging.NewContextWithLogger(ctx, logger)
+		logger.Info().Str("body", string(msg.Body)).Msg("received message")
+
+		messageAccepted := &events.MessageAccepted{}
+		if err := json.Unmarshal(msg.Body, messageAccepted); err == nil {
+			matchingFeatures, _ := freg.Find(ctx, messageAccepted.Sensor)
+			for _, f := range matchingFeatures {
+				f.Handle(ctx, messageAccepted, messenger)
+			}
+		} else {
+			logger.Error().Err(err).Msg("unable to unmarshal incoming message")
+		}
 	}
 }
 
