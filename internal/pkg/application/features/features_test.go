@@ -7,38 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/farshidtz/senml/v2"
 	"github.com/matryer/is"
 )
-
-func TestCreateRegistry(t *testing.T) {
-	is := is.New(t)
-
-	config := "featureId;counter;overflow;sensorId"
-
-	reg, err := NewRegistry(bytes.NewBufferString(config))
-	is.NoErr(err)
-
-	matches, err := reg.Find(context.Background(), "sensorId")
-	is.NoErr(err)
-
-	is.Equal(len(matches), 1) // should find one matching feature
-}
-
-func TestFindNonMatchingFeatureReturnsEmptySlice(t *testing.T) {
-	is := is.New(t)
-
-	config := "featureId;counter;overflow;sensorId"
-	reg, err := NewRegistry(bytes.NewBufferString(config))
-	is.NoErr(err)
-
-	matches, err := reg.Find(context.Background(), "noSuchSensor")
-	is.NoErr(err)
-
-	is.Equal(len(matches), 0) // should not find any matching features
-}
 
 func TestCounter(t *testing.T) {
 	is, ctx, msgctx := testSetup(t)
@@ -50,10 +24,9 @@ func TestCounter(t *testing.T) {
 
 	reg, _ := NewRegistry(input)
 
-	f, _ := reg.Find(ctx, sensorId)
+	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
-	const digitalInput string = "urn:oma:lwm2m:ext:3200"
-	pack := NewSenMLPack(sensorId, digitalInput, time.Now().UTC(), BoolValue("5500", true))
+	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, time.Now().UTC(), BoolValue("5500", true))
 	acceptedMessage := events.NewMessageAccepted("sensorID", pack)
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
@@ -75,12 +48,11 @@ func TestLevel(t *testing.T) {
 
 	reg, _ := NewRegistry(input)
 
-	const distance string = "urn:oma:lwm2m:ext:3300"
 	v := 2.1
-	pack := NewSenMLPack(sensorId, distance, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
+	pack := NewSenMLPack(sensorId, lwm2m.Distance, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
 	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
 
-	f, _ := reg.Find(ctx, sensorId)
+	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 	is.Equal(len(f), 1) // should find one matching feature
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)

@@ -1,6 +1,7 @@
 package events
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -55,6 +56,22 @@ func (m *MessageAccepted) ContentType() string {
 
 func (m *MessageAccepted) TopicName() string {
 	return topics.MessageAccepted
+}
+
+func (m *MessageAccepted) Error() error {
+	if m.Sensor == "" {
+		return errors.New("sensor id is missing")
+	}
+
+	if m.Timestamp == "" {
+		return errors.New("timestamp is mising")
+	}
+
+	if len(m.Pack) == 0 {
+		return errors.New("pack is empty")
+	}
+
+	return nil
 }
 
 func Rec(n, vs string, v *float64, vb *bool, t float64, sum *float64) EventDecoratorFunc {
