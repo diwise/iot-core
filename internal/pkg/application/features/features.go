@@ -82,10 +82,17 @@ func (r *reg) Find(ctx context.Context, sensorID string) ([]Feature, error) {
 	return []Feature{f}, nil
 }
 
+type location struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
 type feat struct {
-	ID      string `json:"id"`
-	Type    string `json:"type"`
-	SubType string `json:"subtype"`
+	ID       string    `json:"id"`
+	Type     string    `json:"type"`
+	SubType  string    `json:"subtype"`
+	Location *location `json:"location,omitempty"`
+	Tenant   string    `json:"tenant,omitempty"`
 
 	Counter counters.Counter `json:"counter,omitempty"`
 	Level   levels.Level     `json:"level,omitempty"`
@@ -94,10 +101,25 @@ type feat struct {
 }
 
 func (f *feat) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
+
 	changed, err := f.handle(ctx, e)
 
 	if err != nil {
 		return err
+	}
+
+	if e.HasLocation() {
+		f.Location = &location{
+			Latitude:  e.Latitude(),
+			Longitude: e.Longitude(),
+		}
+	}
+
+	// TODO: We need to be able to have tenant info before the first packet arrives,
+	// 			so this lazy init version wont work in the long run ...
+	tenant, ok := e.GetString("tenant")
+	if ok {
+		f.Tenant = tenant
 	}
 
 	if changed {
