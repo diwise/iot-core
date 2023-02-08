@@ -45,15 +45,19 @@ func NewRegistry(input io.Reader) (Registry, error) {
 
 			if f.Type == counters.FeatureTypeName {
 				f.Counter = counters.New()
+				f.handle = f.Counter.Handle
 			} else if f.Type == levels.FeatureTypeName {
 				levelConfig := ""
 				if tokenCount > 4 {
 					levelConfig = tokens[4]
 				}
+
 				f.Level, err = levels.New(levelConfig)
 				if err != nil {
 					return nil, err
 				}
+
+				f.handle = f.Level.Handle
 			} else {
 				return nil, fmt.Errorf("unable to parse feature config line: \"%s\"", line)
 			}
@@ -85,27 +89,19 @@ type feat struct {
 
 	Counter counters.Counter `json:"counter,omitempty"`
 	Level   levels.Level     `json:"level,omitempty"`
+
+	handle func(context.Context, *events.MessageAccepted) (bool, error)
 }
 
 func (f *feat) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
-	if f.Counter != nil {
-		changed, err := f.Counter.Handle(ctx, e)
-		if err != nil {
-			return err
-		}
+	changed, err := f.handle(ctx, e)
 
-		if changed {
-			msgctx.PublishOnTopic(ctx, f)
-		}
-	} else if f.Level != nil {
-		changed, err := f.Level.Handle(ctx, e)
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
+	}
 
-		if changed {
-			msgctx.PublishOnTopic(ctx, f)
-		}
+	if changed {
+		msgctx.PublishOnTopic(ctx, f)
 	}
 
 	return nil

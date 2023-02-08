@@ -57,11 +57,7 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted) (bool, 
 		}
 	}
 
-	if previousCount != c.Count_ {
-		return true, nil
-	}
-
-	return false, nil
+	return (previousCount != c.Count_), nil
 }
 
 func (c *counter) Count() int {
