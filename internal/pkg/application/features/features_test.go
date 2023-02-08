@@ -1,6 +1,7 @@
 package features
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,12 +14,42 @@ import (
 	"github.com/matryer/is"
 )
 
-func TestFeatures(t *testing.T) {
+func TestCreateRegistry(t *testing.T) {
+	is := is.New(t)
+
+	config := "featureId;counter;overflow;sensorId"
+
+	reg, err := NewRegistry(bytes.NewBufferString(config))
+	is.NoErr(err)
+
+	matches, err := reg.Find(context.Background(), "sensorId")
+	is.NoErr(err)
+
+	is.Equal(len(matches), 1) // should find one matching feature
+}
+
+func TestFindNonMatchingFeatureReturnsEmptySlice(t *testing.T) {
+	is := is.New(t)
+
+	config := "featureId;counter;overflow;sensorId"
+	reg, err := NewRegistry(bytes.NewBufferString(config))
+	is.NoErr(err)
+
+	matches, err := reg.Find(context.Background(), "noSuchSensor")
+	is.NoErr(err)
+
+	is.Equal(len(matches), 0) // should not find any matching features
+}
+
+func TestCounter(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 	sensorId := "testId"
 
-	reg, _ := NewRegistry()
+	config := "featureId;counter;overflow;" + sensorId
+	input := bytes.NewBufferString(config)
+
+	reg, _ := NewRegistry(input)
 	messenger := &messaging.MsgContextMock{
 		PublishOnTopicFunc: func(ctx context.Context, message messaging.TopicMessage) error {
 			b, _ := json.MarshalIndent(message, " ", " ")
@@ -36,6 +67,35 @@ func TestFeatures(t *testing.T) {
 	f[0].Handle(ctx, acceptedMessage, messenger)
 
 	is.True(true)
+}
+
+func TestLevel(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+	sensorId := "testId"
+
+	input := bytes.NewBufferString("featureId;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5")
+
+	reg, _ := NewRegistry(input)
+	messenger := &messaging.MsgContextMock{
+		PublishOnTopicFunc: func(ctx context.Context, message messaging.TopicMessage) error {
+			b, _ := json.MarshalIndent(message, " ", " ")
+			fmt.Println(string(b))
+			return nil
+		},
+	}
+
+	const distance string = "urn:oma:lwm2m:ext:3300"
+	v := 2.1
+	pack := NewSenMLPack(sensorId, distance, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
+	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
+
+	f, _ := reg.Find(ctx, sensorId)
+	is.Equal(len(f), 1) // should find one matching feature
+
+	err := f[0].Handle(ctx, acceptedMessage, messenger)
+
+	is.NoErr(err)
 }
 
 type SenMLDecoratorFunc func(p *senML)

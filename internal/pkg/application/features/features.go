@@ -1,9 +1,14 @@
 package features
 
 import (
+	"bufio"
 	"context"
-	"math"
+	"fmt"
+	"io"
+	"strings"
 
+	"github.com/diwise/iot-core/internal/pkg/application/features/counters"
+	"github.com/diwise/iot-core/internal/pkg/application/features/levels"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 )
@@ -16,15 +21,61 @@ type Feature interface {
 	Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error
 }
 
-func NewRegistry() (Registry, error) {
-	return &reg{}, nil
+func NewRegistry(input io.Reader) (Registry, error) {
+
+	r := &reg{
+		f: make(map[string]Feature),
+	}
+
+	var err error
+
+	scanner := bufio.NewScanner(input)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		tokens := strings.Split(line, ";")
+		tokenCount := len(tokens)
+
+		if tokenCount >= 4 {
+			f := &feat{
+				ID:      tokens[0],
+				Type:    tokens[1],
+				SubType: tokens[2],
+			}
+
+			if f.Type == counters.FeatureTypeName {
+				f.Counter = counters.New()
+			} else if f.Type == levels.FeatureTypeName {
+				levelConfig := ""
+				if tokenCount > 4 {
+					levelConfig = tokens[4]
+				}
+				f.Level, err = levels.New(levelConfig)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				return nil, fmt.Errorf("unable to parse feature config line: \"%s\"", line)
+			}
+
+			r.f[tokens[3]] = f
+		}
+	}
+
+	return r, nil
 }
 
-type reg struct{}
+type reg struct {
+	f map[string]Feature
+}
 
 func (r *reg) Find(ctx context.Context, sensorID string) ([]Feature, error) {
-	c := NewCounter("featureID", "overflow")
-	return []Feature{c}, nil
+	f, ok := r.f[sensorID]
+	if !ok {
+		return []Feature{}, nil
+	}
+
+	return []Feature{f}, nil
 }
 
 type feat struct {
@@ -32,12 +83,22 @@ type feat struct {
 	Type    string `json:"type"`
 	SubType string `json:"subtype"`
 
-	Counter *counter `json:"counter,omitempty"`
+	Counter counters.Counter `json:"counter,omitempty"`
+	Level   levels.Level     `json:"level,omitempty"`
 }
 
 func (f *feat) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
 	if f.Counter != nil {
 		changed, err := f.Counter.Handle(ctx, e)
+		if err != nil {
+			return err
+		}
+
+		if changed {
+			msgctx.PublishOnTopic(ctx, f)
+		}
+	} else if f.Level != nil {
+		changed, err := f.Level.Handle(ctx, e)
 		if err != nil {
 			return err
 		}
@@ -55,55 +116,5 @@ func (f *feat) ContentType() string {
 }
 
 func (f *feat) TopicName() string {
-	return "features.counters.updated"
-}
-
-func NewCounter(featureID, counterType string) Feature {
-
-	f := &feat{
-		ID:      featureID,
-		Type:    "counter",
-		SubType: counterType,
-		Counter: &counter{
-			Count: 0,
-			State: false,
-		},
-	}
-
-	return f
-}
-
-type counter struct {
-	Count int  `json:"count"`
-	State bool `json:"state"`
-}
-
-func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted) (bool, error) {
-	const (
-		DigitalInputState   string = "5500"
-		DigitalInputCounter string = "5501"
-	)
-
-	previousCount := c.Count
-
-	count, countOk := e.GetFloat64(DigitalInputCounter)
-	state, stateOk := e.GetBool(DigitalInputState)
-
-	if countOk {
-		c.Count = int(math.Ceil(count))
-		if stateOk {
-			c.State = state
-		}
-	} else if stateOk {
-		if state != c.State {
-			c.Count++
-			c.State = state
-		}
-	}
-
-	if previousCount != c.Count {
-		return true, nil
-	}
-
-	return false, nil
+	return "features.updated"
 }
