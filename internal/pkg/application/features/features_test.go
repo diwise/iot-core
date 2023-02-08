@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -42,21 +41,14 @@ func TestFindNonMatchingFeatureReturnsEmptySlice(t *testing.T) {
 }
 
 func TestCounter(t *testing.T) {
-	is := is.New(t)
-	ctx := context.Background()
+	is, ctx, msgctx := testSetup(t)
+
 	sensorId := "testId"
 
 	config := "featureId;counter;overflow;" + sensorId
 	input := bytes.NewBufferString(config)
 
 	reg, _ := NewRegistry(input)
-	messenger := &messaging.MsgContextMock{
-		PublishOnTopicFunc: func(ctx context.Context, message messaging.TopicMessage) error {
-			b, _ := json.MarshalIndent(message, " ", " ")
-			fmt.Println(string(b))
-			return nil
-		},
-	}
 
 	f, _ := reg.Find(ctx, sensorId)
 
@@ -64,26 +56,24 @@ func TestCounter(t *testing.T) {
 	pack := NewSenMLPack(sensorId, digitalInput, time.Now().UTC(), BoolValue("5500", true))
 	acceptedMessage := events.NewMessageAccepted("sensorID", pack)
 
-	f[0].Handle(ctx, acceptedMessage, messenger)
+	err := f[0].Handle(ctx, acceptedMessage, msgctx)
+	is.NoErr(err)
 
-	is.True(true)
+	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
+	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
+
+	const expectation string = `{"id":"featureId","type":"counter","subtype":"overflow","counter":{"count":1,"state":true}}`
+	is.Equal(string(generatedMessagePayload), expectation)
 }
 
 func TestLevel(t *testing.T) {
-	is := is.New(t)
-	ctx := context.Background()
+	is, ctx, msgctx := testSetup(t)
+
 	sensorId := "testId"
 
 	input := bytes.NewBufferString("featureId;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5")
 
 	reg, _ := NewRegistry(input)
-	messenger := &messaging.MsgContextMock{
-		PublishOnTopicFunc: func(ctx context.Context, message messaging.TopicMessage) error {
-			b, _ := json.MarshalIndent(message, " ", " ")
-			fmt.Println(string(b))
-			return nil
-		},
-	}
 
 	const distance string = "urn:oma:lwm2m:ext:3300"
 	v := 2.1
@@ -93,9 +83,25 @@ func TestLevel(t *testing.T) {
 	f, _ := reg.Find(ctx, sensorId)
 	is.Equal(len(f), 1) // should find one matching feature
 
-	err := f[0].Handle(ctx, acceptedMessage, messenger)
-
+	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
+
+	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
+	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
+
+	const expectation string = `{"id":"featureId","type":"level","subtype":"sand","level":{"current":1.4,"percent":56}}`
+	is.Equal(string(generatedMessagePayload), expectation)
+}
+
+func testSetup(t *testing.T) (*is.I, context.Context, *messaging.MsgContextMock) {
+	is := is.New(t)
+	msgctx := &messaging.MsgContextMock{
+		PublishOnTopicFunc: func(ctx context.Context, message messaging.TopicMessage) error {
+			return nil
+		},
+	}
+
+	return is, context.Background(), msgctx
 }
 
 type SenMLDecoratorFunc func(p *senML)
