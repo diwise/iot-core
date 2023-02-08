@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"net/http"
+	"os"
 
 	"github.com/diwise/iot-core/internal/pkg/application"
 	"github.com/diwise/iot-core/internal/pkg/application/features"
@@ -26,11 +28,15 @@ import (
 const serviceName string = "iot-core"
 
 var tracer = otel.Tracer(serviceName)
+var featuresConfigPath string
 
 func main() {
 	serviceVersion := buildinfo.SourceVersion()
 	ctx, logger, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
 	defer cleanup()
+
+	flag.StringVar(&featuresConfigPath, "features", "", "configuration file for features")
+	flag.Parse()
 
 	dmURL := env.GetVariableOrDie(logger, "DEV_MGMT_URL", "url to iot-device-mgmt")
 	tokenURL := env.GetVariableOrDie(logger, "OAUTH2_TOKEN_URL", "a valid oauth2 token URL")
@@ -55,13 +61,21 @@ func main() {
 	needToDecideThis := "application/json"
 	messenger.RegisterCommandHandler(needToDecideThis, newCommandHandler(messenger, m, app))
 
-	freg, err := features.NewRegistry()
-	if err != nil {
-		logger.Fatal().Err(err).Msg("unable to create features registry")
-	}
+	if featuresConfigPath != "" {
+		configFile, err := os.Open(featuresConfigPath)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("failed to open features config file")
+		}
+		defer configFile.Close()
 
-	routingKey := "message.accepted"
-	messenger.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(messenger, app, freg))
+		freg, err := features.NewRegistry(configFile)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("unable to create features registry")
+		}
+
+		routingKey := "message.accepted"
+		messenger.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(messenger, app, freg))
+	}
 
 	setupRouterAndWaitForConnections(logger)
 }
