@@ -15,7 +15,7 @@ func TestThatProcessMessageIsCalled(t *testing.T) {
 	is, m := testSetup(t)
 
 	app := NewIoTCoreApp("", m, zerolog.Logger{})
-	e, err := app.MessageAccepted(context.Background(), events.MessageReceived{})
+	e, err := app.MessageReceived(context.Background(), events.MessageReceived{})
 
 	is.NoErr(err)
 	is.True(e != nil)
