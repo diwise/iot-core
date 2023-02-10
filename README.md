@@ -19,7 +19,9 @@ flowchart LR
 ## Dependencies  
  - [iot-device-mgmt](https://github.com/diwise/iot-device-mgmt)
  - [RabbitMQ](https://www.rabbitmq.com/)
+
 # Build and test
+
 ## Build
 ```bash
 docker build -f deployments/Dockerfile . -t diwise/iot-core:latest
