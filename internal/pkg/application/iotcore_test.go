@@ -8,13 +8,12 @@ import (
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/farshidtz/senml/v2"
 	"github.com/matryer/is"
-	"github.com/rs/zerolog"
 )
 
 func TestThatProcessMessageIsCalled(t *testing.T) {
 	is, m := testSetup(t)
 
-	app := NewIoTCoreApp("", m, zerolog.Logger{})
+	app := New(m, nil)
 	e, err := app.MessageReceived(context.Background(), events.MessageReceived{})
 
 	is.NoErr(err)
