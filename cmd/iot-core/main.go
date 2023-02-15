@@ -52,7 +52,7 @@ func main() {
 		defer configFile.Close()
 	}
 
-	_, api_, err := initialize(dmClient, msgCtx, configFile)
+	_, api_, err := initialize(ctx, dmClient, msgCtx, configFile)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("initialization failed")
 	}
@@ -88,11 +88,11 @@ func createMessagingContextOrDie(ctx context.Context, logger zerolog.Logger) mes
 	return messenger
 }
 
-func initialize(dmClient client.DeviceManagementClient, msgctx messaging.MsgContext, fconfig io.Reader) (application.App, api.API, error) {
+func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msgctx messaging.MsgContext, fconfig io.Reader) (application.App, api.API, error) {
 
 	msgproc := messageprocessor.NewMessageProcessor(dmClient)
 
-	featuresRegistry, err := features.NewRegistry(fconfig)
+	featuresRegistry, err := features.NewRegistry(ctx, fconfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -166,5 +166,8 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 		}
 
 		err = app.MessageAccepted(ctx, evt, messenger)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to handle message")
+		}
 	}
 }

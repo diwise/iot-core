@@ -9,13 +9,14 @@ import (
 
 	"github.com/diwise/iot-core/internal/pkg/application/features/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/features/levels"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 type Registry interface {
 	Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Feature, error)
 }
 
-func NewRegistry(input io.Reader) (Registry, error) {
+func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 
 	r := &reg{
 		f: make(map[string]Feature),
@@ -62,6 +63,9 @@ func NewRegistry(input io.Reader) (Registry, error) {
 			numFeatures++
 		}
 	}
+
+	logger := logging.GetFromContext(ctx)
+	logger.Info().Msgf("loaded %d features from config file", numFeatures)
 
 	return r, nil
 }

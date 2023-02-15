@@ -8,6 +8,7 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 type App interface {
@@ -29,6 +30,9 @@ func New(msgproc messageprocessor.MessageProcessor, featureRegistry features.Reg
 
 func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
 	matchingFeatures, _ := a.features_.Find(ctx, features.MatchSensor(evt.Sensor))
+
+	logger := logging.GetFromContext(ctx)
+	logger.Debug().Msgf("found %d features connected to sensor %s", len(matchingFeatures), evt.Sensor)
 
 	for _, f := range matchingFeatures {
 		if err := f.Handle(ctx, &evt, msgctx); err != nil {

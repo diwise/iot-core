@@ -2,11 +2,13 @@ package features
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/diwise/iot-core/internal/pkg/application/features/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/features/levels"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 type Feature interface {
@@ -34,10 +36,12 @@ type feat struct {
 func (f *feat) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
 
 	changed, err := f.handle(ctx, e)
-
 	if err != nil {
 		return err
 	}
+
+	logger := logging.GetFromContext(ctx)
+	logger.Debug().Msgf("feature %s handled accepted message (changed = %v)", f.ID, changed)
 
 	if e.HasLocation() {
 		f.Location = &location{
@@ -54,6 +58,8 @@ func (f *feat) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	}
 
 	if changed {
+		body, _ := json.Marshal(f)
+		logger.Debug().Str("body", string(body)).Msgf("publishing message to %s", f.TopicName())
 		msgctx.PublishOnTopic(ctx, f)
 	}
 

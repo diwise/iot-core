@@ -22,7 +22,7 @@ func TestCounter(t *testing.T) {
 	config := "featureId;counter;overflow;" + sensorId
 	input := bytes.NewBufferString(config)
 
-	reg, _ := NewRegistry(input)
+	reg, _ := NewRegistry(ctx, input)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
@@ -46,7 +46,7 @@ func TestLevel(t *testing.T) {
 
 	input := bytes.NewBufferString("featureId;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5")
 
-	reg, _ := NewRegistry(input)
+	reg, _ := NewRegistry(ctx, input)
 
 	v := 2.1
 	pack := NewSenMLPack(sensorId, lwm2m.Distance, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))

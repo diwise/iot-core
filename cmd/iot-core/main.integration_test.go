@@ -22,7 +22,7 @@ func TestAPIFeaturesReturns200OK(t *testing.T) {
 	is, dmClient, msgCtx := testSetup(t)
 
 	fconf := bytes.NewBufferString("fid1;counter;overflow;internalID")
-	_, api, err := initialize(dmClient, msgCtx, fconf)
+	_, api, err := initialize(context.Background(), dmClient, msgCtx, fconf)
 	is.NoErr(err)
 
 	server := httptest.NewServer(api.Router())
@@ -37,7 +37,7 @@ func TestReceiveDigitalInputUpdateMessage(t *testing.T) {
 	sID := "internalID"
 
 	fconf := bytes.NewBufferString("fid1;counter;overflow;" + sID)
-	_, _, err := initialize(dmClient, msgCtx, fconf)
+	_, _, err := initialize(context.Background(), dmClient, msgCtx, fconf)
 	is.NoErr(err)
 
 	topicMessageHandler := msgCtx.RegisterTopicMessageHandlerCalls()[0].Handler
