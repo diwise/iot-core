@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 
+	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 )
 
@@ -33,6 +34,10 @@ type counter struct {
 }
 
 func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted) (bool, error) {
+	if !e.BaseNameMatches(lwm2m.DigitalInput) {
+		return false, nil
+	}
+
 	const (
 		DigitalInputState   string = "5500"
 		DigitalInputCounter string = "5501"

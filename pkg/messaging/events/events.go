@@ -229,6 +229,11 @@ func (m MessageAccepted) BaseName() string {
 	return m.Pack[0].BaseName
 }
 
+func (m MessageAccepted) BaseNameMatches(name string) bool {
+	baseName := m.BaseName()
+	return (baseName == name)
+}
+
 func (m MessageAccepted) BaseTime() float64 {
 	return m.Pack[0].BaseTime
 }

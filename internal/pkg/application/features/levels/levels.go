@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 )
 
@@ -74,6 +75,10 @@ type level struct {
 }
 
 func (l *level) Handle(ctx context.Context, e *events.MessageAccepted) (bool, error) {
+
+	if !e.BaseNameMatches(lwm2m.Distance) {
+		return false, nil
+	}
 
 	const SensorValue string = "5700"
 	distance, ok := e.GetFloat64(SensorValue)
