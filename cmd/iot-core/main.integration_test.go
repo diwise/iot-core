@@ -49,7 +49,7 @@ func TestReceiveDigitalInputUpdateMessage(t *testing.T) {
 	topicMessageHandler(ctx, amqp091.Delivery{Body: newStateJSON(sID, false)}, l)
 	topicMessageHandler(ctx, amqp091.Delivery{Body: newStateJSON(sID, true)}, l)
 
-	is.Equal(len(msgCtx.PublishOnTopicCalls()), 2) // should have been called once
+	is.Equal(len(msgCtx.PublishOnTopicCalls()), 3) // should have been called three times
 	msg := msgCtx.PublishOnTopicCalls()[1].Message
 	b, _ := json.Marshal(msg)
 
