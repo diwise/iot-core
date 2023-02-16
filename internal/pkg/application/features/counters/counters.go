@@ -39,6 +39,7 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted) (bool, 
 	)
 
 	previousCount := c.Count_
+	previousState := c.State_
 
 	count, countOk := e.GetFloat64(DigitalInputCounter)
 	state, stateOk := e.GetBool(DigitalInputState)
@@ -57,7 +58,7 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted) (bool, 
 		}
 	}
 
-	return (previousCount != c.Count_), nil
+	return (previousCount != c.Count_ || previousState != c.State_), nil
 }
 
 func (c *counter) Count() int {
