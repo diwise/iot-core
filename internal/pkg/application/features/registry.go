@@ -9,6 +9,7 @@ import (
 
 	"github.com/diwise/iot-core/internal/pkg/application/features/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/features/levels"
+	"github.com/diwise/iot-core/internal/pkg/application/features/presences"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
@@ -55,6 +56,9 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 				}
 
 				f.handle = f.Level.Handle
+			} else if f.Type == presences.FeatureTypeName {
+				f.Presence = presences.New()
+				f.handle = f.Presence.Handle
 			} else if numFeatures > 0 { // allow a failure on the first line
 				return nil, fmt.Errorf("unable to parse feature config line: \"%s\"", line)
 			}

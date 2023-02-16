@@ -6,6 +6,7 @@ import (
 
 	"github.com/diwise/iot-core/internal/pkg/application/features/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/features/levels"
+	"github.com/diwise/iot-core/internal/pkg/application/features/presences"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
@@ -27,8 +28,9 @@ type feat struct {
 	Location *location `json:"location,omitempty"`
 	Tenant   string    `json:"tenant,omitempty"`
 
-	Counter counters.Counter `json:"counter,omitempty"`
-	Level   levels.Level     `json:"level,omitempty"`
+	Counter  counters.Counter   `json:"counter,omitempty"`
+	Level    levels.Level       `json:"level,omitempty"`
+	Presence presences.Presence `json:"presence,omitempty"`
 
 	handle func(context.Context, *events.MessageAccepted) (bool, error)
 }
