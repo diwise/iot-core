@@ -56,6 +56,10 @@ func (f *feat) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	// 			so this lazy init version wont work in the long run ...
 	tenant, ok := e.GetString("tenant")
 	if ok {
+		// Temporary fix to force an update the first time a feature is called
+		if f.Tenant == "" {
+			changed = true
+		}
 		f.Tenant = tenant
 	}
 
