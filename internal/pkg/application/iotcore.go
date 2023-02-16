@@ -2,33 +2,52 @@ package application
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/diwise/iot-core/internal/pkg/application/features"
 	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
-	"github.com/rs/zerolog"
+	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
-type IoTCoreApp interface {
-	MessageAccepted(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
+type App interface {
+	MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error
+	MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
 }
 
-type iotCoreApp struct {
-	messageProcessor messageprocessor.MessageProcessor
-	log              zerolog.Logger
+type app struct {
+	msgproc_  messageprocessor.MessageProcessor
+	features_ features.Registry
 }
 
-func NewIoTCoreApp(serviceName string, m messageprocessor.MessageProcessor, logger zerolog.Logger) IoTCoreApp {
-	return &iotCoreApp{
-		messageProcessor: m,
-		log:              logger,
+func New(msgproc messageprocessor.MessageProcessor, featureRegistry features.Registry) App {
+	return &app{
+		msgproc_:  msgproc,
+		features_: featureRegistry,
 	}
 }
 
-func (a *iotCoreApp) MessageAccepted(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
-	if messageAccepted, err := a.messageProcessor.ProcessMessage(ctx, msg); err == nil {
-		return messageAccepted, nil
-	} else {
-		a.log.Error().Err(err).Msg("failed to process message")
-		return nil, err
+func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
+	matchingFeatures, _ := a.features_.Find(ctx, features.MatchSensor(evt.Sensor))
+
+	logger := logging.GetFromContext(ctx)
+	logger.Debug().Msgf("found %d features connected to sensor %s", len(matchingFeatures), evt.Sensor)
+
+	for _, f := range matchingFeatures {
+		if err := f.Handle(ctx, &evt, msgctx); err != nil {
+			return err
+		}
 	}
+
+	return nil
+}
+
+func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
+	messageAccepted, err := a.msgproc_.ProcessMessage(ctx, msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process message: %w", err)
+	}
+
+	return messageAccepted, nil
 }
