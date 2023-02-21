@@ -25,6 +25,7 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 
 	var err error
 
+	numErrors := 0
 	numFeatures := 0
 
 	scanner := bufio.NewScanner(input)
@@ -59,8 +60,12 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 			} else if f.Type == presences.FeatureTypeName {
 				f.Presence = presences.New()
 				f.handle = f.Presence.Handle
-			} else if numFeatures > 0 { // allow a failure on the first line
-				return nil, fmt.Errorf("unable to parse feature config line: \"%s\"", line)
+			} else {
+				numErrors++
+				if numErrors > 1 {
+					return nil, fmt.Errorf("unable to parse feature config line: \"%s\"", line)
+				}
+				continue
 			}
 
 			r.f[tokens[3]] = f
