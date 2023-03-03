@@ -54,7 +54,7 @@ func newDistance(distance float64) *events.MessageAccepted {
 const messageJSONFormat string = `{
 	"sensorID":"sensorID",
 	"pack":[
-		{"bn":"urn:oma:lwm2m:ext:3300","bt":1675801037,"n":"0","vs":"testId"},
+		{"bn":"urn:oma:lwm2m:ext:3330","bt":1675801037,"n":"0","vs":"testId"},
 		{"n":"5700","u":"m","v":%f}
 	],
 	"timestamp":"2023-02-07T20:17:17.312028Z"
