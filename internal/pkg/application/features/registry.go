@@ -10,6 +10,7 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/features/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/features/levels"
 	"github.com/diwise/iot-core/internal/pkg/application/features/presences"
+	"github.com/diwise/iot-core/internal/pkg/application/features/waterqualities"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
@@ -60,6 +61,9 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 			} else if f.Type == presences.FeatureTypeName {
 				f.Presence = presences.New()
 				f.handle = f.Presence.Handle
+			} else if f.Type == waterqualities.FeatureTypeName {
+				f.WaterQuality = waterqualities.New()
+				f.handle = f.WaterQuality.Handle
 			} else {
 				numErrors++
 				if numErrors > 1 {

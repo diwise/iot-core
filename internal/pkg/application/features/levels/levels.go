@@ -129,5 +129,5 @@ func hasChanged(previousLevel, newLevel float64) bool {
 }
 
 func isNotZero(value float64) bool {
-	return (math.Abs(value) >= 0.01)
+	return (math.Abs(value) >= 0.001)
 }
