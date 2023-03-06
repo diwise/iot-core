@@ -34,6 +34,8 @@ func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted) (
 	temp, tempOk := e.GetFloat64(SensorValue)
 
 	if tempOk {
+		temp = math.Round(temp*10) / 10
+
 		oldTemp := wq.Temperature
 		wq.Temperature = temp
 		return hasChanged(oldTemp, temp), nil

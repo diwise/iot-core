@@ -65,6 +65,32 @@ func TestLevel(t *testing.T) {
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
+func TestWaterQuality(t *testing.T) {
+	is, ctx, msgctx := testSetup(t)
+
+	sensorId := "testId"
+
+	input := bytes.NewBufferString("featureId;waterquality;beach;" + sensorId)
+
+	reg, _ := NewRegistry(ctx, input)
+
+	v := 2.34
+	pack := NewSenMLPack(sensorId, lwm2m.Temperature, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))
+	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
+
+	f, _ := reg.Find(ctx, MatchSensor(sensorId))
+	is.Equal(len(f), 1) // should find one matching feature
+
+	err := f[0].Handle(ctx, acceptedMessage, msgctx)
+	is.NoErr(err)
+
+	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
+	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
+
+	const expectation string = `{"id":"featureId","type":"waterquality","subtype":"beach","waterquality":{"temperature":2.3}}`
+	is.Equal(string(generatedMessagePayload), expectation)
+}
+
 func testSetup(t *testing.T) (*is.I, context.Context, *messaging.MsgContextMock) {
 	is := is.New(t)
 	msgctx := &messaging.MsgContextMock{
