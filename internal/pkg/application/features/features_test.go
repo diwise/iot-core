@@ -69,7 +69,7 @@ func TestLevelFromAnAngle(t *testing.T) {
 	is, ctx, msgctx := testSetup(t)
 
 	sensorId := "testId"
-	input := bytes.NewBufferString("featureId;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5,alpha=30")
+	input := bytes.NewBufferString("featureId;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5,angle=30")
 	reg, _ := NewRegistry(ctx, input)
 
 	v := 2.1

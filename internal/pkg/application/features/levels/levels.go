@@ -36,7 +36,7 @@ func New(config string) (Level, error) {
 	for _, s := range settings {
 		pair := strings.Split(s, "=")
 		if len(pair) == 2 {
-			if pair[0] == "alpha" {
+			if pair[0] == "angle" {
 				angle, err := strconv.ParseFloat(pair[1], 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse level angle \"%s\": %w", s, err)
