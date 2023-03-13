@@ -65,6 +65,30 @@ func TestLevel(t *testing.T) {
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
+func TestLevelFromAnAngle(t *testing.T) {
+	is, ctx, msgctx := testSetup(t)
+
+	sensorId := "testId"
+	input := bytes.NewBufferString("featureId;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5,alpha=30")
+	reg, _ := NewRegistry(ctx, input)
+
+	v := 2.1
+	pack := NewSenMLPack(sensorId, lwm2m.Distance, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
+	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
+
+	f, _ := reg.Find(ctx, MatchSensor(sensorId))
+	is.Equal(len(f), 1) // should find one matching feature
+
+	err := f[0].Handle(ctx, acceptedMessage, msgctx)
+	is.NoErr(err)
+
+	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
+	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
+
+	const expectation string = `{"id":"featureId","type":"level","subtype":"sand","level":{"current":1.21,"percent":48.4}}`
+	is.Equal(string(generatedMessagePayload), expectation)
+}
+
 func TestWaterQuality(t *testing.T) {
 	is, ctx, msgctx := testSetup(t)
 

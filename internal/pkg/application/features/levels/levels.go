@@ -25,11 +25,7 @@ type Level interface {
 func New(config string) (Level, error) {
 
 	lvl := &level{
-		maxDistance: 0.0,
-		maxLevel:    0.0,
-		meanLevel:   0.0,
-
-		Current_: 0.0,
+		cosAlpha: 1.0,
 	}
 
 	config = strings.ReplaceAll(config, " ", "")
@@ -40,7 +36,17 @@ func New(config string) (Level, error) {
 	for _, s := range settings {
 		pair := strings.Split(s, "=")
 		if len(pair) == 2 {
-			if pair[0] == "maxd" {
+			if pair[0] == "alpha" {
+				angle, err := strconv.ParseFloat(pair[1], 64)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse level angle \"%s\": %w", s, err)
+				}
+				if angle < 0 || angle >= 90.0 {
+					return nil, fmt.Errorf("level angle %f not within allowed [0, 90) range", angle)
+				}
+				// precalculate the cosine of the mount angle (after conversion to radians)
+				lvl.cosAlpha = math.Cos(angle * math.Pi / 180.0)
+			} else if pair[0] == "maxd" {
 				lvl.maxDistance, err = strconv.ParseFloat(pair[1], 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse level config \"%s\": %w", s, err)
@@ -65,6 +71,7 @@ func New(config string) (Level, error) {
 }
 
 type level struct {
+	cosAlpha    float64
 	maxDistance float64
 	maxLevel    float64
 	meanLevel   float64
@@ -86,7 +93,12 @@ func (l *level) Handle(ctx context.Context, e *events.MessageAccepted) (bool, er
 	if ok {
 		previousLevel := l.Current_
 
-		l.Current_ = l.maxDistance - distance
+		// Calculate the current level using the configured angle (if any) and round to two decimals
+		l.Current_ = math.Round((l.maxDistance-distance)*l.cosAlpha*100) / 100.0
+
+		if !hasChanged(previousLevel, l.Current_) {
+			return false, nil
+		}
 
 		if isNotZero(l.maxLevel) {
 			pct := math.Min((l.Current_*100.0)/l.maxLevel, 100.0)
@@ -98,7 +110,7 @@ func (l *level) Handle(ctx context.Context, e *events.MessageAccepted) (bool, er
 			l.Offset_ = &offset
 		}
 
-		return hasChanged(previousLevel, l.Current_), nil
+		return true, nil
 	}
 
 	return false, nil
