@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/diwise/iot-core/internal/pkg/application/features"
+	"github.com/diwise/iot-core/internal/pkg/application/functions"
 )
 
-func NewQueryFeaturesHandler(registry features.Registry) http.HandlerFunc {
+func NewQueryFunctionsHandler(registry functions.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		features, _ := registry.Find(r.Context(), features.MatchAll())
-		b, _ := json.MarshalIndent(features, "  ", "  ")
+		functions, _ := registry.Find(r.Context(), functions.MatchAll())
+		b, _ := json.MarshalIndent(functions, "  ", "  ")
 
 		w.WriteHeader(http.StatusOK)
 		w.Write(b)

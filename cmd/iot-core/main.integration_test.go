@@ -18,7 +18,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func TestAPIFeaturesReturns200OK(t *testing.T) {
+func TestAPIfunctionsReturns200OK(t *testing.T) {
 	is, dmClient, msgCtx := testSetup(t)
 
 	fconf := bytes.NewBufferString("fid1;counter;overflow;internalID")
@@ -28,7 +28,7 @@ func TestAPIFeaturesReturns200OK(t *testing.T) {
 	server := httptest.NewServer(api.Router())
 	defer server.Close()
 
-	resp, _ := testRequest(is, server, http.MethodGet, "/api/features", nil)
+	resp, _ := testRequest(is, server, http.MethodGet, "/api/functions", nil)
 	is.Equal(resp.StatusCode, http.StatusOK)
 }
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/diwise/iot-core/internal/pkg/application/features"
+	"github.com/diwise/iot-core/internal/pkg/application/functions"
 	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -17,24 +17,24 @@ type App interface {
 }
 
 type app struct {
-	msgproc_  messageprocessor.MessageProcessor
-	features_ features.Registry
+	msgproc_   messageprocessor.MessageProcessor
+	functions_ functions.Registry
 }
 
-func New(msgproc messageprocessor.MessageProcessor, featureRegistry features.Registry) App {
+func New(msgproc messageprocessor.MessageProcessor, featureRegistry functions.Registry) App {
 	return &app{
-		msgproc_:  msgproc,
-		features_: featureRegistry,
+		msgproc_:   msgproc,
+		functions_: featureRegistry,
 	}
 }
 
 func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
-	matchingFeatures, _ := a.features_.Find(ctx, features.MatchSensor(evt.Sensor))
+	matchingfunctions, _ := a.functions_.Find(ctx, functions.MatchSensor(evt.Sensor))
 
 	logger := logging.GetFromContext(ctx)
-	logger.Debug().Msgf("found %d features connected to sensor %s", len(matchingFeatures), evt.Sensor)
+	logger.Debug().Msgf("found %d functions connected to sensor %s", len(matchingfunctions), evt.Sensor)
 
-	for _, f := range matchingFeatures {
+	for _, f := range matchingfunctions {
 		if err := f.Handle(ctx, &evt, msgctx); err != nil {
 			return err
 		}
