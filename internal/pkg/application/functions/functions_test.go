@@ -1,4 +1,4 @@
-package features
+package functions
 
 import (
 	"bytes"

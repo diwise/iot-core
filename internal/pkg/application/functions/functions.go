@@ -1,19 +1,19 @@
-package features
+package functions
 
 import (
 	"context"
 	"encoding/json"
 
-	"github.com/diwise/iot-core/internal/pkg/application/features/counters"
-	"github.com/diwise/iot-core/internal/pkg/application/features/levels"
-	"github.com/diwise/iot-core/internal/pkg/application/features/presences"
-	"github.com/diwise/iot-core/internal/pkg/application/features/waterqualities"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/presences"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/waterqualities"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
-type Feature interface {
+type Function interface {
 	Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error
 }
 
@@ -22,7 +22,7 @@ type location struct {
 	Longitude float64 `json:"longitude"`
 }
 
-type feat struct {
+type fnct struct {
 	ID       string    `json:"id"`
 	Type     string    `json:"type"`
 	SubType  string    `json:"subtype"`
@@ -37,7 +37,7 @@ type feat struct {
 	handle func(context.Context, *events.MessageAccepted) (bool, error)
 }
 
-func (f *feat) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
+func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
 
 	changed, err := f.handle(ctx, e)
 	if err != nil {
@@ -74,10 +74,10 @@ func (f *feat) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	return nil
 }
 
-func (f *feat) ContentType() string {
+func (f *fnct) ContentType() string {
 	return "application/json"
 }
 
-func (f *feat) TopicName() string {
+func (f *fnct) TopicName() string {
 	return "feature.updated"
 }

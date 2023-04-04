@@ -20,7 +20,7 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal
 WORKDIR /opt/diwise
 
 COPY --from=builder --chown=1001 /app/cmd/iot-core/iot-core /opt/diwise
-COPY --chown=1001 assets/config/features.csv /opt/diwise/config/features.csv
+COPY --chown=1001 assets/config/functions.csv /opt/diwise/config/functions.csv
 
 RUN chown 1001 /opt/diwise
 RUN chmod 700 /opt/diwise

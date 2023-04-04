@@ -1,4 +1,4 @@
-package features
+package functions
 
 import (
 	"bufio"
@@ -7,27 +7,27 @@ import (
 	"io"
 	"strings"
 
-	"github.com/diwise/iot-core/internal/pkg/application/features/counters"
-	"github.com/diwise/iot-core/internal/pkg/application/features/levels"
-	"github.com/diwise/iot-core/internal/pkg/application/features/presences"
-	"github.com/diwise/iot-core/internal/pkg/application/features/waterqualities"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/presences"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/waterqualities"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 type Registry interface {
-	Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Feature, error)
+	Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error)
 }
 
 func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 
 	r := &reg{
-		f: make(map[string]Feature),
+		f: make(map[string]Function),
 	}
 
 	var err error
 
 	numErrors := 0
-	numFeatures := 0
+	numFunctions := 0
 
 	scanner := bufio.NewScanner(input)
 	for scanner.Scan() {
@@ -37,7 +37,7 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 		tokenCount := len(tokens)
 
 		if tokenCount >= 4 {
-			f := &feat{
+			f := &fnct{
 				ID:      tokens[0],
 				Type:    tokens[1],
 				SubType: tokens[2],
@@ -73,27 +73,27 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 			}
 
 			r.f[tokens[3]] = f
-			numFeatures++
+			numFunctions++
 		}
 	}
 
 	logger := logging.GetFromContext(ctx)
-	logger.Info().Msgf("loaded %d features from config file", numFeatures)
+	logger.Info().Msgf("loaded %d functions from config file", numFunctions)
 
 	return r, nil
 }
 
 type reg struct {
-	f map[string]Feature
+	f map[string]Function
 }
 
-func (r *reg) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Feature, error) {
+func (r *reg) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error) {
 
 	if len(matchers) == 0 {
 		return nil, fmt.Errorf("at least one matcher must be supplied to Find")
 	}
 
-	var result []Feature
+	var result []Function
 
 	// TODO: Handle multiple chained matchers
 	for _, match := range matchers {
@@ -103,11 +103,11 @@ func (r *reg) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Feat
 	return result, nil
 }
 
-type RegistryMatcherFunc func(r *reg) []Feature
+type RegistryMatcherFunc func(r *reg) []Function
 
 func MatchAll() RegistryMatcherFunc {
-	return func(r *reg) []Feature {
-		result := make([]Feature, 0, len(r.f))
+	return func(r *reg) []Function {
+		result := make([]Function, 0, len(r.f))
 		for _, f := range r.f {
 			result = append(result, f)
 		}
@@ -116,12 +116,12 @@ func MatchAll() RegistryMatcherFunc {
 }
 
 func MatchSensor(sensorId string) RegistryMatcherFunc {
-	return func(r *reg) []Feature {
+	return func(r *reg) []Function {
 		f, ok := r.f[sensorId]
 		if !ok {
-			return []Feature{}
+			return []Function{}
 		}
 
-		return []Feature{f}
+		return []Function{f}
 	}
 }
