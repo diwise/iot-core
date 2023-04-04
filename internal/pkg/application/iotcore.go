@@ -29,12 +29,12 @@ func New(msgproc messageprocessor.MessageProcessor, featureRegistry functions.Re
 }
 
 func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
-	matchingfunctions, _ := a.functions_.Find(ctx, functions.MatchSensor(evt.Sensor))
+	matchingFunctions, _ := a.functions_.Find(ctx, functions.MatchSensor(evt.Sensor))
 
 	logger := logging.GetFromContext(ctx)
-	logger.Debug().Msgf("found %d functions connected to sensor %s", len(matchingfunctions), evt.Sensor)
+	logger.Debug().Msgf("found %d functions connected to sensor %s", len(matchingFunctions), evt.Sensor)
 
-	for _, f := range matchingfunctions {
+	for _, f := range matchingFunctions {
 		if err := f.Handle(ctx, &evt, msgctx); err != nil {
 			return err
 		}

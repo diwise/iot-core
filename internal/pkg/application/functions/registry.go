@@ -27,7 +27,7 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 	var err error
 
 	numErrors := 0
-	numfunctions := 0
+	numFunctions := 0
 
 	scanner := bufio.NewScanner(input)
 	for scanner.Scan() {
@@ -73,12 +73,12 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 			}
 
 			r.f[tokens[3]] = f
-			numfunctions++
+			numFunctions++
 		}
 	}
 
 	logger := logging.GetFromContext(ctx)
-	logger.Info().Msgf("loaded %d functions from config file", numfunctions)
+	logger.Info().Msgf("loaded %d functions from config file", numFunctions)
 
 	return r, nil
 }
