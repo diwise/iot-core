@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/diwise/iot-core/internal/pkg/application/features"
@@ -12,7 +13,7 @@ type API interface {
 	Router() *chi.Mux
 }
 
-func New(registry features.Registry) API {
+func New(ctx context.Context, registry features.Registry) API {
 	api_ := &api{
 		router: chi.NewRouter(),
 	}
@@ -24,7 +25,8 @@ func New(registry features.Registry) API {
 	}).Handler)
 
 	// TODO: Introduce an authenticator to manage tenant access
-	api_.router.Get("/api/features", NewQueryFeaturesHandler(registry))
+	api_.router.Get("/api/features", NewQueryFeaturesHandler(ctx, registry))
+	api_.router.Get("/api/features/{id}/history", NewQueryFeatureHistoryHandler(ctx, registry))
 
 	api_.router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

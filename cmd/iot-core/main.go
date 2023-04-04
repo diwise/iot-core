@@ -105,7 +105,7 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msg
 	routingKey := "message.accepted"
 	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(msgctx, app))
 
-	return app, api.New(featuresRegistry), nil
+	return app, api.New(ctx, featuresRegistry), nil
 }
 
 func newCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {

@@ -14,6 +14,7 @@ import (
 )
 
 type Feature interface {
+	ID() string
 	Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error
 }
 
@@ -23,7 +24,7 @@ type location struct {
 }
 
 type feat struct {
-	ID       string    `json:"id"`
+	ID_      string    `json:"id"`
 	Type     string    `json:"type"`
 	SubType  string    `json:"subtype"`
 	Location *location `json:"location,omitempty"`
@@ -37,6 +38,10 @@ type feat struct {
 	handle func(context.Context, *events.MessageAccepted) (bool, error)
 }
 
+func (f *feat) ID() string {
+	return f.ID_
+}
+
 func (f *feat) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
 
 	changed, err := f.handle(ctx, e)
@@ -45,7 +50,7 @@ func (f *feat) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	}
 
 	logger := logging.GetFromContext(ctx)
-	logger.Debug().Msgf("feature %s handled accepted message (changed = %v)", f.ID, changed)
+	logger.Debug().Msgf("feature %s handled accepted message (changed = %v)", f.ID(), changed)
 
 	if e.HasLocation() {
 		f.Location = &location{

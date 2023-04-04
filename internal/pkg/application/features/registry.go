@@ -3,6 +3,7 @@ package features
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -16,6 +17,7 @@ import (
 
 type Registry interface {
 	Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Feature, error)
+	Get(ctx context.Context, featureID string) (Feature, error)
 }
 
 func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
@@ -38,7 +40,7 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 
 		if tokenCount >= 4 {
 			f := &feat{
-				ID:      tokens[0],
+				ID_:     tokens[0],
 				Type:    tokens[1],
 				SubType: tokens[2],
 			}
@@ -101,6 +103,16 @@ func (r *reg) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Feat
 	}
 
 	return result, nil
+}
+
+func (r *reg) Get(ctx context.Context, featureID string) (Feature, error) {
+	for _, f := range r.f {
+		if f.ID() == featureID {
+			return f, nil
+		}
+	}
+
+	return nil, errors.New("no such feature")
 }
 
 type RegistryMatcherFunc func(r *reg) []Feature
