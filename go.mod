@@ -1,6 +1,6 @@
 module github.com/diwise/iot-core
 
-go 1.19
+go 1.20
 
 require (
 	github.com/diwise/iot-device-mgmt v0.0.0-20230127161341-e3b78a8d9462
