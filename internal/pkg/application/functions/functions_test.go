@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -103,6 +104,7 @@ func TestTimer(t *testing.T) {
 
 	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, time.Now().UTC(), BoolValue("5500", true))
 	acceptedMessage := events.NewMessageAccepted("sensorID", pack)
+	startTime := acceptedMessage.Timestamp
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
@@ -110,8 +112,8 @@ func TestTimer(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectation string = `{"id":"featureId","type":"timer","subtype":"overflow","timer":{"startTime":"2023-04-12T09:26:37.606627Z","state":true}}`
-	is.Equal(string(generatedMessagePayload), expectation)
+	const expectationFmt string = `{"id":"featureId","type":"timer","subtype":"overflow","timer":{"startTime":"%s","state":true}}`
+	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, startTime))
 }
 
 func TestWaterQuality(t *testing.T) {
