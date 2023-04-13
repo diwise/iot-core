@@ -1,9 +1,10 @@
-package features
+package functions
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -87,6 +88,32 @@ func TestLevelFromAnAngle(t *testing.T) {
 
 	const expectation string = `{"id":"featureId","type":"level","subtype":"sand","level":{"current":1.21,"percent":48.4}}`
 	is.Equal(string(generatedMessagePayload), expectation)
+}
+
+func TestTimer(t *testing.T) {
+	is, ctx, msgctx := testSetup(t)
+
+	sensorId := "testId"
+
+	config := "featureId;timer;overflow;" + sensorId
+	input := bytes.NewBufferString(config)
+
+	reg, _ := NewRegistry(ctx, input)
+
+	f, _ := reg.Find(ctx, MatchSensor(sensorId))
+
+	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, time.Now().UTC(), BoolValue("5500", true))
+	acceptedMessage := events.NewMessageAccepted("sensorID", pack)
+	startTime := acceptedMessage.Timestamp
+
+	err := f[0].Handle(ctx, acceptedMessage, msgctx)
+	is.NoErr(err)
+
+	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
+	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
+
+	const expectationFmt string = `{"id":"featureId","type":"timer","subtype":"overflow","timer":{"startTime":"%s","state":true}}`
+	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, startTime))
 }
 
 func TestWaterQuality(t *testing.T) {

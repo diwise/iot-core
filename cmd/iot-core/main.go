@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/diwise/iot-core/internal/pkg/application"
-	"github.com/diwise/iot-core/internal/pkg/application/features"
+	"github.com/diwise/iot-core/internal/pkg/application/functions"
 	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/internal/pkg/presentation/api"
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -28,14 +28,14 @@ import (
 const serviceName string = "iot-core"
 
 var tracer = otel.Tracer(serviceName)
-var featuresConfigPath string
+var functionsConfigPath string
 
 func main() {
 	serviceVersion := buildinfo.SourceVersion()
 	ctx, logger, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
 	defer cleanup()
 
-	flag.StringVar(&featuresConfigPath, "features", "/opt/diwise/config/features.csv", "configuration file for features")
+	flag.StringVar(&functionsConfigPath, "functions", "/opt/diwise/config/functions.csv", "configuration file for functions")
 	flag.Parse()
 
 	dmClient := createDeviceManagementClientOrDie(ctx, logger)
@@ -44,10 +44,10 @@ func main() {
 	var configFile *os.File
 	var err error
 
-	if featuresConfigPath != "" {
-		configFile, err = os.Open(featuresConfigPath)
+	if functionsConfigPath != "" {
+		configFile, err = os.Open(functionsConfigPath)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("failed to open features config file")
+			logger.Fatal().Err(err).Msg("failed to open functions config file")
 		}
 		defer configFile.Close()
 	}
@@ -92,12 +92,12 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msg
 
 	msgproc := messageprocessor.NewMessageProcessor(dmClient)
 
-	featuresRegistry, err := features.NewRegistry(ctx, fconfig)
+	functionsRegistry, err := functions.NewRegistry(ctx, fconfig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	app := application.New(msgproc, featuresRegistry)
+	app := application.New(msgproc, functionsRegistry)
 
 	needToDecideThis := "application/json"
 	msgctx.RegisterCommandHandler(needToDecideThis, newCommandHandler(msgctx, app))
@@ -105,7 +105,7 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msg
 	routingKey := "message.accepted"
 	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(msgctx, app))
 
-	return app, api.New(ctx, featuresRegistry), nil
+	return app, api.New(ctx, functionsRegistry), nil
 }
 
 func newCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/diwise/iot-core/internal/pkg/application/features"
+	"github.com/diwise/iot-core/internal/pkg/application/functions"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
@@ -17,36 +17,36 @@ import (
 
 var tracer = otel.Tracer("iot-core/api")
 
-func NewQueryFeaturesHandler(ctx context.Context, registry features.Registry) http.HandlerFunc {
+func NewQueryFunctionsHandler(ctx context.Context, registry functions.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		features, _ := registry.Find(r.Context(), features.MatchAll())
-		b, _ := json.MarshalIndent(features, "  ", "  ")
+		functions, _ := registry.Find(r.Context(), functions.MatchAll())
+		b, _ := json.MarshalIndent(functions, "  ", "  ")
 
 		w.WriteHeader(http.StatusOK)
 		w.Write(b)
 	}
 }
 
-func NewQueryFeatureHistoryHandler(ctx context.Context, registry features.Registry) http.HandlerFunc {
+func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Registry) http.HandlerFunc {
 	logger := logging.GetFromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
-		ctx, span := tracer.Start(r.Context(), "retrieve-feature-history")
+		ctx, span := tracer.Start(r.Context(), "retrieve-function-history")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
 		_, ctx, log := o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
-		featureID, _ := url.QueryUnescape(chi.URLParam(r, "id"))
-		if featureID == "" {
-			err = fmt.Errorf("no feature id is supplied in query")
+		functionID, _ := url.QueryUnescape(chi.URLParam(r, "id"))
+		if functionID == "" {
+			err = fmt.Errorf("no function id is supplied in query")
 			log.Error().Err(err).Msg("bad request")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		feature, err := registry.Get(ctx, featureID)
-		b, _ := json.MarshalIndent(feature, "  ", "  ")
+		function, err := registry.Get(ctx, functionID)
+		b, _ := json.MarshalIndent(function, "  ", "  ")
 
 		w.WriteHeader(http.StatusOK)
 		w.Write(b)

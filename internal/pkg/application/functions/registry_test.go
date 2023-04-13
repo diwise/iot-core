@@ -1,4 +1,4 @@
-package features
+package functions
 
 import (
 	"bytes"
@@ -32,5 +32,5 @@ func TestFindNonMatchingFeatureReturnsEmptySlice(t *testing.T) {
 	matches, err := reg.Find(context.Background(), MatchSensor("noSuchSensor"))
 	is.NoErr(err)
 
-	is.Equal(len(matches), 0) // should not find any matching features
+	is.Equal(len(matches), 0) // should not find any matching functions
 }
