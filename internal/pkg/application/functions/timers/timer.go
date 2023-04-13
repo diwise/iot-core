@@ -59,9 +59,8 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted) (bool, er
 			t.StartTime = start
 			t.State_ = state
 
-			t.EndTime = &time.Time{} // setting end time and duration to nil values to ensure we don't send out the wrong ones later
-			duration := 0 * time.Hour
-			t.Duration = &duration
+			t.EndTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
+			t.Duration = nil
 
 		} else if state != previousState && !state {
 			end, err := time.Parse(time.RFC3339, e.Timestamp)
