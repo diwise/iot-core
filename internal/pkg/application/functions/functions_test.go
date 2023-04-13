@@ -89,6 +89,31 @@ func TestLevelFromAnAngle(t *testing.T) {
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
+func TestTimer(t *testing.T) {
+	is, ctx, msgctx := testSetup(t)
+
+	sensorId := "testId"
+
+	config := "featureId;timer;overflow;" + sensorId
+	input := bytes.NewBufferString(config)
+
+	reg, _ := NewRegistry(ctx, input)
+
+	f, _ := reg.Find(ctx, MatchSensor(sensorId))
+
+	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, time.Now().UTC(), BoolValue("5500", true))
+	acceptedMessage := events.NewMessageAccepted("sensorID", pack)
+
+	err := f[0].Handle(ctx, acceptedMessage, msgctx)
+	is.NoErr(err)
+
+	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
+	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
+
+	const expectation string = `{"id":"featureId","type":"timer","subtype":"overflow","timer":{"startTime":"2023-04-12T09:26:37.606627Z","state":true}}`
+	is.Equal(string(generatedMessagePayload), expectation)
+}
+
 func TestWaterQuality(t *testing.T) {
 	is, ctx, msgctx := testSetup(t)
 
