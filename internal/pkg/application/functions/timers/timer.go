@@ -18,12 +18,9 @@ type Timer interface {
 }
 
 func New() Timer {
-	duration := 0 * time.Hour
 
 	t := &timer{
 		StartTime: time.Time{},
-		EndTime:   &time.Time{},
-		Duration:  &duration,
 	}
 
 	return t
@@ -72,7 +69,6 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted) (bool, er
 			t.State_ = state
 
 			duration := t.EndTime.Sub(t.StartTime)
-
 			t.Duration = &duration
 		}
 
