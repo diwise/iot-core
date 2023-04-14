@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	FeatureTypeName string = "waterquality"
+	FunctionTypeName string = "waterquality"
 )
 
 type WaterQuality interface {

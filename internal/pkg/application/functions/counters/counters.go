@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	FeatureTypeName string = "counter"
+	FunctionTypeName string = "counter"
 )
 
 type Counter interface {

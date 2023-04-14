@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	FeatureTypeName string = "level"
+	FunctionTypeName string = "level"
 )
 
 type Level interface {

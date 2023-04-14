@@ -54,7 +54,7 @@ func TestLevel(t *testing.T) {
 	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
-	is.Equal(len(f), 1) // should find one matching feature
+	is.Equal(len(f), 1) // should find one matching function
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
@@ -78,7 +78,7 @@ func TestLevelFromAnAngle(t *testing.T) {
 	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
-	is.Equal(len(f), 1) // should find one matching feature
+	is.Equal(len(f), 1) // should find one matching function
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
@@ -130,7 +130,7 @@ func TestWaterQuality(t *testing.T) {
 	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
-	is.Equal(len(f), 1) // should find one matching feature
+	is.Equal(len(f), 1) // should find one matching function
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)

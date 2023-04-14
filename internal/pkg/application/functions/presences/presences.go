@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	FeatureTypeName string = "presence"
+	FunctionTypeName string = "presence"
 )
 
 type Presence interface {

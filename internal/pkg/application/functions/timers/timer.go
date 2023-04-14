@@ -9,7 +9,7 @@ import (
 	"github.com/diwise/iot-core/pkg/messaging/events"
 )
 
-const FeatureTypeName string = "timer"
+const FunctionTypeName string = "timer"
 
 type Timer interface {
 	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error)

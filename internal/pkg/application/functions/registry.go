@@ -47,11 +47,11 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 				history: make(map[string][]LogValue),
 			}
 
-			if f.Type == counters.FeatureTypeName {
+			if f.Type == counters.FunctionTypeName {
 				f.Counter = counters.New()
 				f.handle = f.Counter.Handle
 				f.defaultHistoryLabel = "count"
-			} else if f.Type == levels.FeatureTypeName {
+			} else if f.Type == levels.FunctionTypeName {
 				levelConfig := ""
 				if tokenCount > 4 {
 					levelConfig = tokens[4]
@@ -64,22 +64,22 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 
 				f.handle = f.Level.Handle
 				f.defaultHistoryLabel = "level"
-			} else if f.Type == presences.FeatureTypeName {
+			} else if f.Type == presences.FunctionTypeName {
 				f.Presence = presences.New()
 				f.handle = f.Presence.Handle
 				f.defaultHistoryLabel = "presence"
-			} else if f.Type == timers.FeatureTypeName {
+			} else if f.Type == timers.FunctionTypeName {
 				f.Timer = timers.New()
 				f.handle = f.Timer.Handle
 				f.defaultHistoryLabel = "state"
-			} else if f.Type == waterqualities.FeatureTypeName {
+			} else if f.Type == waterqualities.FunctionTypeName {
 				f.WaterQuality = waterqualities.New()
 				f.handle = f.WaterQuality.Handle
 				f.defaultHistoryLabel = "temperature"
 			} else {
 				numErrors++
 				if numErrors > 1 {
-					return nil, fmt.Errorf("unable to parse feature config line: \"%s\"", line)
+					return nil, fmt.Errorf("unable to parse function config line: \"%s\"", line)
 				}
 				continue
 			}
@@ -126,7 +126,7 @@ func (r *reg) Get(ctx context.Context, functionID string) (Function, error) {
 		}
 	}
 
-	return nil, errors.New("no such feature")
+	return nil, errors.New("no such function")
 }
 
 type RegistryMatcherFunc func(r *reg) []Function
