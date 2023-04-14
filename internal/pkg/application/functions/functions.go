@@ -81,5 +81,5 @@ func (f *fnct) ContentType() string {
 }
 
 func (f *fnct) TopicName() string {
-	return "feature.updated"
+	return "function.updated"
 }
