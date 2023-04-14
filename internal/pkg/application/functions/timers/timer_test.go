@@ -14,8 +14,8 @@ func TestTimer(t *testing.T) {
 	is := is.New(t)
 
 	tmr := New()
-	tmr.Handle(context.Background(), newState(true, "2023-02-07T21:32:59.682607Z"))
-	tmr.Handle(context.Background(), newState(false, "2023-02-07T23:32:59.682607Z"))
+	tmr.Handle(context.Background(), newState(true, "2023-02-07T21:32:59.682607Z"), func(string, float64) {})
+	tmr.Handle(context.Background(), newState(false, "2023-02-07T23:32:59.682607Z"), func(string, float64) {})
 
 	is.True(tmr.State() == false)
 }
