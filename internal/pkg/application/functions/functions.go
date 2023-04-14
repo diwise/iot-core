@@ -3,6 +3,8 @@ package functions
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
@@ -17,6 +19,7 @@ import (
 type Function interface {
 	ID() string
 	Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error
+	History(context.Context) ([]LogValue, error)
 }
 
 type location struct {
@@ -37,7 +40,10 @@ type fnct struct {
 	Timer        timers.Timer                `json:"timer,omitempty"`
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 
-	handle func(context.Context, *events.MessageAccepted) (bool, error)
+	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64)) (bool, error)
+
+	history             map[string][]LogValue
+	defaultHistoryLabel string
 }
 
 func (f *fnct) ID() string {
@@ -46,13 +52,26 @@ func (f *fnct) ID() string {
 
 func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
 
-	changed, err := f.handle(ctx, e)
+	logger := logging.GetFromContext(ctx)
+
+	onchange := func(prop string, value float64) {
+		logger.Debug().Msgf("property %s changed to %f", prop, value)
+
+		// TODO: This should be persisted to a database instead
+		if loggedValues, ok := f.history[prop]; ok {
+			now, _ := time.Parse(time.RFC3339, e.Timestamp)
+			f.history[prop] = append(loggedValues, LogValue{Value: value, Timestamp: now})
+		} else {
+			logger.Debug().Msgf("new value was not saved to history")
+		}
+	}
+
+	changed, err := f.handle(ctx, e, onchange)
 	if err != nil {
 		return err
 	}
 
-	logger := logging.GetFromContext(ctx)
-	logger.Debug().Msgf("feature %s handled accepted message (changed = %v)", f.ID(), changed)
+	logger.Debug().Msgf("function %s handled accepted message (changed = %v)", f.ID(), changed)
 
 	if e.HasLocation() {
 		f.Location = &location{
@@ -81,10 +100,23 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	return nil
 }
 
+func (f *fnct) History(context.Context) ([]LogValue, error) {
+	if loggedValues, ok := f.history[f.defaultHistoryLabel]; ok {
+		return loggedValues, nil
+	}
+
+	return nil, errors.New("no history")
+}
+
 func (f *fnct) ContentType() string {
 	return "application/json"
 }
 
 func (f *fnct) TopicName() string {
-	return "feature.updated"
+	return "function.updated"
+}
+
+type LogValue struct {
+	Value     float64   `json:"v"`
+	Timestamp time.Time `json:"ts"`
 }

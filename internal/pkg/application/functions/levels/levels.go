@@ -16,7 +16,7 @@ const (
 )
 
 type Level interface {
-	Handle(ctx context.Context, e *events.MessageAccepted) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, func(string, float64)) (bool, error)
 	Current() float64
 	Offset() float64
 	Percent() float64
@@ -81,7 +81,7 @@ type level struct {
 	Offset_  *float64 `json:"offset,omitempty"`
 }
 
-func (l *level) Handle(ctx context.Context, e *events.MessageAccepted) (bool, error) {
+func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error) {
 
 	if !e.BaseNameMatches(lwm2m.Distance) {
 		return false, nil
@@ -109,6 +109,8 @@ func (l *level) Handle(ctx context.Context, e *events.MessageAccepted) (bool, er
 			offset := l.Current_ - l.meanLevel
 			l.Offset_ = &offset
 		}
+
+		onchange("level", l.Current_)
 
 		return true, nil
 	}

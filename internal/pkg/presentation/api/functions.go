@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
@@ -46,9 +47,42 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 		}
 
 		function, err := registry.Get(ctx, functionID)
-		b, _ := json.MarshalIndent(function, "  ", "  ")
+		if err != nil {
+			log.Error().Err(err).Msg("not found")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		history, _ := function.History(ctx)
+		st := time.Time{}
+		et := time.Now().UTC()
+
+		if len(history) > 0 {
+			st = history[0].Timestamp
+			et = history[len(history)-1].Timestamp
+		}
+
+		response := struct {
+			ID      string          `json:"id"`
+			History HistoryResponse `json:"history"`
+		}{
+			ID: function.ID(),
+			History: HistoryResponse{
+				StartTime: st,
+				EndTime:   et,
+				Values:    history,
+			},
+		}
+
+		b, _ := json.MarshalIndent(response, "  ", "  ")
 
 		w.WriteHeader(http.StatusOK)
 		w.Write(b)
 	}
+}
+
+type HistoryResponse struct {
+	StartTime time.Time            `json:"startTime"`
+	EndTime   time.Time            `json:"endTime"`
+	Values    []functions.LogValue `json:"values"`
 }

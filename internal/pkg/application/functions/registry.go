@@ -44,11 +44,13 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 				ID_:     tokens[0],
 				Type:    tokens[1],
 				SubType: tokens[2],
+				history: make(map[string][]LogValue),
 			}
 
 			if f.Type == counters.FeatureTypeName {
 				f.Counter = counters.New()
 				f.handle = f.Counter.Handle
+				f.defaultHistoryLabel = "count"
 			} else if f.Type == levels.FeatureTypeName {
 				levelConfig := ""
 				if tokenCount > 4 {
@@ -61,21 +63,29 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 				}
 
 				f.handle = f.Level.Handle
+				f.defaultHistoryLabel = "level"
 			} else if f.Type == presences.FeatureTypeName {
 				f.Presence = presences.New()
 				f.handle = f.Presence.Handle
+				f.defaultHistoryLabel = "presence"
 			} else if f.Type == timers.FeatureTypeName {
 				f.Timer = timers.New()
 				f.handle = f.Timer.Handle
+				f.defaultHistoryLabel = "state"
 			} else if f.Type == waterqualities.FeatureTypeName {
 				f.WaterQuality = waterqualities.New()
 				f.handle = f.WaterQuality.Handle
+				f.defaultHistoryLabel = "temperature"
 			} else {
 				numErrors++
 				if numErrors > 1 {
 					return nil, fmt.Errorf("unable to parse feature config line: \"%s\"", line)
 				}
 				continue
+			}
+
+			if f.defaultHistoryLabel != "" {
+				f.history[f.defaultHistoryLabel] = make([]LogValue, 0, 100)
 			}
 
 			r.f[tokens[3]] = f
