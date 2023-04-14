@@ -16,7 +16,7 @@ func TestLevel(t *testing.T) {
 	lvl, err := New("maxd=4")
 	is.NoErr(err)
 
-	lvl.Handle(context.Background(), newDistance(1.27))
+	lvl.Handle(context.Background(), newDistance(1.27), func(string, float64) {})
 
 	is.Equal(lvl.Current(), 2.73)
 }
@@ -27,7 +27,7 @@ func TestLevelWithKnownMax(t *testing.T) {
 	lvl, err := New("maxd=4,maxl=3")
 	is.NoErr(err)
 
-	lvl.Handle(context.Background(), newDistance(1.27))
+	lvl.Handle(context.Background(), newDistance(1.27), func(string, float64) {})
 
 	is.Equal(lvl.Percent(), 91.0)
 }
@@ -38,7 +38,7 @@ func TestLevelWithOverflowCapsPctTo100(t *testing.T) {
 	lvl, err := New("maxd=4,maxl=3")
 	is.NoErr(err)
 
-	lvl.Handle(context.Background(), newDistance(0.5))
+	lvl.Handle(context.Background(), newDistance(0.5), func(string, float64) {})
 
 	is.Equal(lvl.Percent(), 100.0)
 }

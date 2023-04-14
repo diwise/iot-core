@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	FeatureTypeName string = "waterquality"
+	FunctionTypeName string = "waterquality"
 )
 
 type WaterQuality interface {
-	Handle(ctx context.Context, e *events.MessageAccepted) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, func(string, float64)) (bool, error)
 }
 
 func New() WaterQuality {
@@ -24,7 +24,7 @@ type waterquality struct {
 	Temperature float64 `json:"temperature"`
 }
 
-func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted) (bool, error) {
+func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error) {
 
 	if !e.BaseNameMatches(lwm2m.Temperature) {
 		return false, nil
@@ -38,7 +38,11 @@ func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted) (
 
 		oldTemp := wq.Temperature
 		wq.Temperature = temp
-		return hasChanged(oldTemp, temp), nil
+
+		if hasChanged(oldTemp, temp) {
+			onchange("temperature", temp)
+			return true, nil
+		}
 	}
 
 	return false, nil

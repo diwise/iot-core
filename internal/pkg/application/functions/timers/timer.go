@@ -9,10 +9,10 @@ import (
 	"github.com/diwise/iot-core/pkg/messaging/events"
 )
 
-const FeatureTypeName string = "timer"
+const FunctionTypeName string = "timer"
 
 type Timer interface {
-	Handle(ctx context.Context, e *events.MessageAccepted) (bool, error)
+	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error)
 
 	State() bool
 }
@@ -33,7 +33,7 @@ type timer struct {
 	State_    bool           `json:"state"`
 }
 
-func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted) (bool, error) {
+func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error) {
 	if !e.BaseNameMatches(lwm2m.DigitalInput) {
 		return false, nil
 	}
@@ -47,31 +47,36 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted) (bool, er
 	state, stateOK := e.GetBool(DigitalInputState)
 
 	if stateOK {
-		if state != previousState && state {
-			start, err := time.Parse(time.RFC3339, e.Timestamp)
-			if err != nil {
-				return false, fmt.Errorf("failed to parse time from event timestamp: %s", err.Error())
+		if state != previousState {
+			if state {
+				onchange("state", 1)
+
+				start, err := time.Parse(time.RFC3339, e.Timestamp)
+				if err != nil {
+					return false, fmt.Errorf("failed to parse time from event timestamp: %s", err.Error())
+				}
+
+				t.StartTime = start
+				t.State_ = state
+
+				t.EndTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
+				t.Duration = nil
+
+			} else {
+				onchange("state", 0)
+
+				end, err := time.Parse(time.RFC3339, e.Timestamp)
+				if err != nil {
+					return false, fmt.Errorf("failed to parse time from event timestamp: %s", err.Error())
+				}
+
+				t.EndTime = &end
+				t.State_ = state
+
+				duration := t.EndTime.Sub(t.StartTime)
+				t.Duration = &duration
 			}
-
-			t.StartTime = start
-			t.State_ = state
-
-			t.EndTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
-			t.Duration = nil
-
-		} else if state != previousState && !state {
-			end, err := time.Parse(time.RFC3339, e.Timestamp)
-			if err != nil {
-				return false, fmt.Errorf("failed to parse time from event timestamp: %s", err.Error())
-			}
-
-			t.EndTime = &end
-			t.State_ = state
-
-			duration := t.EndTime.Sub(t.StartTime)
-			t.Duration = &duration
 		}
-
 	}
 
 	return previousState != t.State_, nil

@@ -3,6 +3,7 @@ package functions
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -17,6 +18,7 @@ import (
 
 type Registry interface {
 	Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error)
+	Get(ctx context.Context, functionID string) (Function, error)
 }
 
 func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
@@ -39,15 +41,17 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 
 		if tokenCount >= 4 {
 			f := &fnct{
-				ID:      tokens[0],
+				ID_:     tokens[0],
 				Type:    tokens[1],
 				SubType: tokens[2],
+				history: make(map[string][]LogValue),
 			}
 
-			if f.Type == counters.FeatureTypeName {
+			if f.Type == counters.FunctionTypeName {
 				f.Counter = counters.New()
 				f.handle = f.Counter.Handle
-			} else if f.Type == levels.FeatureTypeName {
+				f.defaultHistoryLabel = "count"
+			} else if f.Type == levels.FunctionTypeName {
 				levelConfig := ""
 				if tokenCount > 4 {
 					levelConfig = tokens[4]
@@ -59,21 +63,29 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 				}
 
 				f.handle = f.Level.Handle
-			} else if f.Type == presences.FeatureTypeName {
+				f.defaultHistoryLabel = "level"
+			} else if f.Type == presences.FunctionTypeName {
 				f.Presence = presences.New()
 				f.handle = f.Presence.Handle
-			} else if f.Type == timers.FeatureTypeName {
+				f.defaultHistoryLabel = "presence"
+			} else if f.Type == timers.FunctionTypeName {
 				f.Timer = timers.New()
 				f.handle = f.Timer.Handle
-			} else if f.Type == waterqualities.FeatureTypeName {
+				f.defaultHistoryLabel = "state"
+			} else if f.Type == waterqualities.FunctionTypeName {
 				f.WaterQuality = waterqualities.New()
 				f.handle = f.WaterQuality.Handle
+				f.defaultHistoryLabel = "temperature"
 			} else {
 				numErrors++
 				if numErrors > 1 {
-					return nil, fmt.Errorf("unable to parse feature config line: \"%s\"", line)
+					return nil, fmt.Errorf("unable to parse function config line: \"%s\"", line)
 				}
 				continue
+			}
+
+			if f.defaultHistoryLabel != "" {
+				f.history[f.defaultHistoryLabel] = make([]LogValue, 0, 100)
 			}
 
 			r.f[tokens[3]] = f
@@ -105,6 +117,16 @@ func (r *reg) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Func
 	}
 
 	return result, nil
+}
+
+func (r *reg) Get(ctx context.Context, functionID string) (Function, error) {
+	for _, f := range r.f {
+		if f.ID() == functionID {
+			return f, nil
+		}
+	}
+
+	return nil, errors.New("no such function")
 }
 
 type RegistryMatcherFunc func(r *reg) []Function

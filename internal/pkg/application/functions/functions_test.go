@@ -20,7 +20,7 @@ func TestCounter(t *testing.T) {
 
 	sensorId := "testId"
 
-	config := "featureId;counter;overflow;" + sensorId
+	config := "functionID;counter;overflow;" + sensorId
 	input := bytes.NewBufferString(config)
 
 	reg, _ := NewRegistry(ctx, input)
@@ -36,7 +36,7 @@ func TestCounter(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectation string = `{"id":"featureId","type":"counter","subtype":"overflow","counter":{"count":1,"state":true}}`
+	const expectation string = `{"id":"functionID","type":"counter","subtype":"overflow","counter":{"count":1,"state":true}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -45,7 +45,7 @@ func TestLevel(t *testing.T) {
 
 	sensorId := "testId"
 
-	input := bytes.NewBufferString("featureId;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5")
+	input := bytes.NewBufferString("functionID;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5")
 
 	reg, _ := NewRegistry(ctx, input)
 
@@ -54,7 +54,7 @@ func TestLevel(t *testing.T) {
 	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
-	is.Equal(len(f), 1) // should find one matching feature
+	is.Equal(len(f), 1) // should find one matching function
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
@@ -62,7 +62,7 @@ func TestLevel(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectation string = `{"id":"featureId","type":"level","subtype":"sand","level":{"current":1.4,"percent":56}}`
+	const expectation string = `{"id":"functionID","type":"level","subtype":"sand","level":{"current":1.4,"percent":56}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -70,7 +70,7 @@ func TestLevelFromAnAngle(t *testing.T) {
 	is, ctx, msgctx := testSetup(t)
 
 	sensorId := "testId"
-	input := bytes.NewBufferString("featureId;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5,angle=30")
+	input := bytes.NewBufferString("functionID;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5,angle=30")
 	reg, _ := NewRegistry(ctx, input)
 
 	v := 2.1
@@ -78,7 +78,7 @@ func TestLevelFromAnAngle(t *testing.T) {
 	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
-	is.Equal(len(f), 1) // should find one matching feature
+	is.Equal(len(f), 1) // should find one matching function
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
@@ -86,7 +86,7 @@ func TestLevelFromAnAngle(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectation string = `{"id":"featureId","type":"level","subtype":"sand","level":{"current":1.21,"percent":48.4}}`
+	const expectation string = `{"id":"functionID","type":"level","subtype":"sand","level":{"current":1.21,"percent":48.4}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -95,7 +95,7 @@ func TestTimer(t *testing.T) {
 
 	sensorId := "testId"
 
-	config := "featureId;timer;overflow;" + sensorId
+	config := "functionID;timer;overflow;" + sensorId
 	input := bytes.NewBufferString(config)
 
 	reg, _ := NewRegistry(ctx, input)
@@ -112,7 +112,7 @@ func TestTimer(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectationFmt string = `{"id":"featureId","type":"timer","subtype":"overflow","timer":{"startTime":"%s","state":true}}`
+	const expectationFmt string = `{"id":"functionID","type":"timer","subtype":"overflow","timer":{"startTime":"%s","state":true}}`
 	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, startTime))
 }
 
@@ -121,7 +121,7 @@ func TestWaterQuality(t *testing.T) {
 
 	sensorId := "testId"
 
-	input := bytes.NewBufferString("featureId;waterquality;beach;" + sensorId)
+	input := bytes.NewBufferString("functionID;waterquality;beach;" + sensorId)
 
 	reg, _ := NewRegistry(ctx, input)
 
@@ -130,7 +130,7 @@ func TestWaterQuality(t *testing.T) {
 	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
-	is.Equal(len(f), 1) // should find one matching feature
+	is.Equal(len(f), 1) // should find one matching function
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
@@ -138,7 +138,7 @@ func TestWaterQuality(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectation string = `{"id":"featureId","type":"waterquality","subtype":"beach","waterquality":{"temperature":2.3}}`
+	const expectation string = `{"id":"functionID","type":"waterquality","subtype":"beach","waterquality":{"temperature":2.3}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 

@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	FeatureTypeName string = "presence"
+	FunctionTypeName string = "presence"
 )
 
 type Presence interface {
-	Handle(ctx context.Context, e *events.MessageAccepted) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, func(string, float64)) (bool, error)
 	State() bool
 }
 
@@ -24,7 +24,7 @@ type presence struct {
 	State_ bool `json:"state"`
 }
 
-func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted) (bool, error) {
+func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error) {
 
 	if !e.BaseNameMatches(lwm2m.DigitalInput) && !e.BaseNameMatches(lwm2m.Presence) {
 		return false, nil
@@ -38,6 +38,8 @@ func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted) (bool,
 
 	if stateOk && state != t.State_ {
 		t.State_ = state
+		presenceValue := map[bool]float64{true: 1, false: 0}
+		onchange("presence", presenceValue[t.State_])
 		return true, nil
 	}
 

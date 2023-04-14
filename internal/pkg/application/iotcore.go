@@ -21,10 +21,10 @@ type app struct {
 	functions_ functions.Registry
 }
 
-func New(msgproc messageprocessor.MessageProcessor, featureRegistry functions.Registry) App {
+func New(msgproc messageprocessor.MessageProcessor, functionRegistry functions.Registry) App {
 	return &app{
 		msgproc_:   msgproc,
-		functions_: featureRegistry,
+		functions_: functionRegistry,
 	}
 }
 
