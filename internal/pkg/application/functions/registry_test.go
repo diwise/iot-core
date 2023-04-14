@@ -12,7 +12,7 @@ func TestCreateRegistry(t *testing.T) {
 	is := is.New(t)
 	sensorId := "testId"
 
-	config := "featureId;counter;overflow;" + sensorId
+	config := "functionID;counter;overflow;" + sensorId
 	reg, err := NewRegistry(context.Background(), bytes.NewBufferString(config))
 	is.NoErr(err)
 
@@ -25,7 +25,7 @@ func TestCreateRegistry(t *testing.T) {
 func TestFindNonMatchingFeatureReturnsEmptySlice(t *testing.T) {
 	is := is.New(t)
 
-	config := "featureId;counter;overflow;sensorId"
+	config := "functionID;counter;overflow;sensorId"
 	reg, err := NewRegistry(context.Background(), bytes.NewBufferString(config))
 	is.NoErr(err)
 
