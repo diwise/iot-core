@@ -71,7 +71,7 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 			} else if f.Type == timers.FunctionTypeName {
 				f.Timer = timers.New()
 				f.handle = f.Timer.Handle
-				f.defaultHistoryLabel = "state"
+				f.defaultHistoryLabel = "time"
 			} else if f.Type == waterqualities.FunctionTypeName {
 				f.WaterQuality = waterqualities.New()
 				f.handle = f.WaterQuality.Handle
