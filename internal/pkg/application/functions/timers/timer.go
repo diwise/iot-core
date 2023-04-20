@@ -31,6 +31,9 @@ type timer struct {
 	EndTime   *time.Time     `json:"endTime,omitempty"`
 	Duration  *time.Duration `json:"duration,omitempty"`
 	State_    bool           `json:"state"`
+
+	totalDuration time.Duration
+	valueUpdater  *time.Ticker
 }
 
 func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error) {
@@ -63,6 +66,20 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 				t.EndTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
 				t.Duration = nil
 
+				onchange("time", t.totalDuration.Minutes())
+
+				if t.valueUpdater == nil {
+					t.valueUpdater = time.NewTicker(1 * time.Minute)
+					go func() {
+						for range t.valueUpdater.C {
+							if t.State_ {
+								duration := t.totalDuration + time.Now().UTC().Sub(t.StartTime)
+								onchange("time", duration.Minutes())
+							}
+						}
+					}()
+				}
+
 			} else {
 				onchange("state", 1)
 				onchange("state", 0)
@@ -77,6 +94,9 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 				duration := t.EndTime.Sub(t.StartTime)
 				t.Duration = &duration
+				t.totalDuration = t.totalDuration + duration
+
+				onchange("time", t.totalDuration.Minutes())
 			}
 		}
 	}
