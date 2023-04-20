@@ -39,6 +39,8 @@ func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 	if stateOk && state != t.State_ {
 		t.State_ = state
 		presenceValue := map[bool]float64{true: 1, false: 0}
+		// Temporary fix to create square waves in the UI ...
+		onchange("presence", presenceValue[!t.State_])
 		onchange("presence", presenceValue[t.State_])
 		return true, nil
 	}

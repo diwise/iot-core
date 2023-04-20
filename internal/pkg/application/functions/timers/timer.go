@@ -49,6 +49,7 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 	if stateOK {
 		if state != previousState {
 			if state {
+				onchange("state", 0)
 				onchange("state", 1)
 
 				start, err := time.Parse(time.RFC3339, e.Timestamp)
@@ -63,6 +64,7 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 				t.Duration = nil
 
 			} else {
+				onchange("state", 1)
 				onchange("state", 0)
 
 				end, err := time.Parse(time.RFC3339, e.Timestamp)
