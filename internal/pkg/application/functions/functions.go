@@ -54,12 +54,23 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 	logger := logging.GetFromContext(ctx)
 
+	timeWhenHandleWasCalled := time.Now().UTC()
+
 	onchange := func(prop string, value float64) {
 		logger.Debug().Msgf("property %s changed to %f", prop, value)
 
+		// onchange may be called repeatedly based on a timer, so we need to adjust
+		// the event time if that happens
+		timeWhenOnchangeWasCalled := time.Now().UTC()
+		timeSinceHandleWasCalled := timeWhenOnchangeWasCalled.Sub(timeWhenHandleWasCalled)
+
+		now, _ := time.Parse(time.RFC3339, e.Timestamp)
+		if timeSinceHandleWasCalled >= time.Second {
+			now = now.Add(timeSinceHandleWasCalled)
+		}
+
 		// TODO: This should be persisted to a database instead
 		if loggedValues, ok := f.history[prop]; ok {
-			now, _ := time.Parse(time.RFC3339, e.Timestamp)
 			f.history[prop] = append(loggedValues, LogValue{Value: value, Timestamp: now})
 		} else {
 			logger.Debug().Msgf("new value was not saved to history")
