@@ -19,7 +19,7 @@ import (
 type Function interface {
 	ID() string
 	Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error
-	History(context.Context) ([]LogValue, error)
+	History(context.Context, int) ([]LogValue, error)
 }
 
 type location struct {
@@ -111,8 +111,16 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	return nil
 }
 
-func (f *fnct) History(context.Context) ([]LogValue, error) {
+func (f *fnct) History(ctx context.Context, lastN int) ([]LogValue, error) {
 	if loggedValues, ok := f.history[f.defaultHistoryLabel]; ok {
+		if lastN > 0 {
+			skip := 0
+			if lastN < len(loggedValues) {
+				skip = len(loggedValues) - lastN
+			}
+			return loggedValues[skip:], nil
+		}
+
 		return loggedValues, nil
 	}
 
