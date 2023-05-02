@@ -142,6 +142,38 @@ func TestWaterQuality(t *testing.T) {
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
+func TestLastN(t *testing.T) {
+	is, ctx, msgctx := testSetup(t)
+
+	sensorId := "testId"
+	input := bytes.NewBufferString("functionID;waterquality;beach;" + sensorId)
+	reg, _ := NewRegistry(ctx, input)
+
+	newMessageAccepted := func(v float64, t time.Time) *events.MessageAccepted {
+		pack := NewSenMLPack(sensorId, lwm2m.Temperature, t, Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))
+		return events.NewMessageAccepted(sensorId, pack)
+	}
+
+	f, _ := reg.Find(ctx, MatchSensor(sensorId))
+
+	_ = f[0].Handle(ctx, newMessageAccepted(1.67, time.Now().Add(1*time.Hour)), msgctx)
+	_ = f[0].Handle(ctx, newMessageAccepted(2.67, time.Now().Add(2*time.Hour)), msgctx)
+	_ = f[0].Handle(ctx, newMessageAccepted(3.67, time.Now().Add(3*time.Hour)), msgctx)
+	_ = f[0].Handle(ctx, newMessageAccepted(4.67, time.Now().Add(4*time.Hour)), msgctx)
+	_ = f[0].Handle(ctx, newMessageAccepted(5.67, time.Now().Add(5*time.Hour)), msgctx)
+	_ = f[0].Handle(ctx, newMessageAccepted(6.67, time.Now().Add(6*time.Hour)), msgctx)
+
+	h, _ := f[0].History(ctx, 0)
+	is.Equal(6, len(h))
+
+	h, _ = f[0].History(ctx, 4)
+	is.Equal(4, len(h))
+	is.Equal(3.7, h[0].Value)
+
+	h, _ = f[0].History(ctx, 7)
+	is.Equal(6, len(h))
+}
+
 func testSetup(t *testing.T) (*is.I, context.Context, *messaging.MsgContextMock) {
 	is := is.New(t)
 	msgctx := &messaging.MsgContextMock{

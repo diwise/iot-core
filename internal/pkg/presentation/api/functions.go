@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
@@ -53,7 +54,9 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 			return
 		}
 
-		history, _ := function.History(ctx)
+		lastN := queryUnescapeQueryInt(r, "lastN")
+
+		history, _ := function.History(ctx, lastN)
 		st := time.Time{}
 		et := time.Now().UTC()
 
@@ -79,6 +82,18 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 		w.WriteHeader(http.StatusOK)
 		w.Write(b)
 	}
+}
+
+func queryUnescapeQueryInt(r *http.Request, key string) int {
+	q, err := url.QueryUnescape(r.URL.Query().Get(key))
+	if err != nil {
+		return 0
+	}
+	i, err := strconv.Atoi(q)
+	if err != nil {
+		return 0
+	}
+	return i
 }
 
 type HistoryResponse struct {
