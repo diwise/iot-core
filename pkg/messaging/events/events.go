@@ -143,6 +143,13 @@ func Environment(e string) EventDecoratorFunc {
 	return Rec("env", e, nil, nil, 0, nil)
 }
 
+func Source(s string) EventDecoratorFunc {
+	if strings.EqualFold(s, "") {
+		return func(m *MessageAccepted) {}
+	}
+	return Rec("source", s, nil, nil, 0, nil)
+}
+
 func Tenant(t string) EventDecoratorFunc {
 	if strings.EqualFold(t, "") {
 		t = "default"
