@@ -38,5 +38,6 @@ func (m *messageProcessor) ProcessMessage(ctx context.Context, msg events.Messag
 		events.Lat(device.Latitude()),
 		events.Lon(device.Longitude()),
 		events.Environment(device.Environment()),
+		events.Source(device.Source()),
 		events.Tenant(device.Tenant())), nil
 }

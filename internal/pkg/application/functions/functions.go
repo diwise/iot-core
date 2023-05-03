@@ -19,7 +19,7 @@ import (
 type Function interface {
 	ID() string
 	Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error
-	History(context.Context) ([]LogValue, error)
+	History(context.Context, int) ([]LogValue, error)
 }
 
 type location struct {
@@ -33,6 +33,7 @@ type fnct struct {
 	SubType  string    `json:"subtype"`
 	Location *location `json:"location,omitempty"`
 	Tenant   string    `json:"tenant,omitempty"`
+	Source   string    `json:"source,omitempty"`
 
 	Counter      counters.Counter            `json:"counter,omitempty"`
 	Level        levels.Level                `json:"level,omitempty"`
@@ -102,6 +103,14 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		f.Tenant = tenant
 	}
 
+	source, ok := e.GetString("source")
+	if ok {
+		if f.Source == "" {
+			changed = true
+		}
+		f.Source = source
+	}
+
 	if changed {
 		body, _ := json.Marshal(f)
 		logger.Debug().Str("body", string(body)).Msgf("publishing message to %s", f.TopicName())
@@ -111,8 +120,16 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	return nil
 }
 
-func (f *fnct) History(context.Context) ([]LogValue, error) {
+func (f *fnct) History(ctx context.Context, lastN int) ([]LogValue, error) {
 	if loggedValues, ok := f.history[f.defaultHistoryLabel]; ok {
+		if lastN > 0 {
+			skip := 0
+			if lastN < len(loggedValues) {
+				skip = len(loggedValues) - lastN
+			}
+			return loggedValues[skip:], nil
+		}
+
 		return loggedValues, nil
 	}
 

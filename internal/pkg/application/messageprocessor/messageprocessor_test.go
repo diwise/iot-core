@@ -41,6 +41,7 @@ func testSetup(t *testing.T) (*is.I, *dmctest.DeviceManagementClientMock, zerolo
 				LongitudeFunc:   func() float64 { return 16 },
 				LatitudeFunc:    func() float64 { return 32 },
 				TenantFunc:      func() string { return "default" },
+				SourceFunc:      func() string { return "source" },
 			}
 			return res, nil
 		},
