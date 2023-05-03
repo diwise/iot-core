@@ -33,6 +33,7 @@ type fnct struct {
 	SubType  string    `json:"subtype"`
 	Location *location `json:"location,omitempty"`
 	Tenant   string    `json:"tenant,omitempty"`
+	Source   string    `json:"source,omitempty"`
 
 	Counter      counters.Counter            `json:"counter,omitempty"`
 	Level        levels.Level                `json:"level,omitempty"`
@@ -100,6 +101,14 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 			changed = true
 		}
 		f.Tenant = tenant
+	}
+
+	source, ok := e.GetString("source")
+	if ok {
+		if f.Source == "" {
+			changed = true
+		}
+		f.Source = source
 	}
 
 	if changed {
