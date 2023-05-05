@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/diwise/iot-core/internal/pkg/application/functions/buildings"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/presences"
@@ -76,6 +77,10 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 				f.WaterQuality = waterqualities.New()
 				f.handle = f.WaterQuality.Handle
 				f.defaultHistoryLabel = "temperature"
+			} else if f.Type == buildings.FunctionTypeName {
+				f.Building = buildings.New()
+				f.handle = f.Building.Handle
+				f.defaultHistoryLabel = "building"
 			} else {
 				numErrors++
 				if numErrors > 1 {

@@ -3,7 +3,12 @@ package buildings
 import (
 	"context"
 
+	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+)
+
+const (
+	FunctionTypeName string = "building"
 )
 
 type Building interface {
@@ -20,5 +25,11 @@ type building struct {
 }
 
 func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error) {
+	if !e.BaseNameMatches(lwm2m.Power) && !e.BaseNameMatches(lwm2m.Energy) {
+		return false, nil
+	}
+
+	//const SensorValue string = "5700"
+
 	return false, nil
 }
