@@ -80,7 +80,7 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 			} else if f.Type == buildings.FunctionTypeName {
 				f.Building = buildings.New()
 				f.handle = f.Building.Handle
-				f.defaultHistoryLabel = "building"
+				f.defaultHistoryLabel = "power"
 			} else {
 				numErrors++
 				if numErrors > 1 {
