@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/diwise/iot-core/internal/pkg/application/functions/buildings"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/presences"
@@ -40,6 +41,7 @@ type fnct struct {
 	Presence     presences.Presence          `json:"presence,omitempty"`
 	Timer        timers.Timer                `json:"timer,omitempty"`
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
+	Building     buildings.Building          `json:"building,omitempty"`
 
 	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64)) (bool, error)
 
