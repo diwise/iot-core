@@ -11,4 +11,6 @@ const (
 	Distance     string = lwm2mPrefix + "3330"
 	AirQuality   string = lwm2mPrefix + "3428"
 	Watermeter   string = lwm2mPrefix + "3424"
+	Power        string = lwm2mPrefix + "3328"
+	Energy       string = lwm2mPrefix + "3331"
 )
