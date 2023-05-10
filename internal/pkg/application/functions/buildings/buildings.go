@@ -39,6 +39,7 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 	if ok {
 		if e.BaseNameMatches(lwm2m.Power) {
 			previousValue := b.Power
+			value = value / 1000.0 // convert from Watt to kW
 			b.Power = value
 
 			if hasChanged(previousValue, value) {
@@ -47,6 +48,7 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 			}
 		} else if e.BaseNameMatches(lwm2m.Energy) {
 			previousValue := b.Energy
+			value = value / 3600000.0 // convert from Joule to kWh
 			b.Energy = value
 
 			if hasChanged(previousValue, value) {

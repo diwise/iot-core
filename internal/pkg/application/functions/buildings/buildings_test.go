@@ -17,7 +17,7 @@ func TestBuildingPower(t *testing.T) {
 	b := New()
 
 	b.Handle(context.Background(), newValue(lwm2m.Power, 22322.0), func(s string, f float64) {})
-	is.Equal(b.CurrentPower(), 22322.0)
+	is.Equal(b.CurrentPower(), 22.322)
 }
 
 func TestBuildingEnergy(t *testing.T) {
@@ -25,8 +25,8 @@ func TestBuildingEnergy(t *testing.T) {
 
 	b := New()
 
-	b.Handle(context.Background(), newValue(lwm2m.Energy, 33333.0), func(s string, f float64) {})
-	is.Equal(b.CurrentEnergy(), 33333.0)
+	b.Handle(context.Background(), newValue(lwm2m.Energy, 3600.0), func(s string, f float64) {})
+	is.Equal(b.CurrentEnergy(), 0.001)
 }
 
 func newValue(baseName string, value float64) *events.MessageAccepted {
