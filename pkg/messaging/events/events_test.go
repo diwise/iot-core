@@ -55,7 +55,7 @@ func TestGetValuesFromPack2(t *testing.T) {
 	dt := time.Date(2022, time.January, 1, 12, 0, 0, 0, time.UTC)
 	baseRec := senml.Pack{
 		senml.Record{
-			Name: "0",
+			Name:     "0",
 			BaseName: "basename",
 		},
 	}
@@ -67,7 +67,7 @@ func TestGetValuesFromPack2(t *testing.T) {
 	s, _ := Get[string](*evt, "basename", 1)
 	is.Equal(s, "str")
 	b2, _ := Get[bool](*evt, "basename", 1)
-	is.Equal(b2, true)	
+	is.Equal(b2, true)
 }
 
 func testSetup(t *testing.T) *is.I {
