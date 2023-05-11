@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/diwise/iot-core/internal/pkg/application/functions/metadata"
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 )
@@ -13,6 +14,7 @@ const FunctionTypeName string = "timer"
 
 type Timer interface {
 	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error)
+	Metadata() metadata.Metadata
 
 	State() bool
 }
@@ -106,4 +108,8 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 func (t *timer) State() bool {
 	return t.State_
+}
+
+func (t *timer) Metadata() metadata.Metadata {
+	return metadata.Metadata{}
 }

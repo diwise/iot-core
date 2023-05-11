@@ -3,6 +3,7 @@ package presences
 import (
 	"context"
 
+	"github.com/diwise/iot-core/internal/pkg/application/functions/metadata"
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 )
@@ -13,6 +14,8 @@ const (
 
 type Presence interface {
 	Handle(context.Context, *events.MessageAccepted, func(string, float64)) (bool, error)
+	Metadata() metadata.Metadata
+
 	State() bool
 }
 
@@ -50,4 +53,8 @@ func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 
 func (t *presence) State() bool {
 	return t.State_
+}
+
+func (p *presence) Metadata() metadata.Metadata {
+	return metadata.Metadata{}
 }

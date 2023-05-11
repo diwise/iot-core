@@ -10,9 +10,15 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/iot-core/main.go",
+            "args": [
+                "-functions=../diwise/deployments/docker/configs/diwise/functions.nutscodes.test.csv"
+            ],
             "env": {
-                "DEV_MGMT_URL" : "http://localhost:8080",
-                "RABBITMQ_HOST" : "localhost"
+                "DEV_MGMT_URL": "http://localhost:8080",
+                "OAUTH2_TOKEN_URL": "http://token-url",
+                "OAUTH2_CLIENT_ID": "iot-core",
+                "OAUTH2_CLIENT_SECRET": "secret",
+                "RABBITMQ_DISABLED": "true"
             }
         }
     ]

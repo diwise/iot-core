@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/diwise/iot-core/internal/pkg/application/functions/metadata"
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 )
@@ -17,6 +18,8 @@ const (
 
 type Level interface {
 	Handle(context.Context, *events.MessageAccepted, func(string, float64)) (bool, error)
+	Metadata() metadata.Metadata
+
 	Current() float64
 	Offset() float64
 	Percent() float64
@@ -136,6 +139,10 @@ func (l *level) Percent() float64 {
 	}
 
 	return 0.0
+}
+
+func (l *level) Metadata() metadata.Metadata {
+	return metadata.Metadata{}
 }
 
 func hasChanged(previousLevel, newLevel float64) bool {

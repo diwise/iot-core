@@ -27,6 +27,7 @@ func New(ctx context.Context, registry functions.Registry) API {
 	// TODO: Introduce an authenticator to manage tenant access
 	api_.router.Get("/api/functions", NewQueryFunctionsHandler(ctx, registry))
 	api_.router.Get("/api/functions/{id}/history", NewQueryFunctionHistoryHandler(ctx, registry))
+	api_.router.Get("/api/functions/{id}/metadata", NewMetadataHandler(ctx, registry))
 
 	api_.router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

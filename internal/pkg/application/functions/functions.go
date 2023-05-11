@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions/buildings"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/metadata"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/presences"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/timers"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/waterqualities"
@@ -21,6 +23,7 @@ type Function interface {
 	ID() string
 	Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error
 	History(context.Context, int) ([]LogValue, error)
+	Metadata(context.Context) (*metadata.Metadata, error)
 }
 
 type location struct {
@@ -43,7 +46,8 @@ type fnct struct {
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 	Building     buildings.Building          `json:"building,omitempty"`
 
-	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64)) (bool, error)
+	handle   func(context.Context, *events.MessageAccepted, func(prop string, value float64)) (bool, error)
+	metadata func() metadata.Metadata
 
 	history             map[string][]LogValue
 	defaultHistoryLabel string
@@ -137,7 +141,10 @@ func (f *fnct) History(ctx context.Context, lastN int) ([]LogValue, error) {
 
 	return nil, errors.New("no history")
 }
-
+func (f *fnct) Metadata(ctx context.Context) (*metadata.Metadata, error) {
+	m := f.metadata()
+	return &m, fmt.Errorf("not implemented")
+}
 func (f *fnct) ContentType() string {
 	return "application/json"
 }

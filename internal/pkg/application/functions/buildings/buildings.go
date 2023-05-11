@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 
+	"github.com/diwise/iot-core/internal/pkg/application/functions/metadata"
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 )
@@ -14,6 +15,7 @@ const (
 
 type Building interface {
 	Handle(context.Context, *events.MessageAccepted, func(string, float64)) (bool, error)
+	Metadata() metadata.Metadata
 
 	CurrentPower() float64
 	CurrentEnergy() float64
@@ -59,6 +61,10 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 	}
 
 	return false, nil
+}
+
+func (b *building) Metadata() metadata.Metadata {
+	return metadata.Metadata{}
 }
 
 func hasChanged(previousLevel, newLevel float64) bool {

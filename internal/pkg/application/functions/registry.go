@@ -51,6 +51,7 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 			if f.Type == counters.FunctionTypeName {
 				f.Counter = counters.New()
 				f.handle = f.Counter.Handle
+				f.metadata = f.Counter.Metadata
 				f.defaultHistoryLabel = "count"
 			} else if f.Type == levels.FunctionTypeName {
 				levelConfig := ""
@@ -64,22 +65,27 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 				}
 
 				f.handle = f.Level.Handle
+				f.metadata = f.Level.Metadata
 				f.defaultHistoryLabel = "level"
 			} else if f.Type == presences.FunctionTypeName {
 				f.Presence = presences.New()
 				f.handle = f.Presence.Handle
+				f.metadata = f.Presence.Metadata
 				f.defaultHistoryLabel = "presence"
 			} else if f.Type == timers.FunctionTypeName {
 				f.Timer = timers.New()
 				f.handle = f.Timer.Handle
+				f.metadata = f.Timer.Metadata
 				f.defaultHistoryLabel = "time"
 			} else if f.Type == waterqualities.FunctionTypeName {
 				f.WaterQuality = waterqualities.New()
 				f.handle = f.WaterQuality.Handle
+				f.metadata = f.WaterQuality.Metadata
 				f.defaultHistoryLabel = "temperature"
 			} else if f.Type == buildings.FunctionTypeName {
 				f.Building = buildings.New()
 				f.handle = f.Building.Handle
+				f.metadata = f.Building.Metadata
 				f.defaultHistoryLabel = "power"
 			} else {
 				numErrors++

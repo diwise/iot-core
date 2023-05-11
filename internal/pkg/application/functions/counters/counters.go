@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 
+	"github.com/diwise/iot-core/internal/pkg/application/functions/metadata"
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 )
@@ -14,6 +15,8 @@ const (
 
 type Counter interface {
 	Handle(context.Context, *events.MessageAccepted, func(prop string, value float64)) (bool, error)
+	Metadata() metadata.Metadata
+
 	Count() int
 	State() bool
 }
@@ -77,6 +80,10 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 	}
 
 	return changed, nil
+}
+
+func (c *counter) Metadata() metadata.Metadata {
+	return metadata.Metadata{}
 }
 
 func (c *counter) Count() int {

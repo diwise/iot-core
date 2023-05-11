@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 
+	"github.com/diwise/iot-core/internal/pkg/application/functions/metadata"
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 )
@@ -14,6 +15,7 @@ const (
 
 type WaterQuality interface {
 	Handle(context.Context, *events.MessageAccepted, func(string, float64)) (bool, error)
+	Metadata() metadata.Metadata
 }
 
 func New() WaterQuality {
@@ -46,6 +48,10 @@ func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, o
 	}
 
 	return false, nil
+}
+
+func (wq *waterquality) Metadata() metadata.Metadata {
+	return metadata.Metadata{}
 }
 
 func hasChanged(previousLevel, newLevel float64) bool {

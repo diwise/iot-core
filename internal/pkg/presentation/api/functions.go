@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/metadata"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
@@ -84,6 +85,42 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 	}
 }
 
+func NewMetadataHandler(ctx context.Context, registry functions.Registry) http.HandlerFunc {
+	logger := logging.GetFromContext(ctx)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		ctx, span := tracer.Start(r.Context(), "retrieve-function-history")
+		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
+
+		_, ctx, log := o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
+
+		functionID, _ := url.QueryUnescape(chi.URLParam(r, "id"))
+
+		function, err := registry.Get(ctx, functionID)
+		if err != nil {
+			log.Error().Err(err).Msg("not found")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		m, _ := function.Metadata(ctx)
+
+		response := struct {
+			ID       string            `json:"id"`
+			Metadata metadata.Metadata `json:"metadata"`
+		}{
+			ID:       function.ID(),
+			Metadata: *m,
+		}
+
+		b, _ := json.MarshalIndent(response, "  ", "  ")
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(b)
+	}
+}
+
 func queryUnescapeQueryInt(r *http.Request, key string) int {
 	q, err := url.QueryUnescape(r.URL.Query().Get(key))
 	if err != nil {
@@ -94,6 +131,9 @@ func queryUnescapeQueryInt(r *http.Request, key string) int {
 		return 0
 	}
 	return i
+}
+
+type MetadataResonse struct {
 }
 
 type HistoryResponse struct {
