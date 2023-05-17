@@ -12,6 +12,7 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/functions/presences"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/timers"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/waterqualities"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
@@ -47,6 +48,8 @@ type fnct struct {
 
 	history             map[string][]LogValue
 	defaultHistoryLabel string
+
+	storage database.Storage
 }
 
 func (f *fnct) ID() string {
@@ -75,6 +78,10 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		// TODO: This should be persisted to a database instead
 		if loggedValues, ok := f.history[prop]; ok {
 			f.history[prop] = append(loggedValues, LogValue{Value: value, Timestamp: now})
+			err := f.storage.Add(context.Background(), f.ID(), prop, value, now)
+			if err != nil {
+				logger.Error().Err(err).Msgf("failed to add to database")
+			}
 		} else {
 			logger.Debug().Msgf("new value was not saved to history")
 		}

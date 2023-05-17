@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -23,7 +24,14 @@ func TestCounter(t *testing.T) {
 	config := "functionID;counter;overflow;" + sensorId
 	input := bytes.NewBufferString(config)
 
-	reg, _ := NewRegistry(ctx, input)
+	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+	})
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
@@ -47,7 +55,14 @@ func TestLevel(t *testing.T) {
 
 	input := bytes.NewBufferString("functionID;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5")
 
-	reg, _ := NewRegistry(ctx, input)
+	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+	})
 
 	v := 2.1
 	pack := NewSenMLPack(sensorId, lwm2m.Distance, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
@@ -71,7 +86,14 @@ func TestLevelFromAnAngle(t *testing.T) {
 
 	sensorId := "testId"
 	input := bytes.NewBufferString("functionID;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5,angle=30")
-	reg, _ := NewRegistry(ctx, input)
+	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+	})
 
 	v := 2.1
 	pack := NewSenMLPack(sensorId, lwm2m.Distance, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
@@ -98,7 +120,14 @@ func TestTimer(t *testing.T) {
 	config := "functionID;timer;overflow;" + sensorId
 	input := bytes.NewBufferString(config)
 
-	reg, _ := NewRegistry(ctx, input)
+	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+	})
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
@@ -123,7 +152,13 @@ func TestWaterQuality(t *testing.T) {
 
 	input := bytes.NewBufferString("functionID;waterquality;beach;" + sensorId)
 
-	reg, _ := NewRegistry(ctx, input)
+	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		}})
 
 	v := 2.34
 	pack := NewSenMLPack(sensorId, lwm2m.Temperature, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))
@@ -147,7 +182,14 @@ func TestLastN(t *testing.T) {
 
 	sensorId := "testId"
 	input := bytes.NewBufferString("functionID;waterquality;beach;" + sensorId)
-	reg, _ := NewRegistry(ctx, input)
+	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+	})
 
 	newMessageAccepted := func(v float64, t time.Time) *events.MessageAccepted {
 		pack := NewSenMLPack(sensorId, lwm2m.Temperature, t, Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))

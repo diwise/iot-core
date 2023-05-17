@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"testing"
+	"time"
 
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/matryer/is"
 )
 
@@ -13,7 +15,17 @@ func TestCreateRegistry(t *testing.T) {
 	sensorId := "testId"
 
 	config := "functionID;counter;overflow;" + sensorId
-	reg, err := NewRegistry(context.Background(), bytes.NewBufferString(config))
+	reg, err := NewRegistry(context.Background(), bytes.NewBufferString(config), &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+		InitializeFunc: func(contextMoqParam context.Context) error {
+			return nil
+		},
+	})
 	is.NoErr(err)
 
 	matches, err := reg.Find(context.Background(), MatchSensor(sensorId))
@@ -26,7 +38,17 @@ func TestFindNonMatchingFunctionReturnsEmptySlice(t *testing.T) {
 	is := is.New(t)
 
 	config := "functionID;counter;overflow;sensorId"
-	reg, err := NewRegistry(context.Background(), bytes.NewBufferString(config))
+	reg, err := NewRegistry(context.Background(), bytes.NewBufferString(config), &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+		InitializeFunc: func(contextMoqParam context.Context) error {
+			return nil
+		},
+	})
 	is.NoErr(err)
 
 	matches, err := reg.Find(context.Background(), MatchSensor("noSuchSensor"))

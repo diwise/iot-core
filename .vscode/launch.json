@@ -11,9 +11,21 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/iot-core/main.go",
             "env": {
-                "DEV_MGMT_URL" : "http://localhost:8080",
-                "RABBITMQ_HOST" : "localhost"
-            }
+                "DEV_MGMT_URL": "http://localhost:8081",
+                "OAUTH2_TOKEN_URL": "http://localhost:8082/realms/diwise-local/protocol/openid-connect/token",
+                "OAUTH2_CLIENT_ID": "diwise-devmgmt-api",
+                "OAUTH2_CLIENT_SECRET": "615241704865544572616B61474E494B65504861574E7449744943655269654E",
+                "RABBITMQ_DISABLED": "true",
+                "POSTGRES_USER": "diwise",
+                "POSTGRES_PASSWORD": "diwise",
+                "POSTGRES_HOST": "localhost",
+                "POSTGRES_PORT": "5432",
+                "POSTGRES_DBNAME": "diwise",
+                "POSTGRES_SSLMODE": "disable",
+            },
+            "args": [
+                "-functions=${workspaceFolder}/deployments/configs/diwise/functions.csv"
+            ]
         }
     ]
 }

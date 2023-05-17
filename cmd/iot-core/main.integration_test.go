@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
 	dmctest "github.com/diwise/iot-device-mgmt/pkg/test"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -22,7 +24,17 @@ func TestAPIfunctionsReturns200OK(t *testing.T) {
 	is, dmClient, msgCtx := testSetup(t)
 
 	fconf := bytes.NewBufferString("fid1;counter;overflow;internalID")
-	_, api, err := initialize(context.Background(), dmClient, msgCtx, fconf)
+	_, api, err := initialize(context.Background(), dmClient, msgCtx, fconf, &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+		InitializeFunc: func(contextMoqParam context.Context) error {
+			return nil
+		},
+	})
 	is.NoErr(err)
 
 	server := httptest.NewServer(api.Router())
@@ -37,7 +49,17 @@ func TestReceiveDigitalInputUpdateMessage(t *testing.T) {
 	sID := "internalID"
 
 	fconf := bytes.NewBufferString("fid1;counter;overflow;" + sID)
-	_, _, err := initialize(context.Background(), dmClient, msgCtx, fconf)
+	_, _, err := initialize(context.Background(), dmClient, msgCtx, fconf, &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+		InitializeFunc: func(contextMoqParam context.Context) error {
+			return nil
+		},
+	})
 	is.NoErr(err)
 
 	topicMessageHandler := msgCtx.RegisterTopicMessageHandlerCalls()[0].Handler
