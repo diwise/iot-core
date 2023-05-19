@@ -62,7 +62,7 @@ func Connect(ctx context.Context, log zerolog.Logger, cfg Config) (Storage, erro
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &impl{
 		db: conn,
 	}, nil
@@ -91,7 +91,8 @@ func (i *impl) createTables(ctx context.Context) error {
 			label 	TEXT NOT NULL,
 			value 	DOUBLE PRECISION NOT NULL,
 			FOREIGN KEY (fnct_id) REFERENCES fnct (id)			
-	  	);`
+	  	);
+		CREATE INDEX IF NOT EXISTS fnct_history_fnct_id_label_idx ON fnct_history (fnct_id, label);`
 
 	tx, err := i.db.Begin(ctx)
 	if err != nil {
