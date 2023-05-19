@@ -14,7 +14,7 @@
                 "DEV_MGMT_URL": "http://localhost:8081",
                 "OAUTH2_TOKEN_URL": "http://localhost:8082/realms/diwise-local/protocol/openid-connect/token",
                 "OAUTH2_CLIENT_ID": "diwise-devmgmt-api",
-                "OAUTH2_CLIENT_SECRET": "615241704865544572616B61474E494B65504861574E7449744943655269654E",
+                "OAUTH2_CLIENT_SECRET": "",
                 "RABBITMQ_DISABLED": "true",
                 "POSTGRES_USER": "diwise",
                 "POSTGRES_PASSWORD": "diwise",
