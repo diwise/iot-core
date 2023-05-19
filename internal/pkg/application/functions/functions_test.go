@@ -210,7 +210,7 @@ func TestAddToHistory(t *testing.T) {
 	_ = f[0].Handle(ctx, newMessageAccepted(5.67, time.Now().Add(5*time.Hour)), msgctx)
 	_ = f[0].Handle(ctx, newMessageAccepted(6.67, time.Now().Add(6*time.Hour)), msgctx)
 
-	h, _ := f[0].History(ctx, 0)
+	h, _ := f[0].History(ctx, "", 0)
 	is.Equal(6, len(h))
 }
 

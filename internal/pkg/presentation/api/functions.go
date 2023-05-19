@@ -55,8 +55,9 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 		}
 
 		lastN := queryUnescapeQueryInt(r, "lastN")
+		label := queryUnescapeQueryStr(r, "label")
 
-		history, _ := function.History(ctx, lastN)
+		history, _ := function.History(ctx, label, lastN)
 		st := time.Time{}
 		et := time.Now().UTC()
 
@@ -82,6 +83,13 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 		w.WriteHeader(http.StatusOK)
 		w.Write(b)
 	}
+}
+func queryUnescapeQueryStr(r *http.Request, key string) string {
+	q, err := url.QueryUnescape(r.URL.Query().Get(key))
+	if err != nil {
+		return ""
+	}
+	return q
 }
 
 func queryUnescapeQueryInt(r *http.Request, key string) int {

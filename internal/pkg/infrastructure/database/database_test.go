@@ -9,6 +9,9 @@ import (
 )
 
 func TestSQL(t *testing.T) {
+	// start TimescaleDB 'using docker compose -f deployments/docker-compose.yaml up'
+	// test will PASS if no DB is running
+
 	s, ctx, err := testSetup()
 	if err != nil {
 		return
