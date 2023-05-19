@@ -58,6 +58,11 @@ func Connect(ctx context.Context, log zerolog.Logger, cfg Config) (Storage, erro
 		return nil, err
 	}
 
+	err = conn.Ping(ctx)
+	if err != nil {
+		return nil, err
+	}
+	
 	return &impl{
 		db: conn,
 	}, nil
