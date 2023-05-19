@@ -124,7 +124,7 @@ func (f *fnct) History(ctx context.Context, label string, lastN int) ([]LogValue
 	if label == "" {
 		label = f.defaultHistoryLabel
 	}
-	
+
 	lv, err := f.storage.History(ctx, f.ID(), label, lastN)
 	if err != nil {
 		return nil, err
@@ -134,9 +134,9 @@ func (f *fnct) History(ctx context.Context, label string, lastN int) ([]LogValue
 		return []LogValue{}, errors.New("no history")
 	}
 
-	loggedValues := make([]LogValue, 0)
-	for _, v := range lv {
-		loggedValues = append(loggedValues, LogValue{Timestamp: v.Timestamp, Value: v.Value})
+	loggedValues := make([]LogValue, len(lv))
+	for i, v := range lv {
+		loggedValues[i] = LogValue{Timestamp: v.Timestamp, Value: v.Value}
 	}
 
 	return loggedValues, nil
