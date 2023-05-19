@@ -177,17 +177,22 @@ func TestWaterQuality(t *testing.T) {
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
-func TestLastN(t *testing.T) {
+func TestAddToHistory(t *testing.T) {
 	is, ctx, msgctx := testSetup(t)
 
 	sensorId := "testId"
 	input := bytes.NewBufferString("functionID;waterquality;beach;" + sensorId)
+	store := make([]database.LogValue, 0)
 	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			store = append(store, database.LogValue{Timestamp: timestamp, Value: value})
 			return nil
+		},
+		HistoryFunc: func(ctx context.Context, id, label string, lastN int) ([]database.LogValue, error) {
+			return store, nil
 		},
 	})
 
@@ -206,13 +211,6 @@ func TestLastN(t *testing.T) {
 	_ = f[0].Handle(ctx, newMessageAccepted(6.67, time.Now().Add(6*time.Hour)), msgctx)
 
 	h, _ := f[0].History(ctx, 0)
-	is.Equal(6, len(h))
-
-	h, _ = f[0].History(ctx, 4)
-	is.Equal(4, len(h))
-	is.Equal(3.7, h[0].Value)
-
-	h, _ = f[0].History(ctx, 7)
 	is.Equal(6, len(h))
 }
 

@@ -46,7 +46,6 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				ID_:     tokens[0],
 				Type:    tokens[1],
 				SubType: tokens[2],
-				history: make(map[string][]LogValue),
 				storage: storage,
 			}
 
@@ -89,10 +88,6 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 					return nil, fmt.Errorf("unable to parse function config line: \"%s\"", line)
 				}
 				continue
-			}
-
-			if f.defaultHistoryLabel != "" {
-				f.history[f.defaultHistoryLabel] = make([]LogValue, 0, 100)
 			}
 
 			storage.AddFn(ctx, f.ID_, f.Type, f.SubType, f.Tenant, f.Source, 0, 0)

@@ -25,6 +25,9 @@ var _ Storage = &StorageMock{}
 //			AddFnFunc: func(ctx context.Context, id string, fnType string, subType string, tenant string, source string, lat float64, lon float64) error {
 //				panic("mock out the AddFn method")
 //			},
+//			HistoryFunc: func(ctx context.Context, id string, label string, lastN int) ([]LogValue, error) {
+//				panic("mock out the History method")
+//			},
 //			InitializeFunc: func(contextMoqParam context.Context) error {
 //				panic("mock out the Initialize method")
 //			},
@@ -40,6 +43,9 @@ type StorageMock struct {
 
 	// AddFnFunc mocks the AddFn method.
 	AddFnFunc func(ctx context.Context, id string, fnType string, subType string, tenant string, source string, lat float64, lon float64) error
+
+	// HistoryFunc mocks the History method.
+	HistoryFunc func(ctx context.Context, id string, label string, lastN int) ([]LogValue, error)
 
 	// InitializeFunc mocks the Initialize method.
 	InitializeFunc func(contextMoqParam context.Context) error
@@ -78,6 +84,17 @@ type StorageMock struct {
 			// Lon is the lon argument value.
 			Lon float64
 		}
+		// History holds details about calls to the History method.
+		History []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ID is the id argument value.
+			ID string
+			// Label is the label argument value.
+			Label string
+			// LastN is the lastN argument value.
+			LastN int
+		}
 		// Initialize holds details about calls to the Initialize method.
 		Initialize []struct {
 			// ContextMoqParam is the contextMoqParam argument value.
@@ -86,6 +103,7 @@ type StorageMock struct {
 	}
 	lockAdd        sync.RWMutex
 	lockAddFn      sync.RWMutex
+	lockHistory    sync.RWMutex
 	lockInitialize sync.RWMutex
 }
 
@@ -194,6 +212,50 @@ func (mock *StorageMock) AddFnCalls() []struct {
 	mock.lockAddFn.RLock()
 	calls = mock.calls.AddFn
 	mock.lockAddFn.RUnlock()
+	return calls
+}
+
+// History calls HistoryFunc.
+func (mock *StorageMock) History(ctx context.Context, id string, label string, lastN int) ([]LogValue, error) {
+	if mock.HistoryFunc == nil {
+		panic("StorageMock.HistoryFunc: method is nil but Storage.History was just called")
+	}
+	callInfo := struct {
+		Ctx   context.Context
+		ID    string
+		Label string
+		LastN int
+	}{
+		Ctx:   ctx,
+		ID:    id,
+		Label: label,
+		LastN: lastN,
+	}
+	mock.lockHistory.Lock()
+	mock.calls.History = append(mock.calls.History, callInfo)
+	mock.lockHistory.Unlock()
+	return mock.HistoryFunc(ctx, id, label, lastN)
+}
+
+// HistoryCalls gets all the calls that were made to History.
+// Check the length with:
+//
+//	len(mockedStorage.HistoryCalls())
+func (mock *StorageMock) HistoryCalls() []struct {
+	Ctx   context.Context
+	ID    string
+	Label string
+	LastN int
+} {
+	var calls []struct {
+		Ctx   context.Context
+		ID    string
+		Label string
+		LastN int
+	}
+	mock.lockHistory.RLock()
+	calls = mock.calls.History
+	mock.lockHistory.RUnlock()
 	return calls
 }
 

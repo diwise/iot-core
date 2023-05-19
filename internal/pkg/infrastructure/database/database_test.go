@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func TestXxx(t *testing.T) {
+func TestSQL(t *testing.T) {
 	s, ctx, err := testSetup()
 	if err != nil {
 		return
@@ -22,6 +22,19 @@ func TestXxx(t *testing.T) {
 	err = s.Add(ctx, "fnct-01", "temperature", 42.0, time.Now().UTC())
 	if err != nil {
 		t.Error(err)
+	}
+
+	err = s.Add(ctx, "fnct-01", "temperature", 45.0, time.Now().UTC().Add(5*time.Second))
+	if err != nil {
+		t.Error(err)
+	}
+
+	logValues, err := s.History(ctx, "fnct-01", "temperature", 10)
+	if err != nil {
+		t.Error(err)
+	}
+	if !(len(logValues) >= 2) {
+		t.Fail()
 	}
 }
 

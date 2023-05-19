@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 )
@@ -17,10 +16,16 @@ type Storage interface {
 	Initialize(context.Context) error
 	Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
 	AddFn(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error
+	History(ctx context.Context, id, label string, lastN int) ([]LogValue, error)
 }
 
 type impl struct {
 	db *pgxpool.Pool
+}
+
+type LogValue struct {
+	Value     float64   `json:"v"`
+	Timestamp time.Time `json:"ts"`
 }
 
 type Config struct {
@@ -100,15 +105,19 @@ func (i *impl) createTables(ctx context.Context) error {
 		return err
 	}
 
-	_, err = tx.Exec(ctx, `SELECT create_hypertable('fnct_history', 'time');`)
+	var n int32
+	err = tx.QueryRow(ctx, `
+		SELECT COUNT(*) n 
+		FROM timescaledb_information.hypertables 
+		WHERE hypertable_name = 'fnct_history';`).Scan(&n)
 	if err != nil {
-		isAlreadyHypertable := false
-		if pgerr, ok := err.(*pgconn.PgError); ok {
-			if pgerr.Code == "TS110" { // TS110 = table fnct_history is already a hypertable
-				isAlreadyHypertable = true
-			}
-		}
-		if !isAlreadyHypertable {
+		tx.Rollback(ctx)
+		return err
+	}
+
+	if n == 0 {
+		_, err := tx.Exec(ctx, `SELECT create_hypertable('fnct_history', 'time');`)
+		if err != nil {
 			tx.Rollback(ctx)
 			return err
 		}
@@ -136,4 +145,34 @@ func (i *impl) Add(ctx context.Context, id, label string, value float64, timesta
 	`, timestamp, id, label, value)
 
 	return err
+}
+
+func (i *impl) History(ctx context.Context, id, label string, lastN int) ([]LogValue, error) {
+	rows, err := i.db.Query(ctx,
+		`SELECT time, value FROM (
+			SELECT time, value 
+			FROM fnct_history 
+			WHERE fnct_id=$1 AND label=$2 
+			ORDER BY time DESC
+			LIMIT $3
+			) as history 
+		ORDER BY time ASC`, id, label, lastN)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	logValues := make([]LogValue, 0)
+
+	for rows.Next() {
+		var t time.Time
+		var v float64
+		err := rows.Scan(&t, &v)
+		if err != nil {
+			return nil, err
+		}
+		logValues = append(logValues, LogValue{Timestamp: t, Value: v})
+	}
+
+	return logValues, nil
 }

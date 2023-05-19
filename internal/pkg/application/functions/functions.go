@@ -46,10 +46,8 @@ type fnct struct {
 
 	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64)) (bool, error)
 
-	history             map[string][]LogValue
 	defaultHistoryLabel string
-
-	storage database.Storage
+	storage             database.Storage
 }
 
 func (f *fnct) ID() string {
@@ -57,7 +55,6 @@ func (f *fnct) ID() string {
 }
 
 func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
-
 	logger := logging.GetFromContext(ctx)
 
 	timeWhenHandleWasCalled := time.Now().UTC()
@@ -75,15 +72,9 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 			now = now.Add(timeSinceHandleWasCalled)
 		}
 
-		// TODO: This should be persisted to a database instead
-		if loggedValues, ok := f.history[prop]; ok {
-			f.history[prop] = append(loggedValues, LogValue{Value: value, Timestamp: now})
-			err := f.storage.Add(context.Background(), f.ID(), prop, value, now)
-			if err != nil {
-				logger.Error().Err(err).Msgf("failed to add to database")
-			}
-		} else {
-			logger.Debug().Msgf("new value was not saved to history")
+		err := f.storage.Add(context.Background(), f.ID(), prop, value, now)
+		if err != nil {
+			logger.Error().Err(err).Msgf("failed to add values to database")
 		}
 	}
 
@@ -130,19 +121,21 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 }
 
 func (f *fnct) History(ctx context.Context, lastN int) ([]LogValue, error) {
-	if loggedValues, ok := f.history[f.defaultHistoryLabel]; ok {
-		if lastN > 0 {
-			skip := 0
-			if lastN < len(loggedValues) {
-				skip = len(loggedValues) - lastN
-			}
-			return loggedValues[skip:], nil
-		}
-
-		return loggedValues, nil
+	lv, err := f.storage.History(ctx, f.ID(), f.defaultHistoryLabel, lastN)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, errors.New("no history")
+	if len(lv) == 0 {
+		return []LogValue{}, errors.New("no history")
+	}
+
+	loggedValues := make([]LogValue, 0)
+	for _, v := range lv {
+		loggedValues = append(loggedValues, LogValue{Timestamp: v.Timestamp, Value: v.Value})
+	}
+
+	return loggedValues, nil
 }
 
 func (f *fnct) ContentType() string {
