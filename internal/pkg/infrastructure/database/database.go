@@ -73,7 +73,7 @@ func (i *impl) Initialize(ctx context.Context) error {
 }
 
 func (i *impl) createTables(ctx context.Context) error {
-	fnctTbl := `
+	ddl := `
 		CREATE TABLE IF NOT EXISTS fnct (
 			id 		  TEXT PRIMARY KEY NOT NULL,
 			type 	  TEXT NOT NULL,
@@ -82,9 +82,8 @@ func (i *impl) createTables(ctx context.Context) error {
 			source 	  TEXT NULL,
 			latitude  NUMERIC(7, 5),
 			longitude NUMERIC(7, 5)
-	  	);`
+	  	);
 
-	histTbl := `
 		CREATE TABLE IF NOT EXISTS fnct_history (
 			time 	TIMESTAMPTZ NOT NULL,
 			fnct_id TEXT NOT NULL,
@@ -92,6 +91,7 @@ func (i *impl) createTables(ctx context.Context) error {
 			value 	DOUBLE PRECISION NOT NULL,
 			FOREIGN KEY (fnct_id) REFERENCES fnct (id)
 	  	);
+
 		CREATE INDEX IF NOT EXISTS fnct_history_fnct_id_label_idx ON fnct_history (fnct_id, label);`
 
 	tx, err := i.db.Begin(ctx)
@@ -99,13 +99,7 @@ func (i *impl) createTables(ctx context.Context) error {
 		return err
 	}
 
-	_, err = tx.Exec(ctx, fnctTbl)
-	if err != nil {
-		tx.Rollback(ctx)
-		return err
-	}
-
-	_, err = tx.Exec(ctx, histTbl)
+	_, err = tx.Exec(ctx, ddl)
 	if err != nil {
 		tx.Rollback(ctx)
 		return err
