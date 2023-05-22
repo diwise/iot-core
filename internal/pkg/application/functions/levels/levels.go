@@ -142,7 +142,12 @@ func (l *level) Percent() float64 {
 }
 
 func (l *level) Metadata() metadata.Metadata {
-	return metadata.Metadata{}
+	return metadata.Metadata{
+		CosAlpha: &l.cosAlpha,
+		MaxDistance: &l.maxDistance,
+		MaxLevel: &l.maxLevel,
+		MeanLevel: &l.meanLevel,
+	}
 }
 
 func hasChanged(previousLevel, newLevel float64) bool {
