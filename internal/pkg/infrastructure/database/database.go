@@ -90,7 +90,7 @@ func (i *impl) createTables(ctx context.Context) error {
 			fnct_id TEXT NOT NULL,
 			label 	TEXT NOT NULL,
 			value 	DOUBLE PRECISION NOT NULL,
-			FOREIGN KEY (fnct_id) REFERENCES fnct (id)			
+			FOREIGN KEY (fnct_id) REFERENCES fnct (id)
 	  	);
 		CREATE INDEX IF NOT EXISTS fnct_history_fnct_id_label_idx ON fnct_history (fnct_id, label);`
 
@@ -113,8 +113,8 @@ func (i *impl) createTables(ctx context.Context) error {
 
 	var n int32
 	err = tx.QueryRow(ctx, `
-		SELECT COUNT(*) n 
-		FROM timescaledb_information.hypertables 
+		SELECT COUNT(*) n
+		FROM timescaledb_information.hypertables
 		WHERE hypertable_name = 'fnct_history';`).Scan(&n)
 	if err != nil {
 		tx.Rollback(ctx)
@@ -146,7 +146,7 @@ func (i *impl) AddFn(ctx context.Context, id, fnType, subType, tenant, source st
 }
 
 func (i *impl) Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
-	_, err := i.db.Exec(ctx, `		
+	_, err := i.db.Exec(ctx, `
 		INSERT INTO fnct_history (time, fnct_id, label, value) VALUES ($1, $2, $3, $4);
 	`, timestamp, id, label, value)
 
@@ -156,12 +156,12 @@ func (i *impl) Add(ctx context.Context, id, label string, value float64, timesta
 func (i *impl) History(ctx context.Context, id, label string, lastN int) ([]LogValue, error) {
 	rows, err := i.db.Query(ctx,
 		`SELECT time, value FROM (
-			SELECT time, value 
-			FROM fnct_history 
-			WHERE fnct_id=$1 AND label=$2 
+			SELECT time, value
+			FROM fnct_history
+			WHERE fnct_id=$1 AND label=$2
 			ORDER BY time DESC
 			LIMIT $3
-			) as history 
+			) as history
 		ORDER BY time ASC`, id, label, lastN)
 	if err != nil {
 		return nil, err
