@@ -2,7 +2,6 @@ package timers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
@@ -12,7 +11,7 @@ import (
 const FunctionTypeName string = "timer"
 
 type Timer interface {
-	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error)
+	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time)) (bool, error)
 
 	State() bool
 }
@@ -36,7 +35,7 @@ type timer struct {
 	valueUpdater  *time.Ticker
 }
 
-func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error) {
+func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time)) (bool, error) {
 	if !e.BaseNameMatches(lwm2m.DigitalInput) {
 		return false, nil
 	}
@@ -47,18 +46,18 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 	previousState := t.State_
 
-	state, stateOK := e.GetBool(DigitalInputState)
+	r, stateOK := e.GetRecord(DigitalInputState)
 
 	if stateOK {
+		state := *r.BoolValue
+		ts := time.Unix(int64(r.Time), 0).UTC()
+
 		if state != previousState {
 			if state {
-				onchange("state", 0)
-				onchange("state", 1)
+				onchange("state", 0, ts)
+				onchange("state", 1, ts)
 
-				start, err := time.Parse(time.RFC3339, e.Timestamp)
-				if err != nil {
-					return false, fmt.Errorf("failed to parse time from event timestamp: %s", err.Error())
-				}
+				start := ts
 
 				t.StartTime = start
 				t.State_ = state
@@ -66,7 +65,7 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 				t.EndTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
 				t.Duration = nil
 
-				onchange("time", t.totalDuration.Minutes())
+				onchange("time", t.totalDuration.Minutes(), ts)
 
 				if t.valueUpdater == nil {
 					t.valueUpdater = time.NewTicker(1 * time.Minute)
@@ -74,20 +73,17 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 						for range t.valueUpdater.C {
 							if t.State_ {
 								duration := t.totalDuration + time.Now().UTC().Sub(t.StartTime)
-								onchange("time", duration.Minutes())
+								onchange("time", duration.Minutes(), time.Now().UTC())
 							}
 						}
 					}()
 				}
 
 			} else {
-				onchange("state", 1)
-				onchange("state", 0)
+				onchange("state", 1, ts)
+				onchange("state", 0, ts)
 
-				end, err := time.Parse(time.RFC3339, e.Timestamp)
-				if err != nil {
-					return false, fmt.Errorf("failed to parse time from event timestamp: %s", err.Error())
-				}
+				end := ts
 
 				t.EndTime = &end
 				t.State_ = state
@@ -96,7 +92,7 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 				t.Duration = &duration
 				t.totalDuration = t.totalDuration + duration
 
-				onchange("time", t.totalDuration.Minutes())
+				onchange("time", t.totalDuration.Minutes(), ts)
 			}
 		}
 	}

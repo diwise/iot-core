@@ -27,7 +27,7 @@ func TestCounter(t *testing.T) {
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
-	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, time.Now().UTC(), BoolValue("5500", true))
+	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, time.Now().UTC(), BoolValue("5500", true, time.Now().UTC()))
 	acceptedMessage := events.NewMessageAccepted("sensorID", pack)
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
@@ -102,9 +102,9 @@ func TestTimer(t *testing.T) {
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
-	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, time.Now().UTC(), BoolValue("5500", true))
+	packTime := time.Now().UTC()
+	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, packTime, BoolValue("5500", true, packTime))
 	acceptedMessage := events.NewMessageAccepted("sensorID", pack)
-	startTime := acceptedMessage.Timestamp
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
@@ -113,7 +113,7 @@ func TestTimer(t *testing.T) {
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
 	const expectationFmt string = `{"id":"functionID","type":"timer","subtype":"overflow","timer":{"startTime":"%s","state":true}}`
-	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, startTime))
+	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, packTime.Format(time.RFC3339)))
 }
 
 func TestWaterQuality(t *testing.T) {
@@ -208,8 +208,8 @@ func NewSenMLPack(deviceID, baseName string, baseTime time.Time, decorators ...S
 	return s.Pack
 }
 
-func BoolValue(n string, vb bool) SenMLDecoratorFunc {
-	return Rec(n, nil, nil, "", nil, "", &vb)
+func BoolValue(n string, vb bool, t time.Time) SenMLDecoratorFunc {
+	return Rec(n, nil, nil, "", &t, "", &vb)
 }
 
 func Rec(n string, v, sum *float64, vs string, t *time.Time, u string, vb *bool) SenMLDecoratorFunc {

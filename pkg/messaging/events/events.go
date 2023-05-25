@@ -224,6 +224,15 @@ func (m MessageAccepted) GetTime(name string) (float64, bool) {
 	return 0, false
 }
 
+func (m MessageAccepted) GetRecord(name string) (senml.Record, bool) {
+	for _, r := range m.Pack {
+		if strings.EqualFold(r.Name, name) {
+			return r, true
+		}
+	}
+	return senml.Record{}, false
+ }
+
 func (m MessageAccepted) Tenant() string {
 	if s, ok := m.GetString("tenant"); ok {
 		return s

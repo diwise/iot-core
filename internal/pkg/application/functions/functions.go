@@ -43,7 +43,7 @@ type fnct struct {
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 	Building     buildings.Building          `json:"building,omitempty"`
 
-	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64)) (bool, error)
+	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time)) (bool, error)
 
 	history             map[string][]LogValue
 	defaultHistoryLabel string
@@ -59,7 +59,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 	timeWhenHandleWasCalled := time.Now().UTC()
 
-	onchange := func(prop string, value float64) {
+	onchange := func(prop string, value float64, ts time.Time) {
 		logger.Debug().Msgf("property %s changed to %f", prop, value)
 
 		// onchange may be called repeatedly based on a timer, so we need to adjust

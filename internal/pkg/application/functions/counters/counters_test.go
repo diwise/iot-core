@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/matryer/is"
@@ -14,7 +15,7 @@ func TestCounter(t *testing.T) {
 	is := is.New(t)
 
 	c := New()
-	c.Handle(context.Background(), newState(true), func(string, float64) {})
+	c.Handle(context.Background(), newState(true), func(string, float64, time.Time) {})
 
 	is.Equal(c.Count(), 1) // Should have changed one time
 	is.True(c.State())
@@ -24,8 +25,8 @@ func TestCounterDoubleOn(t *testing.T) {
 	is := is.New(t)
 
 	c := New()
-	c.Handle(context.Background(), newState(true), func(string, float64) {})
-	c.Handle(context.Background(), newState(true), func(string, float64) {})
+	c.Handle(context.Background(), newState(true), func(string, float64, time.Time) {})
+	c.Handle(context.Background(), newState(true), func(string, float64, time.Time) {})
 
 	is.Equal(c.Count(), 1) // Should only have changed once
 }
@@ -34,10 +35,10 @@ func TestCounterOnOffOn(t *testing.T) {
 	is := is.New(t)
 
 	c := New()
-	c.Handle(context.Background(), newState(true), func(string, float64) {})
-	c.Handle(context.Background(), newState(false), func(string, float64) {})
-	c.Handle(context.Background(), newState(true), func(string, float64) {})
-	c.Handle(context.Background(), newState(false), func(string, float64) {})
+	c.Handle(context.Background(), newState(true), func(string, float64, time.Time) {})
+	c.Handle(context.Background(), newState(false), func(string, float64, time.Time) {})
+	c.Handle(context.Background(), newState(true), func(string, float64, time.Time) {})
+	c.Handle(context.Background(), newState(false), func(string, float64, time.Time) {})
 
 	is.Equal(c.Count(), 2) // Should have changed to on twice
 	is.True(c.State() == false)
