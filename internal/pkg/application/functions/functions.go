@@ -3,7 +3,6 @@ package functions
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions/buildings"
@@ -131,7 +130,7 @@ func (f *fnct) History(ctx context.Context, label string, lastN int) ([]LogValue
 	}
 
 	if len(lv) == 0 {
-		return []LogValue{}, errors.New("no history")
+		return []LogValue{}, nil
 	}
 
 	loggedValues := make([]LogValue, len(lv))
