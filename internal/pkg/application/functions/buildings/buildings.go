@@ -13,7 +13,7 @@ const (
 )
 
 type Building interface {
-	Handle(context.Context, *events.MessageAccepted, func(string, float64)) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, func(string, float64) error) (bool, error)
 
 	CurrentPower() float64
 	CurrentEnergy() float64
@@ -28,7 +28,7 @@ type building struct {
 	Power  float64 `json:"power"`
 }
 
-func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error) {
+func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64) error) (bool, error) {
 	if !e.BaseNameMatches(lwm2m.Power) && !e.BaseNameMatches(lwm2m.Energy) {
 		return false, nil
 	}
@@ -43,8 +43,8 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 			b.Power = value
 
 			if hasChanged(previousValue, value) {
-				onchange("power", value)
-				return true, nil
+				err := onchange("power", value)
+				return true, err
 			}
 		} else if e.BaseNameMatches(lwm2m.Energy) {
 			previousValue := b.Energy
@@ -52,8 +52,8 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 			b.Energy = value
 
 			if hasChanged(previousValue, value) {
-				onchange("energy", value)
-				return true, nil
+				err := onchange("energy", value)
+				return true, err
 			}
 		}
 	}

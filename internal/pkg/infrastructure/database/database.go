@@ -73,7 +73,7 @@ func (i *impl) Initialize(ctx context.Context) error {
 }
 
 func (i *impl) createTables(ctx context.Context) error {
-	fnctTbl := `
+	ddl := `
 		CREATE TABLE IF NOT EXISTS fnct (
 			id 		  TEXT PRIMARY KEY NOT NULL,
 			type 	  TEXT NOT NULL,
@@ -82,16 +82,16 @@ func (i *impl) createTables(ctx context.Context) error {
 			source 	  TEXT NULL,
 			latitude  NUMERIC(7, 5),
 			longitude NUMERIC(7, 5)
-	  	);`
+	  	);
 
-	histTbl := `
 		CREATE TABLE IF NOT EXISTS fnct_history (
 			time 	TIMESTAMPTZ NOT NULL,
 			fnct_id TEXT NOT NULL,
 			label 	TEXT NOT NULL,
 			value 	DOUBLE PRECISION NOT NULL,
-			FOREIGN KEY (fnct_id) REFERENCES fnct (id)			
+			FOREIGN KEY (fnct_id) REFERENCES fnct (id)
 	  	);
+
 		CREATE INDEX IF NOT EXISTS fnct_history_fnct_id_label_idx ON fnct_history (fnct_id, label);`
 
 	tx, err := i.db.Begin(ctx)
@@ -99,13 +99,7 @@ func (i *impl) createTables(ctx context.Context) error {
 		return err
 	}
 
-	_, err = tx.Exec(ctx, fnctTbl)
-	if err != nil {
-		tx.Rollback(ctx)
-		return err
-	}
-
-	_, err = tx.Exec(ctx, histTbl)
+	_, err = tx.Exec(ctx, ddl)
 	if err != nil {
 		tx.Rollback(ctx)
 		return err
@@ -113,8 +107,8 @@ func (i *impl) createTables(ctx context.Context) error {
 
 	var n int32
 	err = tx.QueryRow(ctx, `
-		SELECT COUNT(*) n 
-		FROM timescaledb_information.hypertables 
+		SELECT COUNT(*) n
+		FROM timescaledb_information.hypertables
 		WHERE hypertable_name = 'fnct_history';`).Scan(&n)
 	if err != nil {
 		tx.Rollback(ctx)
@@ -146,7 +140,7 @@ func (i *impl) AddFn(ctx context.Context, id, fnType, subType, tenant, source st
 }
 
 func (i *impl) Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
-	_, err := i.db.Exec(ctx, `		
+	_, err := i.db.Exec(ctx, `
 		INSERT INTO fnct_history (time, fnct_id, label, value) VALUES ($1, $2, $3, $4);
 	`, timestamp, id, label, value)
 
@@ -156,12 +150,12 @@ func (i *impl) Add(ctx context.Context, id, label string, value float64, timesta
 func (i *impl) History(ctx context.Context, id, label string, lastN int) ([]LogValue, error) {
 	rows, err := i.db.Query(ctx,
 		`SELECT time, value FROM (
-			SELECT time, value 
-			FROM fnct_history 
-			WHERE fnct_id=$1 AND label=$2 
+			SELECT time, value
+			FROM fnct_history
+			WHERE fnct_id=$1 AND label=$2
 			ORDER BY time DESC
 			LIMIT $3
-			) as history 
+			) as history
 		ORDER BY time ASC`, id, label, lastN)
 	if err != nil {
 		return nil, err

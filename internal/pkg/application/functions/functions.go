@@ -43,7 +43,7 @@ type fnct struct {
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 	Building     buildings.Building          `json:"building,omitempty"`
 
-	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64)) (bool, error)
+	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64) error) (bool, error)
 
 	defaultHistoryLabel string
 	storage             database.Storage
@@ -58,7 +58,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 	timeWhenHandleWasCalled := time.Now().UTC()
 
-	onchange := func(prop string, value float64) {
+	onchange := func(prop string, value float64) error {
 		logger.Debug().Msgf("property %s changed to %f", prop, value)
 
 		// onchange may be called repeatedly based on a timer, so we need to adjust
@@ -71,10 +71,13 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 			now = now.Add(timeSinceHandleWasCalled)
 		}
 
-		err := f.storage.Add(context.Background(), f.ID(), prop, value, now)
+		err := f.storage.Add(ctx, f.ID(), prop, value, now)
 		if err != nil {
 			logger.Error().Err(err).Msgf("failed to add values to database")
+			return err
 		}
+
+		return nil
 	}
 
 	changed, err := f.handle(ctx, e, onchange)

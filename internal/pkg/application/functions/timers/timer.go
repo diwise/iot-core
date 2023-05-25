@@ -2,6 +2,7 @@ package timers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 const FunctionTypeName string = "timer"
 
 type Timer interface {
-	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error)
+	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64) error) (bool, error)
 
 	State() bool
 }
@@ -36,7 +37,7 @@ type timer struct {
 	valueUpdater  *time.Ticker
 }
 
-func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error) {
+func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64) error) (bool, error) {
 	if !e.BaseNameMatches(lwm2m.DigitalInput) {
 		return false, nil
 	}
@@ -49,11 +50,13 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 	state, stateOK := e.GetBool(DigitalInputState)
 
+	errs := make([]error, 0)
+
 	if stateOK {
 		if state != previousState {
 			if state {
-				onchange("state", 0)
-				onchange("state", 1)
+				errs = append(errs, onchange("state", 0))
+				errs = append(errs, onchange("state", 1))
 
 				start, err := time.Parse(time.RFC3339, e.Timestamp)
 				if err != nil {
@@ -66,7 +69,7 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 				t.EndTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
 				t.Duration = nil
 
-				onchange("time", t.totalDuration.Minutes())
+				errs = append(errs, onchange("time", t.totalDuration.Minutes()))
 
 				if t.valueUpdater == nil {
 					t.valueUpdater = time.NewTicker(1 * time.Minute)
@@ -74,15 +77,14 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 						for range t.valueUpdater.C {
 							if t.State_ {
 								duration := t.totalDuration + time.Now().UTC().Sub(t.StartTime)
-								onchange("time", duration.Minutes())
+								errs = append(errs, onchange("time", duration.Minutes()))
 							}
 						}
 					}()
 				}
-
 			} else {
-				onchange("state", 1)
-				onchange("state", 0)
+				errs = append(errs, onchange("state", 1))
+				errs = append(errs, onchange("state", 0))
 
 				end, err := time.Parse(time.RFC3339, e.Timestamp)
 				if err != nil {
@@ -96,12 +98,12 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 				t.Duration = &duration
 				t.totalDuration = t.totalDuration + duration
 
-				onchange("time", t.totalDuration.Minutes())
+				errs = append(errs, onchange("time", t.totalDuration.Minutes()))
 			}
 		}
 	}
 
-	return previousState != t.State_, nil
+	return previousState != t.State_, errors.Join(errs...)
 }
 
 func (t *timer) State() bool {
