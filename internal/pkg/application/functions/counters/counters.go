@@ -50,7 +50,10 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 	countRec, countOk := e.GetRecord(DigitalInputCounter)
 	stateRec, stateOk := e.GetRecord(DigitalInputState)
 
-	if countOk {
+	countTs, _ := e.GetTimeForRec(DigitalInputCounter)
+	stateTs, _ := e.GetTimeForRec(DigitalInputState)
+
+	if countOk {		
 		count := *countRec.Value
 		state := *stateRec.BoolValue
 
@@ -72,13 +75,13 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 	changed := false
 
 	if previousCount != c.Count_ {
-		onchange("count", float64(c.Count_), time.Unix(int64(countRec.Time), 0).UTC())
+		onchange("count", float64(c.Count_), countTs)
 		changed = true
 	}
 
 	if previousState != c.State_ {
 		stateValue := map[bool]float64{true: 1.0, false: 0.0}
-		onchange("state", stateValue[c.State_], time.Unix(int64(stateRec.Time), 0).UTC())
+		onchange("state", stateValue[c.State_], stateTs)
 		changed = true
 	}
 

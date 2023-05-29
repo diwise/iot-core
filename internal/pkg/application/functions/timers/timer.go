@@ -50,7 +50,7 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 	if stateOK {
 		state := *r.BoolValue
-		ts := time.Unix(int64(r.Time), 0).UTC()
+		ts, _ := e.GetTimeForRec(DigitalInputState)
 
 		if state != previousState {
 			if state {

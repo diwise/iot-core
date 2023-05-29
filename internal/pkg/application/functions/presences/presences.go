@@ -39,11 +39,13 @@ func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 	state := *r.BoolValue
 
 	if stateOk && state != t.State_ {
+		ts, _ := e.GetTimeForRec(DigitalInputState)
+
 		t.State_ = state
 		presenceValue := map[bool]float64{true: 1, false: 0}
 		// Temporary fix to create square waves in the UI ...
-		onchange("presence", presenceValue[!t.State_], time.Unix(int64(r.Time), 0).UTC())
-		onchange("presence", presenceValue[t.State_], time.Unix(int64(r.Time), 0).UTC())
+		onchange("presence", presenceValue[!t.State_], ts)
+		onchange("presence", presenceValue[t.State_], ts)
 		return true, nil
 	}
 

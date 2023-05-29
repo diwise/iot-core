@@ -39,7 +39,7 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 
 	if ok {
 		value := *r.Value
-		ts := time.Unix(int64(r.Time), 0).UTC()
+		ts, _ := e.GetTimeForRec(SensorValue)		
 		
 		if e.BaseNameMatches(lwm2m.Power) {
 			previousValue := b.Power

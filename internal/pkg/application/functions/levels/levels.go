@@ -92,6 +92,8 @@ func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 	r, ok := e.GetRecord(SensorValue)
 
 	if ok {
+		ts, _ := e.GetTimeForRec(SensorValue)
+
 		distance := *r.Value
 		previousLevel := l.Current_
 
@@ -112,7 +114,7 @@ func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 			l.Offset_ = &offset
 		}
 
-		onchange("level", l.Current_, time.Unix(int64(r.Time),0).UTC())
+		onchange("level", l.Current_, ts)
 
 		return true, nil
 	}

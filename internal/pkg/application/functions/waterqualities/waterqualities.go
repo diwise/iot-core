@@ -33,13 +33,14 @@ func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, o
 
 	const SensorValue string = "5700"
 	r, tempOk := e.GetRecord(SensorValue)
+	t, timeOk := e.GetTimeForRec(SensorValue)
 
-	if tempOk {
+	if tempOk && timeOk {
 		temp := math.Round(*r.Value*10) / 10
 		oldTemp := wq.Temperature
 		wq.Temperature = temp
 		if hasChanged(oldTemp, temp) {
-			onchange("temperature", temp, time.Unix(int64(r.Time), 0).UTC())
+			onchange("temperature", temp, t)
 			return true, nil
 		}
 	}

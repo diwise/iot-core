@@ -64,10 +64,10 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 		// onchange may be called repeatedly based on a timer, so we need to adjust
 		// the event time if that happens
-		timeWhenOnchangeWasCalled := time.Now().UTC()
+		timeWhenOnchangeWasCalled := ts
 		timeSinceHandleWasCalled := timeWhenOnchangeWasCalled.Sub(timeWhenHandleWasCalled)
 
-		now, _ := time.Parse(time.RFC3339, e.Timestamp)
+		now := ts
 		if timeSinceHandleWasCalled >= time.Second {
 			now = now.Add(timeSinceHandleWasCalled)
 		}
