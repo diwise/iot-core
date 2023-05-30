@@ -6,6 +6,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -16,7 +17,7 @@ const (
 )
 
 type Level interface {
-	Handle(context.Context, *events.MessageAccepted, func(string, float64)) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time)) (bool, error)
 	Current() float64
 	Offset() float64
 	Percent() float64
@@ -81,16 +82,19 @@ type level struct {
 	Offset_  *float64 `json:"offset,omitempty"`
 }
 
-func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error) {
+func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time)) (bool, error) {
 
 	if !e.BaseNameMatches(lwm2m.Distance) {
 		return false, nil
 	}
 
 	const SensorValue string = "5700"
-	distance, ok := e.GetFloat64(SensorValue)
+	r, ok := e.GetRecord(SensorValue)
 
 	if ok {
+		ts, _ := e.GetTimeForRec(SensorValue)
+
+		distance := *r.Value
 		previousLevel := l.Current_
 
 		// Calculate the current level using the configured angle (if any) and round to two decimals
@@ -110,7 +114,7 @@ func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 			l.Offset_ = &offset
 		}
 
-		onchange("level", l.Current_)
+		onchange("level", l.Current_, ts)
 
 		return true, nil
 	}

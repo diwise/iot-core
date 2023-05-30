@@ -43,7 +43,7 @@ type fnct struct {
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 	Building     buildings.Building          `json:"building,omitempty"`
 
-	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64)) (bool, error)
+	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time)) (bool, error)
 
 	history             map[string][]LogValue
 	defaultHistoryLabel string
@@ -57,24 +57,12 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 	logger := logging.GetFromContext(ctx)
 
-	timeWhenHandleWasCalled := time.Now().UTC()
-
-	onchange := func(prop string, value float64) {
+	onchange := func(prop string, value float64, ts time.Time) {
 		logger.Debug().Msgf("property %s changed to %f", prop, value)
-
-		// onchange may be called repeatedly based on a timer, so we need to adjust
-		// the event time if that happens
-		timeWhenOnchangeWasCalled := time.Now().UTC()
-		timeSinceHandleWasCalled := timeWhenOnchangeWasCalled.Sub(timeWhenHandleWasCalled)
-
-		now, _ := time.Parse(time.RFC3339, e.Timestamp)
-		if timeSinceHandleWasCalled >= time.Second {
-			now = now.Add(timeSinceHandleWasCalled)
-		}
 
 		// TODO: This should be persisted to a database instead
 		if loggedValues, ok := f.history[prop]; ok {
-			f.history[prop] = append(loggedValues, LogValue{Value: value, Timestamp: now})
+			f.history[prop] = append(loggedValues, LogValue{Value: value, Timestamp: ts})
 		} else {
 			logger.Debug().Msgf("new value was not saved to history")
 		}
