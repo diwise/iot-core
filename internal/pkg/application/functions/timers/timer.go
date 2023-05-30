@@ -44,22 +44,20 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 		DigitalInputState string = "5500"
 	)
 
-	previousState := t.State_
+	previousState := t.State_	
 
 	r, stateOK := e.GetRecord(DigitalInputState)
 
 	if stateOK {
 		state := *r.BoolValue
 		ts, _ := e.GetTimeForRec(DigitalInputState)
-
+		
 		if state != previousState {
 			if state {
 				onchange("state", 0, ts)
 				onchange("state", 1, ts)
-
-				start := ts
-
-				t.StartTime = start
+				
+				t.StartTime = ts
 				t.State_ = state
 
 				t.EndTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
@@ -72,13 +70,13 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 					go func() {
 						for range t.valueUpdater.C {
 							if t.State_ {
-								duration := t.totalDuration + time.Now().UTC().Sub(t.StartTime)
-								onchange("time", duration.Minutes(), time.Now().UTC())
+								now := time.Now().UTC()
+								duration := t.totalDuration + now.Sub(t.StartTime)
+								onchange("time", duration.Minutes(), now)
 							}
 						}
 					}()
 				}
-
 			} else {
 				onchange("state", 1, ts)
 				onchange("state", 0, ts)
