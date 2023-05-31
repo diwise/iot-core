@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/matryer/is"
@@ -14,8 +15,8 @@ func TestTimer(t *testing.T) {
 	is := is.New(t)
 
 	tmr := New()
-	tmr.Handle(context.Background(), newState(true, "2023-02-07T21:32:59.682607Z"), func(string, float64) error { return nil })
-	tmr.Handle(context.Background(), newState(false, "2023-02-07T23:32:59.682607Z"), func(string, float64) error { return nil })
+	tmr.Handle(context.Background(), newState(true, "2023-02-07T21:32:59.682607Z"), func(string, float64, time.Time) error { return nil })
+	tmr.Handle(context.Background(), newState(false, "2023-02-07T23:32:59.682607Z"), func(string, float64, time.Time) error { return nil })
 
 	is.True(tmr.State() == false)
 }

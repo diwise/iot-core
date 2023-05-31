@@ -43,7 +43,7 @@ type fnct struct {
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 	Building     buildings.Building          `json:"building,omitempty"`
 
-	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64) error) (bool, error)
+	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, error)
 
 	defaultHistoryLabel string
 	storage             database.Storage
@@ -56,22 +56,10 @@ func (f *fnct) ID() string {
 func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
 	logger := logging.GetFromContext(ctx)
 
-	timeWhenHandleWasCalled := time.Now().UTC()
-
-	onchange := func(prop string, value float64) error {
+	onchange := func(prop string, value float64, ts time.Time) error {
 		logger.Debug().Msgf("property %s changed to %f", prop, value)
 
-		// onchange may be called repeatedly based on a timer, so we need to adjust
-		// the event time if that happens
-		timeWhenOnchangeWasCalled := time.Now().UTC()
-		timeSinceHandleWasCalled := timeWhenOnchangeWasCalled.Sub(timeWhenHandleWasCalled)
-
-		now, _ := time.Parse(time.RFC3339, e.Timestamp)
-		if timeSinceHandleWasCalled >= time.Second {
-			now = now.Add(timeSinceHandleWasCalled)
-		}
-
-		err := f.storage.Add(ctx, f.ID(), prop, value, now)
+		err := f.storage.Add(ctx, f.ID(), prop, value, ts)
 		if err != nil {
 			logger.Error().Err(err).Msgf("failed to add values to database")
 			return err

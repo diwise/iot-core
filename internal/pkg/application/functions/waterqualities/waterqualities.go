@@ -3,6 +3,7 @@ package waterqualities
 import (
 	"context"
 	"math"
+	"time"
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -13,7 +14,7 @@ const (
 )
 
 type WaterQuality interface {
-	Handle(context.Context, *events.MessageAccepted, func(string, float64) error) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time) error) (bool, error)
 }
 
 func New() WaterQuality {
@@ -24,23 +25,23 @@ type waterquality struct {
 	Temperature float64 `json:"temperature"`
 }
 
-func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64) error) (bool, error) {
+func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
 	if !e.BaseNameMatches(lwm2m.Temperature) {
 		return false, nil
 	}
 
 	const SensorValue string = "5700"
-	temp, tempOk := e.GetFloat64(SensorValue)
+	r, tempOk := e.GetRecord(SensorValue)
+	t, timeOk := e.GetTimeForRec(SensorValue)
 
-	if tempOk {
-		temp = math.Round(temp*10) / 10
-
+	if tempOk && timeOk {
+		temp := math.Round(*r.Value*10) / 10
 		oldTemp := wq.Temperature
 		wq.Temperature = temp
 
 		if hasChanged(oldTemp, temp) {
-			err := onchange("temperature", temp)
+			err := onchange("temperature", temp, t)
 			return true, err
 		}
 	}

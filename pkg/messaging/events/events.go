@@ -224,6 +224,39 @@ func (m MessageAccepted) GetTime(name string) (float64, bool) {
 	return 0, false
 }
 
+func (m MessageAccepted) GetRecord(name string) (senml.Record, bool) {
+	for _, r := range m.Pack {
+		if strings.EqualFold(r.Name, name) {
+			return r, true
+		}
+	}
+	return senml.Record{}, false
+}
+
+func (m MessageAccepted) GetTimeForRec(name string) (time.Time, bool) {
+	btime := m.Pack[0].BaseTime
+
+	var now = float64(time.Now().UnixNano()) / 1000000000
+	const pivot = 268435456 // rfc8428: values less than 2**28 represent time relative to the current time.
+
+	//TODO: remove this "fix" when time is correctly used
+	for _, r := range m.Pack {
+		if strings.EqualFold(r.Name, name) {
+			if r.Time > 0 {
+				if r.Time < pivot {
+					return time.Unix(int64(now+r.Time), 0).UTC(), true
+				}
+
+				return time.Unix(int64(r.Time), 0).UTC(), true
+			}
+
+			return time.Unix(int64(btime), 0).UTC(), true
+		}
+	}
+
+	return time.Time{}, false
+}
+
 func (m MessageAccepted) Tenant() string {
 	if s, ok := m.GetString("tenant"); ok {
 		return s
