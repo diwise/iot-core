@@ -26,22 +26,21 @@ type waterquality struct {
 }
 
 func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-
 	if !e.BaseNameMatches(lwm2m.Temperature) {
 		return false, nil
 	}
 
 	const SensorValue string = "5700"
 	r, tempOk := e.GetRecord(SensorValue)
-	t, timeOk := e.GetTimeForRec(SensorValue)
+	ts, timeOk := e.GetTimeForRec(SensorValue)
 
-	if tempOk && timeOk {
+	if tempOk && timeOk && r.Value != nil {
 		temp := math.Round(*r.Value*10) / 10
 		oldTemp := wq.Temperature
 		wq.Temperature = temp
 
 		if hasChanged(oldTemp, temp) {
-			err := onchange("temperature", temp, t)
+			err := onchange("temperature", temp, ts)
 			return true, err
 		}
 	}

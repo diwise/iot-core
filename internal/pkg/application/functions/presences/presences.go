@@ -2,7 +2,6 @@ package presences
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
@@ -38,19 +37,27 @@ func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 
 	r, stateOk := e.GetRecord(DigitalInputState)
 	ts, timeOk := e.GetTimeForRec(DigitalInputState)
-	state := *r.BoolValue
 
-	if stateOk && timeOk && state != t.State_ {
-		errs := make([]error, 0)
+	if stateOk && timeOk && r.BoolValue != nil {
+		state := *r.BoolValue
 
-		t.State_ = state
-		presenceValue := map[bool]float64{true: 1, false: 0}
+		if state != t.State_ {
+			t.State_ = state
+			presenceValue := map[bool]float64{true: 1, false: 0}
 
-		// Temporary fix to create square waves in the UI ...
-		errs = append(errs, onchange("presence", presenceValue[!t.State_], ts))
-		errs = append(errs, onchange("presence", presenceValue[t.State_], ts))
+			// Temporary fix to create square waves in the UI ...
+			err := onchange("presence", presenceValue[!t.State_], ts)
+			if err != nil {
+				return true, err
+			}
 
-		return true, errors.Join(errs...)
+			err = onchange("presence", presenceValue[t.State_], ts)
+			if err != nil {
+				return true, err
+			}
+
+			return true, nil
+		}
 	}
 
 	return false, nil

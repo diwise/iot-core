@@ -51,10 +51,7 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 	countRec, countOk := e.GetRecord(DigitalInputCounter)
 	stateRec, stateOk := e.GetRecord(DigitalInputState)
 
-	countTs, _ := e.GetTimeForRec(DigitalInputCounter)
-	stateTs, _ := e.GetTimeForRec(DigitalInputState)
-
-	if countOk {
+	if countOk && countRec.Value != nil && stateRec.BoolValue != nil {
 		count := *countRec.Value
 		state := *stateRec.BoolValue
 
@@ -62,7 +59,7 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 		if stateOk {
 			c.State_ = state
 		}
-	} else if stateOk {
+	} else if stateOk && stateRec.BoolValue != nil {
 		state := *stateRec.BoolValue
 
 		if state != c.State_ {
@@ -73,15 +70,18 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 		}
 	}
 
+	countTs, countTimeOk := e.GetTimeForRec(DigitalInputCounter)
+	stateTs, stateTimeOk := e.GetTimeForRec(DigitalInputState)
+
 	changed := false
 	errs := make([]error, 0)
 
-	if previousCount != c.Count_ {
+	if countTimeOk && previousCount != c.Count_ {
 		errs = append(errs, onchange("count", float64(c.Count_), countTs))
 		changed = true
 	}
 
-	if previousState != c.State_ {
+	if stateTimeOk && previousState != c.State_ {
 		stateValue := map[bool]float64{true: 1.0, false: 0.0}
 		errs = append(errs, onchange("state", stateValue[c.State_], stateTs))
 		changed = true
