@@ -23,7 +23,6 @@ COPY --from=builder --chown=1001 /app/cmd/iot-core/iot-core /opt/diwise
 COPY --chown=1001 assets/config/functions.csv /opt/diwise/config/functions.csv
 
 RUN chown 1001 /opt/diwise
-RUN chmod 700 /opt/diwise
 
 EXPOSE 8080
 USER 1001
