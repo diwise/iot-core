@@ -2,6 +2,7 @@ package presences
 
 import (
 	"context"
+	"time"
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -12,7 +13,7 @@ const (
 )
 
 type Presence interface {
-	Handle(context.Context, *events.MessageAccepted, func(string, float64)) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time)) (bool, error)
 	State() bool
 }
 
@@ -24,7 +25,7 @@ type presence struct {
 	State_ bool `json:"state"`
 }
 
-func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64)) (bool, error) {
+func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time)) (bool, error) {
 
 	if !e.BaseNameMatches(lwm2m.DigitalInput) && !e.BaseNameMatches(lwm2m.Presence) {
 		return false, nil
@@ -34,14 +35,17 @@ func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 		DigitalInputState string = "5500"
 	)
 
-	state, stateOk := e.GetBool(DigitalInputState)
+	r, stateOk := e.GetRecord(DigitalInputState)
+	state := *r.BoolValue
 
 	if stateOk && state != t.State_ {
+		ts, _ := e.GetTimeForRec(DigitalInputState)
+
 		t.State_ = state
 		presenceValue := map[bool]float64{true: 1, false: 0}
 		// Temporary fix to create square waves in the UI ...
-		onchange("presence", presenceValue[!t.State_])
-		onchange("presence", presenceValue[t.State_])
+		onchange("presence", presenceValue[!t.State_], ts)
+		onchange("presence", presenceValue[t.State_], ts)
 		return true, nil
 	}
 
