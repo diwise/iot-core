@@ -58,7 +58,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	logger := logging.GetFromContext(ctx)
 
 	onchange := func(prop string, value float64, ts time.Time) {
-		logger.Debug().Msgf("property %s changed to %f", prop, value)
+		logger.Debug().Msgf("property %s changed to %f with time %s", prop, value, ts.Format(time.RFC3339Nano))
 
 		// TODO: This should be persisted to a database instead
 		if loggedValues, ok := f.history[prop]; ok {
