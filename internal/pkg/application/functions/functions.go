@@ -57,7 +57,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	logger := logging.GetFromContext(ctx)
 
 	onchange := func(prop string, value float64, ts time.Time) error {
-		logger.Debug().Msgf("property %s changed to %f", prop, value)
+		logger.Debug().Msgf("property %s changed to %f with time %s", prop, value, ts.Format(time.RFC3339Nano))
 
 		err := f.storage.Add(ctx, f.ID(), prop, value, ts)
 		if err != nil {

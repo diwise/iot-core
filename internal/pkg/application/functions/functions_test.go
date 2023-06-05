@@ -161,7 +161,8 @@ func TestWaterQuality(t *testing.T) {
 		}})
 
 	v := 2.34
-	pack := NewSenMLPack(sensorId, lwm2m.Temperature, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))
+	ts, _ := time.Parse(time.RFC3339Nano, "2023-06-05T11:26:57Z")
+	pack := NewSenMLPack(sensorId, lwm2m.Temperature, ts, Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))
 	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
@@ -173,7 +174,7 @@ func TestWaterQuality(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectation string = `{"id":"functionID","type":"waterquality","subtype":"beach","waterquality":{"temperature":2.3}}`
+	const expectation string = `{"id":"functionID","type":"waterquality","subtype":"beach","waterquality":{"temperature":2.3,"timestamp":"2023-06-05T11:26:57Z"}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 

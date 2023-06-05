@@ -22,7 +22,8 @@ func New() WaterQuality {
 }
 
 type waterquality struct {
-	Temperature float64 `json:"temperature"`
+	Temperature float64   `json:"temperature"`
+	Timestamp   time.Time `json:"timestamp"`
 }
 
 func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
@@ -31,13 +32,15 @@ func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, o
 	}
 
 	const SensorValue string = "5700"
+	
 	r, tempOk := e.GetRecord(SensorValue)
 	ts, timeOk := e.GetTimeForRec(SensorValue)
-
-	if tempOk && timeOk && r.Value != nil {
+	
+	if tempOk && timeOk && r.Value != nil && ts.After(wq.Timestamp) {
 		temp := math.Round(*r.Value*10) / 10
 		oldTemp := wq.Temperature
-		wq.Temperature = temp
+				
+		wq.Timestamp = ts
 
 		if hasChanged(oldTemp, temp) {
 			err := onchange("temperature", temp, ts)
