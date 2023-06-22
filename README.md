@@ -50,4 +50,3 @@ none
 # Links
 [iot-core](https://diwise.github.io/) on diwise.github.io
 
-
