@@ -29,6 +29,7 @@ func New(ctx context.Context, registry functions.Registry) API {
 	api_.router.Get("/api/functions/{id}/history", NewQueryFunctionHistoryHandler(ctx, registry))
 
 	api_.router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
 		w.WriteHeader(http.StatusOK)
 	})
 
