@@ -39,6 +39,8 @@ func main() {
 	flag.Parse()
 
 	dmClient := createDeviceManagementClientOrDie(ctx, logger)
+	defer dmClient.Close(ctx)
+
 	msgCtx := createMessagingContextOrDie(ctx, logger)
 
 	var configFile *os.File
