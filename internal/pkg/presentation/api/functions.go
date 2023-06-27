@@ -21,6 +21,8 @@ var tracer = otel.Tracer("iot-core/api")
 
 func NewQueryFunctionsHandler(ctx context.Context, registry functions.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
 		functions, _ := registry.Find(r.Context(), functions.MatchAll())
 		b, _ := json.MarshalIndent(functions, "  ", "  ")
 
@@ -34,6 +36,8 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
+		defer r.Body.Close()
+
 		ctx, span := tracer.Start(r.Context(), "retrieve-function-history")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
