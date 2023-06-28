@@ -100,13 +100,12 @@ func createDatabaseConnectionOrDie(ctx context.Context, logger zerolog.Logger) d
 	}
 	err = storage.Initialize(ctx)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("database connect failed")
+		logger.Fatal().Err(err).Msg("database initialize failed")
 	}
 	return storage
 }
 
 func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
-
 	msgproc := messageprocessor.NewMessageProcessor(dmClient)
 
 	functionsRegistry, err := functions.NewRegistry(ctx, fconfig, storage)
@@ -126,7 +125,6 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msg
 }
 
 func newCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {
-
 	return func(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger zerolog.Logger) error {
 		var err error
 
@@ -158,7 +156,6 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 }
 
 func newTopicMessageHandler(messenger messaging.MsgContext, app application.App) messaging.TopicMessageHandler {
-
 	return func(ctx context.Context, msg amqp.Delivery, logger zerolog.Logger) {
 		var err error
 

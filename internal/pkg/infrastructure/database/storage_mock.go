@@ -155,8 +155,8 @@ func (mock *StorageMock) AddCalls() []struct {
 	return calls
 }
 
-// AddFn calls AddFnFunc.
-func (mock *StorageMock) AddFn(ctx context.Context, id string, fnType string, subType string, tenant string, source string, lat float64, lon float64) error {
+// AddFnct calls AddFnFunc.
+func (mock *StorageMock) AddFnct(ctx context.Context, id string, fnType string, subType string, tenant string, source string, lat float64, lon float64) error {
 	if mock.AddFnFunc == nil {
 		panic("StorageMock.AddFnFunc: method is nil but Storage.AddFn was just called")
 	}

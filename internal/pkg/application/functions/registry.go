@@ -90,7 +90,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				continue
 			}
 
-			storage.AddFn(ctx, f.ID_, f.Type, f.SubType, f.Tenant, f.Source, 0, 0)
+			storage.AddFnct(ctx, f.ID_, f.Type, f.SubType, f.Tenant, f.Source, 0, 0)
 
 			r.f[tokens[3]] = f
 			numFunctions++

@@ -17,7 +17,7 @@ func TestSQL(t *testing.T) {
 		return
 	}
 
-	err = s.AddFn(ctx, "fnct-01", "waterquality", "beach", "", "", 0, 0)
+	err = s.AddFnct(ctx, "fnct-01", "waterquality", "beach", "", "", 0, 0)
 	if err != nil {
 		t.Error(err)
 	}

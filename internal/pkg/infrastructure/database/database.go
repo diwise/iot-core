@@ -15,7 +15,7 @@ import (
 type Storage interface {
 	Initialize(context.Context) error
 	Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
-	AddFn(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error
+	AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error
 	History(ctx context.Context, id, label string, lastN int) ([]LogValue, error)
 }
 
@@ -131,7 +131,7 @@ func (i *impl) createTables(ctx context.Context) error {
 	return nil
 }
 
-func (i *impl) AddFn(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+func (i *impl) AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 	_, err := i.db.Exec(ctx, `
 		INSERT INTO fnct(id,type,sub_type,tenant,source,latitude,longitude) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO NOTHING;
 	`, id, fnType, subType, tenant, source, lat, lon)
