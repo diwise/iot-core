@@ -14,7 +14,7 @@ const (
 )
 
 type Building interface {
-	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time)) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time) error) (bool, error)
 
 	CurrentPower() float64
 	CurrentEnergy() float64
@@ -29,26 +29,26 @@ type building struct {
 	Power  float64 `json:"power"`
 }
 
-func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time)) (bool, error) {
+func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	if !e.BaseNameMatches(lwm2m.Power) && !e.BaseNameMatches(lwm2m.Energy) {
 		return false, nil
 	}
 
 	const SensorValue string = "5700"
 	r, ok := e.GetRecord(SensorValue)
+	ts, timeOk := e.GetTimeForRec(SensorValue)
 
-	if ok {
+	if ok && timeOk && r.Value != nil {
 		value := *r.Value
-		ts, _ := e.GetTimeForRec(SensorValue)		
-		
+
 		if e.BaseNameMatches(lwm2m.Power) {
 			previousValue := b.Power
 			value = value / 1000.0 // convert from Watt to kW
 			b.Power = value
 
 			if hasChanged(previousValue, value) {
-				onchange("power", value, ts)
-				return true, nil
+				err := onchange("power", value, ts)
+				return true, err
 			}
 		} else if e.BaseNameMatches(lwm2m.Energy) {
 			previousValue := b.Energy
@@ -56,8 +56,8 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 			b.Energy = value
 
 			if hasChanged(previousValue, value) {
-				onchange("energy", value, ts)
-				return true, nil
+				err := onchange("energy", value, ts)
+				return true, err
 			}
 		}
 	}

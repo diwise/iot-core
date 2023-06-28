@@ -11,6 +11,7 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
 	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/internal/pkg/presentation/api"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
@@ -38,13 +39,15 @@ func main() {
 	flag.StringVar(&functionsConfigPath, "functions", "/opt/diwise/config/functions.csv", "configuration file for functions")
 	flag.Parse()
 
+	var err error
+
 	dmClient := createDeviceManagementClientOrDie(ctx, logger)
 	defer dmClient.Close(ctx)
 
 	msgCtx := createMessagingContextOrDie(ctx, logger)
+	storage := createDatabaseConnectionOrDie(ctx, logger)
 
 	var configFile *os.File
-	var err error
 
 	if functionsConfigPath != "" {
 		configFile, err = os.Open(functionsConfigPath)
@@ -54,7 +57,7 @@ func main() {
 		defer configFile.Close()
 	}
 
-	_, api_, err := initialize(ctx, dmClient, msgCtx, configFile)
+	_, api_, err := initialize(ctx, dmClient, msgCtx, configFile, storage)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("initialization failed")
 	}
@@ -90,11 +93,22 @@ func createMessagingContextOrDie(ctx context.Context, logger zerolog.Logger) mes
 	return messenger
 }
 
-func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msgctx messaging.MsgContext, fconfig io.Reader) (application.App, api.API, error) {
+func createDatabaseConnectionOrDie(ctx context.Context, logger zerolog.Logger) database.Storage {
+	storage, err := database.Connect(ctx, logger, database.LoadConfiguration(logger))
+	if err != nil {
+		logger.Fatal().Err(err).Msg("database connect failed")
+	}
+	err = storage.Initialize(ctx)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("database initialize failed")
+	}
+	return storage
+}
 
+func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
 	msgproc := messageprocessor.NewMessageProcessor(dmClient)
 
-	functionsRegistry, err := functions.NewRegistry(ctx, fconfig)
+	functionsRegistry, err := functions.NewRegistry(ctx, fconfig, storage)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -111,7 +125,6 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msg
 }
 
 func newCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {
-
 	return func(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger zerolog.Logger) error {
 		var err error
 
@@ -143,7 +156,6 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 }
 
 func newTopicMessageHandler(messenger messaging.MsgContext, app application.App) messaging.TopicMessageHandler {
-
 	return func(ctx context.Context, msg amqp.Delivery, logger zerolog.Logger) {
 		var err error
 
