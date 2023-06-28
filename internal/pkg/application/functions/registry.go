@@ -14,6 +14,7 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/functions/presences"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/timers"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/waterqualities"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
@@ -22,7 +23,7 @@ type Registry interface {
 	Get(ctx context.Context, functionID string) (Function, error)
 }
 
-func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
+func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage) (Registry, error) {
 
 	r := &reg{
 		f: make(map[string]Function),
@@ -45,7 +46,7 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 				ID_:     tokens[0],
 				Type:    tokens[1],
 				SubType: tokens[2],
-				history: make(map[string][]LogValue),
+				storage: storage,
 			}
 
 			if f.Type == counters.FunctionTypeName {
@@ -89,9 +90,7 @@ func NewRegistry(ctx context.Context, input io.Reader) (Registry, error) {
 				continue
 			}
 
-			if f.defaultHistoryLabel != "" {
-				f.history[f.defaultHistoryLabel] = make([]LogValue, 0, 100)
-			}
+			storage.AddFn(ctx, f.ID_, f.Type, f.SubType, f.Tenant, f.Source, 0, 0)
 
 			r.f[tokens[3]] = f
 			numFunctions++

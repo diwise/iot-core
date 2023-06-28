@@ -11,18 +11,15 @@ import (
 const FunctionTypeName string = "timer"
 
 type Timer interface {
-	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time)) (bool, error)
+	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error)
 
 	State() bool
 }
 
 func New() Timer {
-
-	t := &timer{
+	return &timer{
 		StartTime: time.Time{},
 	}
-
-	return t
 }
 
 type timer struct {
@@ -35,7 +32,7 @@ type timer struct {
 	valueUpdater  *time.Ticker
 }
 
-func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time)) (bool, error) {
+func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	if !e.BaseNameMatches(lwm2m.DigitalInput) {
 		return false, nil
 	}
@@ -44,53 +41,78 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 		DigitalInputState string = "5500"
 	)
 
-	previousState := t.State_	
+	previousState := t.State_
 
 	r, stateOK := e.GetRecord(DigitalInputState)
+	ts, timeOk := e.GetTimeForRec(DigitalInputState)
 
-	if stateOK {
+	if stateOK && timeOk && r.BoolValue != nil {
 		state := *r.BoolValue
-		ts, _ := e.GetTimeForRec(DigitalInputState)
-		
+
 		if state != previousState {
+			var err error
+
 			if state {
-				onchange("state", 0, ts)
-				onchange("state", 1, ts)
-				
 				t.StartTime = ts
 				t.State_ = state
 
 				t.EndTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
 				t.Duration = nil
 
-				onchange("time", t.totalDuration.Minutes(), ts)
+				err = onchange("state", 0, ts)
+				if err != nil {
+					return true, err
+				}
+
+				err = onchange("state", 1, ts)
+				if err != nil {
+					return true, err
+				}
+
+				err = onchange("time", t.totalDuration.Minutes(), ts)
+				if err != nil {
+					return true, err
+				}
 
 				if t.valueUpdater == nil {
 					t.valueUpdater = time.NewTicker(1 * time.Minute)
-					go func() {
+					go func() error {
 						for range t.valueUpdater.C {
 							if t.State_ {
 								now := time.Now().UTC()
 								duration := t.totalDuration + now.Sub(t.StartTime)
-								onchange("time", duration.Minutes(), now)
+								err = onchange("time", duration.Minutes(), now)
+								if err != nil {
+									t.valueUpdater.Stop()
+									return err
+								}
 							}
 						}
+						return nil
 					}()
 				}
 			} else {
-				onchange("state", 1, ts)
-				onchange("state", 0, ts)
+				err = onchange("state", 1, ts)
+				if err != nil {
+					return true, err
+				}
 
-				end := ts
+				err = onchange("state", 0, ts)
+				if err != nil {
+					return true, err
+				}
 
-				t.EndTime = &end
+				t.EndTime = &ts
 				t.State_ = state
 
 				duration := t.EndTime.Sub(t.StartTime)
 				t.Duration = &duration
 				t.totalDuration = t.totalDuration + duration
 
-				onchange("time", t.totalDuration.Minutes(), ts)
+				err = onchange("time", t.totalDuration.Minutes(), ts)
+				if err != nil {
+					return true, err
+				}
 			}
 		}
 	}

@@ -3,7 +3,6 @@ package functions
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions/buildings"
@@ -12,6 +11,7 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/functions/presences"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/timers"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/waterqualities"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
@@ -20,7 +20,7 @@ import (
 type Function interface {
 	ID() string
 	Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error
-	History(context.Context, int) ([]LogValue, error)
+	History(context.Context, string, int) ([]LogValue, error)
 }
 
 type location struct {
@@ -43,10 +43,10 @@ type fnct struct {
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 	Building     buildings.Building          `json:"building,omitempty"`
 
-	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time)) (bool, error)
+	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, error)
 
-	history             map[string][]LogValue
 	defaultHistoryLabel string
+	storage             database.Storage
 }
 
 func (f *fnct) ID() string {
@@ -54,18 +54,18 @@ func (f *fnct) ID() string {
 }
 
 func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
-
 	logger := logging.GetFromContext(ctx)
 
-	onchange := func(prop string, value float64, ts time.Time) {
+	onchange := func(prop string, value float64, ts time.Time) error {
 		logger.Debug().Msgf("property %s changed to %f with time %s", prop, value, ts.Format(time.RFC3339Nano))
 
-		// TODO: This should be persisted to a database instead
-		if loggedValues, ok := f.history[prop]; ok {
-			f.history[prop] = append(loggedValues, LogValue{Value: value, Timestamp: ts})
-		} else {
-			logger.Debug().Msgf("new value was not saved to history")
+		err := f.storage.Add(ctx, f.ID(), prop, value, ts)
+		if err != nil {
+			logger.Error().Err(err).Msgf("failed to add values to database")
+			return err
 		}
+
+		return nil
 	}
 
 	changed, err := f.handle(ctx, e, onchange)
@@ -110,20 +110,26 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	return nil
 }
 
-func (f *fnct) History(ctx context.Context, lastN int) ([]LogValue, error) {
-	if loggedValues, ok := f.history[f.defaultHistoryLabel]; ok {
-		if lastN > 0 {
-			skip := 0
-			if lastN < len(loggedValues) {
-				skip = len(loggedValues) - lastN
-			}
-			return loggedValues[skip:], nil
-		}
-
-		return loggedValues, nil
+func (f *fnct) History(ctx context.Context, label string, lastN int) ([]LogValue, error) {
+	if label == "" {
+		label = f.defaultHistoryLabel
 	}
 
-	return nil, errors.New("no history")
+	lv, err := f.storage.History(ctx, f.ID(), label, lastN)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(lv) == 0 {
+		return []LogValue{}, nil
+	}
+
+	loggedValues := make([]LogValue, len(lv))
+	for i, v := range lv {
+		loggedValues[i] = LogValue{Timestamp: v.Timestamp, Value: v.Value}
+	}
+
+	return loggedValues, nil
 }
 
 func (f *fnct) ContentType() string {
