@@ -40,6 +40,7 @@ func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, o
 		temp := math.Round(*r.Value*10) / 10
 		oldTemp := wq.Temperature
 
+		wq.Temperature = temp
 		wq.Timestamp = ts
 
 		if hasChanged(oldTemp, temp) {
