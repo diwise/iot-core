@@ -163,7 +163,7 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
 		ctx = logging.NewContextWithLogger(ctx, logger)
-		logger.Info().Str("body", string(msg.Body)).Msg("received message")
+		logger.Debug().Str("body", string(msg.Body)).Msg("received message")
 
 		evt := events.MessageAccepted{}
 
@@ -178,6 +178,9 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 			logger.Warn().Err(err).Msg("received malformed topic message")
 			return
 		}
+
+		logger = logger.With().Str("device_id", evt.Sensor).Logger()
+		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		err = app.MessageAccepted(ctx, evt, messenger)
 		if err != nil {

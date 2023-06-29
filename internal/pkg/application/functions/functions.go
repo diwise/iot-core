@@ -54,7 +54,8 @@ func (f *fnct) ID() string {
 }
 
 func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
-	logger := logging.GetFromContext(ctx)
+	logger := logging.GetFromContext(ctx).With().Str("function_id", f.ID()).Logger()
+	ctx = logging.NewContextWithLogger(ctx, logger)
 
 	onchange := func(prop string, value float64, ts time.Time) error {
 		logger.Debug().Msgf("property %s changed to %f with time %s", prop, value, ts.Format(time.RFC3339Nano))
@@ -73,7 +74,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		return err
 	}
 
-	logger.Debug().Msgf("function %s handled accepted message (changed = %v)", f.ID(), changed)
+	logger.Debug().Msgf("handled accepted message (changed = %v)", changed)
 
 	if e.HasLocation() {
 		f.Location = &location{
