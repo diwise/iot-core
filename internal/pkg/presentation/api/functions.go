@@ -20,10 +20,20 @@ import (
 var tracer = otel.Tracer("iot-core/api")
 
 func NewQueryFunctionsHandler(ctx context.Context, registry functions.Registry) http.HandlerFunc {
+	logger := logging.GetFromContext(ctx)
+
 	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
 		defer r.Body.Close()
 
-		functions, _ := registry.Find(r.Context(), functions.MatchAll())
+		ctx, span := tracer.Start(r.Context(), "retrieve-functions")
+		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
+
+		_, ctx, log := o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
+
+		log.Debug().Msg("functions requested")
+
+		functions, _ := registry.Find(ctx, functions.MatchAll())
 		b, _ := json.MarshalIndent(functions, "  ", "  ")
 
 		w.WriteHeader(http.StatusOK)
