@@ -131,12 +131,17 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 		ctx, span := tracer.Start(ctx, "receive-command")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
+		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
+
 		evt := events.MessageReceived{}
 		err = json.Unmarshal(wrapper.Body(), &evt)
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to decode message from json")
 			return err
 		}
+
+		logger = logger.With().Str("device_id", evt.Device).Logger()
+		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		messageAccepted, err := app.MessageReceived(ctx, evt)
 		if err != nil {
@@ -162,7 +167,8 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 		ctx, span := tracer.Start(ctx, "receive-message")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
-		ctx = logging.NewContextWithLogger(ctx, logger)
+		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
+
 		logger.Debug().Str("body", string(msg.Body)).Msg("received message")
 
 		evt := events.MessageAccepted{}
