@@ -21,7 +21,7 @@ func TestCounter(t *testing.T) {
 
 	sensorId := "testId"
 
-	config := "functionID;counter;overflow;" + sensorId
+	config := "functionID;name;counter;overflow;" + sensorId
 	input := bytes.NewBufferString(config)
 
 	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
@@ -44,7 +44,7 @@ func TestCounter(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectation string = `{"id":"functionID","type":"counter","subtype":"overflow","counter":{"count":1,"state":true}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"counter","subtype":"overflow","counter":{"count":1,"state":true}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -53,7 +53,7 @@ func TestLevel(t *testing.T) {
 
 	sensorId := "testId"
 
-	input := bytes.NewBufferString("functionID;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5")
+	input := bytes.NewBufferString("functionID;name;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5")
 
 	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
@@ -77,7 +77,7 @@ func TestLevel(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectation string = `{"id":"functionID","type":"level","subtype":"sand","level":{"current":1.4,"percent":56}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","level":{"current":1.4,"percent":56}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -85,7 +85,7 @@ func TestLevelFromAnAngle(t *testing.T) {
 	is, ctx, msgctx := testSetup(t)
 
 	sensorId := "testId"
-	input := bytes.NewBufferString("functionID;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5,angle=30")
+	input := bytes.NewBufferString("functionID;name;level;sand;" + sensorId + ";maxd=3.5,maxl=2.5,angle=30")
 	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
@@ -108,7 +108,7 @@ func TestLevelFromAnAngle(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectation string = `{"id":"functionID","type":"level","subtype":"sand","level":{"current":1.21,"percent":48.4}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","level":{"current":1.21,"percent":48.4}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -117,7 +117,7 @@ func TestTimer(t *testing.T) {
 
 	sensorId := "testId"
 
-	config := "functionID;timer;overflow;" + sensorId
+	config := "functionID;name;timer;overflow;" + sensorId
 	input := bytes.NewBufferString(config)
 
 	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
@@ -141,7 +141,7 @@ func TestTimer(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectationFmt string = `{"id":"functionID","type":"timer","subtype":"overflow","timer":{"startTime":"%s","state":true}}`
+	const expectationFmt string = `{"id":"functionID","name":"name","type":"timer","subtype":"overflow","timer":{"startTime":"%s","state":true}}`
 	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, packTime.Format(time.RFC3339)))
 }
 
@@ -150,7 +150,7 @@ func TestWaterQuality(t *testing.T) {
 
 	sensorId := "testId"
 
-	input := bytes.NewBufferString("functionID;waterquality;beach;" + sensorId)
+	input := bytes.NewBufferString("functionID;name;waterquality;beach;" + sensorId)
 
 	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
@@ -174,7 +174,7 @@ func TestWaterQuality(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload, _ := json.Marshal(msgctx.PublishOnTopicCalls()[0].Message)
 
-	const expectation string = `{"id":"functionID","type":"waterquality","subtype":"beach","waterquality":{"temperature":2.3,"timestamp":"2023-06-05T11:26:57Z"}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"waterquality","subtype":"beach","waterquality":{"temperature":2.3,"timestamp":"2023-06-05T11:26:57Z"}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -182,7 +182,7 @@ func TestAddToHistory(t *testing.T) {
 	is, ctx, msgctx := testSetup(t)
 
 	sensorId := "testId"
-	input := bytes.NewBufferString("functionID;waterquality;beach;" + sensorId)
+	input := bytes.NewBufferString("functionID;name;waterquality;beach;" + sensorId)
 	store := make([]database.LogValue, 0)
 	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
