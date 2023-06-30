@@ -44,8 +44,9 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 		if tokenCount >= 4 {
 			f := &fnct{
 				ID_:     tokens[0],
-				Type:    tokens[1],
-				SubType: tokens[2],
+				Name_:   tokens[1],
+				Type:    tokens[2],
+				SubType: tokens[3],
 				storage: storage,
 			}
 
@@ -55,8 +56,8 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				f.defaultHistoryLabel = "count"
 			} else if f.Type == levels.FunctionTypeName {
 				levelConfig := ""
-				if tokenCount > 4 {
-					levelConfig = tokens[4]
+				if tokenCount > 5 {
+					levelConfig = tokens[5]
 				}
 
 				f.Level, err = levels.New(levelConfig)
@@ -92,7 +93,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 
 			storage.AddFnct(ctx, f.ID_, f.Type, f.SubType, f.Tenant, f.Source, 0, 0)
 
-			r.f[tokens[3]] = f
+			r.f[tokens[4]] = f
 			numFunctions++
 		}
 	}

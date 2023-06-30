@@ -19,6 +19,8 @@ import (
 
 type Function interface {
 	ID() string
+	Name() string
+
 	Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error
 	History(context.Context, string, int) ([]LogValue, error)
 }
@@ -30,6 +32,7 @@ type location struct {
 
 type fnct struct {
 	ID_      string    `json:"id"`
+	Name_    string    `json:"name"`
 	Type     string    `json:"type"`
 	SubType  string    `json:"subtype"`
 	Location *location `json:"location,omitempty"`
@@ -51,6 +54,10 @@ type fnct struct {
 
 func (f *fnct) ID() string {
 	return f.ID_
+}
+
+func (f *fnct) Name() string {
+	return f.Name_
 }
 
 func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
