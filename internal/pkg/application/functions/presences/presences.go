@@ -17,8 +17,10 @@ type Presence interface {
 	State() bool
 }
 
-func New() Presence {
-	return &presence{}
+func New(v float64) Presence {
+	return &presence{
+		State_: v == 1.0,
+	}
 }
 
 type presence struct {

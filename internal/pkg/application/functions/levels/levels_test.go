@@ -14,7 +14,7 @@ import (
 func TestLevel(t *testing.T) {
 	is := is.New(t)
 
-	lvl, err := New("maxd=4")
+	lvl, err := New("maxd=4", 0)
 	is.NoErr(err)
 
 	lvl.Handle(context.Background(), newDistance(1.27), func(string, float64, time.Time) error { return nil })
@@ -25,7 +25,7 @@ func TestLevel(t *testing.T) {
 func TestLevelWithKnownMax(t *testing.T) {
 	is := is.New(t)
 
-	lvl, err := New("maxd=4,maxl=3")
+	lvl, err := New("maxd=4,maxl=3", 0)
 	is.NoErr(err)
 
 	lvl.Handle(context.Background(), newDistance(1.27), func(string, float64, time.Time) error { return nil })
@@ -36,7 +36,7 @@ func TestLevelWithKnownMax(t *testing.T) {
 func TestLevelWithOverflowCapsPctTo100(t *testing.T) {
 	is := is.New(t)
 
-	lvl, err := New("maxd=4,maxl=3")
+	lvl, err := New("maxd=4,maxl=3", 0)
 	is.NoErr(err)
 
 	lvl.Handle(context.Background(), newDistance(0.5), func(string, float64, time.Time) error { return nil })
