@@ -23,7 +23,7 @@ type Level interface {
 	Percent() float64
 }
 
-func New(config string) (Level, error) {
+func New(config string, current float64) (Level, error) {
 
 	lvl := &level{
 		cosAlpha: 1.0,
@@ -66,6 +66,17 @@ func New(config string) (Level, error) {
 				return nil, fmt.Errorf("failed to parse level config \"%s\": %w", s, err)
 			}
 		}
+	}
+
+	lvl.Current_ = current
+	if isNotZero(lvl.maxLevel) {
+		pct := math.Min((lvl.Current_*100.0)/lvl.maxLevel, 100.0)
+		lvl.Percent_ = &pct
+	}
+
+	if isNotZero(lvl.meanLevel) {
+		offset := lvl.Current_ - lvl.meanLevel
+		lvl.Offset_ = &offset
 	}
 
 	return lvl, nil
