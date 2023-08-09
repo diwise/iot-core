@@ -2,6 +2,7 @@ package presences
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
@@ -17,8 +18,10 @@ type Presence interface {
 	State() bool
 }
 
-func New() Presence {
-	return &presence{}
+func New(v float64) Presence {
+	return &presence{
+		State_: (math.Abs(v) >= 0.001),
+	}
 }
 
 type presence struct {
