@@ -62,6 +62,9 @@ func TestLevel(t *testing.T) {
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
 			return nil
 		},
+		HistoryFunc: func(ctx context.Context, id, label string, lastN int) ([]database.LogValue, error) {
+			return []database.LogValue{}, nil
+		},
 	})
 
 	v := 2.1
@@ -92,6 +95,9 @@ func TestLevelFromAnAngle(t *testing.T) {
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
 			return nil
+		},
+		HistoryFunc: func(ctx context.Context, id, label string, lastN int) ([]database.LogValue, error) {
+			return []database.LogValue{}, nil
 		},
 	})
 

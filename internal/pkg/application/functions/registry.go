@@ -34,6 +34,8 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 	numErrors := 0
 	numFunctions := 0
 
+	logger := logging.GetFromContext(ctx)
+
 	scanner := bufio.NewScanner(input)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -59,18 +61,25 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				if tokenCount > 5 {
 					levelConfig = tokens[5]
 				}
+				f.defaultHistoryLabel = "level"
+				l := lastLogValue(ctx, storage, f)
 
-				f.Level, err = levels.New(levelConfig)
+				logger.Debug().Msgf("new level %s with value %f", f.ID_, l.Value)
+
+				f.Level, err = levels.New(levelConfig, l.Value)
 				if err != nil {
 					return nil, err
 				}
 
 				f.handle = f.Level.Handle
-				f.defaultHistoryLabel = "level"
 			} else if f.Type == presences.FunctionTypeName {
-				f.Presence = presences.New()
-				f.handle = f.Presence.Handle
 				f.defaultHistoryLabel = "presence"
+				l := lastLogValue(ctx, storage, f)
+
+				logger.Debug().Msgf("new presence %s with value %f", f.ID_, l.Value)
+
+				f.Presence = presences.New(l.Value)
+				f.handle = f.Presence.Handle
 			} else if f.Type == timers.FunctionTypeName {
 				f.Timer = timers.New()
 				f.handle = f.Timer.Handle
@@ -98,7 +107,6 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 		}
 	}
 
-	logger := logging.GetFromContext(ctx)
 	logger.Info().Msgf("loaded %d functions from config file", numFunctions)
 
 	return r, nil
@@ -155,4 +163,15 @@ func MatchSensor(sensorId string) RegistryMatcherFunc {
 
 		return []Function{f}
 	}
+}
+
+func lastLogValue(ctx context.Context, s database.Storage, f *fnct) database.LogValue {
+	lv, err := s.History(ctx, f.ID_, f.defaultHistoryLabel, 1)
+	if err != nil {
+		return database.LogValue{}
+	}
+	if len(lv) == 0 {
+		return database.LogValue{}
+	}
+	return lv[0]
 }
