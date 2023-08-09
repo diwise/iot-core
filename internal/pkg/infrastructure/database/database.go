@@ -85,6 +85,7 @@ func (i *impl) createTables(ctx context.Context) error {
 	  	);
 
 		CREATE TABLE IF NOT EXISTS fnct_history (
+			row_id 	bigserial,
 			time 	TIMESTAMPTZ NOT NULL,
 			fnct_id TEXT NOT NULL,
 			label 	TEXT NOT NULL,
@@ -150,13 +151,13 @@ func (i *impl) Add(ctx context.Context, id, label string, value float64, timesta
 func (i *impl) History(ctx context.Context, id, label string, lastN int) ([]LogValue, error) {
 	rows, err := i.db.Query(ctx,
 		`SELECT time, value FROM (
-			SELECT time, value
+			SELECT time, value, row_id
 			FROM fnct_history
 			WHERE fnct_id=$1 AND label=$2
-			ORDER BY time DESC
+			ORDER BY time DESC, row_id DESC
 			LIMIT $3
 			) as history
-		ORDER BY time ASC`, id, label, lastN)
+		ORDER BY time ASC, row_id ASC`, id, label, lastN)
 	if err != nil {
 		return nil, err
 	}
