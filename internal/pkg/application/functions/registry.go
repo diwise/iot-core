@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/diwise/iot-core/internal/pkg/application/functions/airquality"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/buildings"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
@@ -92,6 +93,10 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				f.Building = buildings.New()
 				f.handle = f.Building.Handle
 				f.defaultHistoryLabel = "power"
+			} else if f.Type == airquality.FunctionTypeName {
+				f.AirQuality = airquality.New()
+				f.handle = f.AirQuality.Handle
+				f.defaultHistoryLabel = "temperature"
 			} else {
 				numErrors++
 				if numErrors > 1 {
