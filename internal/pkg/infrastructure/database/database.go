@@ -7,7 +7,6 @@ import (
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rs/zerolog"
 )
 
 //go:generate moq -rm -out storage_mock.go . Storage
@@ -41,18 +40,18 @@ func (c Config) ConnStr() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", c.user, c.password, c.host, c.port, c.dbname, c.sslmode)
 }
 
-func LoadConfiguration(log zerolog.Logger) Config {
+func LoadConfiguration(ctx context.Context) Config {
 	return Config{
-		host:     env.GetVariableOrDefault(log, "POSTGRES_HOST", ""),
-		user:     env.GetVariableOrDefault(log, "POSTGRES_USER", ""),
-		password: env.GetVariableOrDefault(log, "POSTGRES_PASSWORD", ""),
-		port:     env.GetVariableOrDefault(log, "POSTGRES_PORT", "5432"),
-		dbname:   env.GetVariableOrDefault(log, "POSTGRES_DBNAME", "diwise"),
-		sslmode:  env.GetVariableOrDefault(log, "POSTGRES_SSLMODE", "disable"),
+		host:     env.GetVariableOrDefault(ctx, "POSTGRES_HOST", ""),
+		user:     env.GetVariableOrDefault(ctx, "POSTGRES_USER", ""),
+		password: env.GetVariableOrDefault(ctx, "POSTGRES_PASSWORD", ""),
+		port:     env.GetVariableOrDefault(ctx, "POSTGRES_PORT", "5432"),
+		dbname:   env.GetVariableOrDefault(ctx, "POSTGRES_DBNAME", "diwise"),
+		sslmode:  env.GetVariableOrDefault(ctx, "POSTGRES_SSLMODE", "disable"),
 	}
 }
 
-func Connect(ctx context.Context, log zerolog.Logger, cfg Config) (Storage, error) {
+func Connect(ctx context.Context, cfg Config) (Storage, error) {
 	conn, err := pgxpool.New(ctx, cfg.ConnStr())
 	if err != nil {
 		return nil, err

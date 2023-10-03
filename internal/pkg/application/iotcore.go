@@ -32,7 +32,13 @@ func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, m
 	matchingFunctions, _ := a.functions_.Find(ctx, functions.MatchSensor(evt.Sensor))
 
 	logger := logging.GetFromContext(ctx)
-	logger.Debug().Msgf("found %d matching functions", len(matchingFunctions))
+	matchingCount := len(matchingFunctions)
+
+	if matchingCount > 0 {
+		logger.Debug("found matching functions", "count", matchingCount)
+	} else {
+		logger.Debug("no matching functions found")
+	}
 
 	for _, f := range matchingFunctions {
 		if err := f.Handle(ctx, &evt, msgctx); err != nil {

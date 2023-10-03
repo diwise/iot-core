@@ -31,7 +31,7 @@ func NewQueryFunctionsHandler(ctx context.Context, registry functions.Registry) 
 
 		_, ctx, log := o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
-		log.Debug().Msg("functions requested")
+		log.Debug("functions requested")
 
 		functions, _ := registry.Find(ctx, functions.MatchAll())
 		b, _ := json.MarshalIndent(functions, "  ", "  ")
@@ -56,14 +56,14 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 		functionID, _ := url.QueryUnescape(chi.URLParam(r, "id"))
 		if functionID == "" {
 			err = fmt.Errorf("no function id is supplied in query")
-			log.Error().Err(err).Msg("bad request")
+			log.Error("bad request", "err", err.Error())
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		function, err := registry.Get(ctx, functionID)
 		if err != nil {
-			log.Error().Err(err).Msg("not found")
+			log.Error("not found", "err", err.Error())
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}

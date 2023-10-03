@@ -2,6 +2,8 @@ package messageprocessor
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -10,7 +12,6 @@ import (
 	dmctest "github.com/diwise/iot-device-mgmt/pkg/test"
 	"github.com/farshidtz/senml/v2/codec"
 	"github.com/matryer/is"
-	"github.com/rs/zerolog"
 )
 
 func TestThatProcessMessageReadsSenMLPackProperly(t *testing.T) {
@@ -30,7 +31,7 @@ func TestThatProcessMessageReadsSenMLPackProperly(t *testing.T) {
 	is.True(msg.Sensor == "internalID")
 }
 
-func testSetup(t *testing.T) (*is.I, *dmctest.DeviceManagementClientMock, zerolog.Logger) {
+func testSetup(t *testing.T) (*is.I, *dmctest.DeviceManagementClientMock, *slog.Logger) {
 	is := is.New(t)
 
 	dmc := &dmctest.DeviceManagementClientMock{
@@ -47,7 +48,7 @@ func testSetup(t *testing.T) (*is.I, *dmctest.DeviceManagementClientMock, zerolo
 		},
 	}
 
-	return is, dmc, zerolog.Logger{}
+	return is, dmc, slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
 const co2 string = `[{"bn":"urn:oma:lwm2m:ext:3428","n":"0","vs":"internalID","bt":1234567},{"n":"CO2","v":22}]`
