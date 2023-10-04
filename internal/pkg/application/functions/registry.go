@@ -65,7 +65,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				f.defaultHistoryLabel = "level"
 				l := lastLogValue(ctx, storage, f)
 
-				logger.Debug().Msgf("new level %s with value %f", f.ID_, l.Value)
+				logger.Debug("new level created", "function_id", f.ID_, "value", l.Value)
 
 				f.Level, err = levels.New(levelConfig, l.Value)
 				if err != nil {
@@ -77,7 +77,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				f.defaultHistoryLabel = "presence"
 				l := lastLogValue(ctx, storage, f)
 
-				logger.Debug().Msgf("new presence %s with value %f", f.ID_, l.Value)
+				logger.Debug("new presence created", "function_id", f.ID_, "value", l.Value)
 
 				f.Presence = presences.New(l.Value)
 				f.handle = f.Presence.Handle
@@ -112,7 +112,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 		}
 	}
 
-	logger.Info().Msgf("loaded %d functions from config file", numFunctions)
+	logger.Info("loaded functions from config file", "count", numFunctions)
 
 	return r, nil
 }

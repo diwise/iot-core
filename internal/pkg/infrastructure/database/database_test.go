@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 	"time"
-
-	"github.com/rs/zerolog"
 )
 
 func TestSQL(t *testing.T) {
@@ -53,7 +51,7 @@ func testSetup() (Storage, context.Context, error) {
 
 	ctx := context.Background()
 
-	s, err := Connect(ctx, zerolog.Logger{}, cfg)
+	s, err := Connect(ctx, cfg)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,7 +18,6 @@ import (
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/matryer/is"
 	"github.com/rabbitmq/amqp091-go"
-	"github.com/rs/zerolog"
 )
 
 func TestAPIfunctionsReturns200OK(t *testing.T) {
@@ -65,7 +65,7 @@ func TestReceiveDigitalInputUpdateMessage(t *testing.T) {
 	topicMessageHandler := msgCtx.RegisterTopicMessageHandlerCalls()[0].Handler
 
 	ctx := context.Background()
-	l := zerolog.Logger{}
+	l := slog.New(slog.NewTextHandler(io.Discard, nil))
 
 	topicMessageHandler(ctx, amqp091.Delivery{Body: newStateJSON(sID, true)}, l)
 	topicMessageHandler(ctx, amqp091.Delivery{Body: newStateJSON(sID, false)}, l)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -22,7 +23,6 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 )
 
@@ -33,7 +33,7 @@ var functionsConfigPath string
 
 func main() {
 	serviceVersion := buildinfo.SourceVersion()
-	ctx, logger, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
+	ctx, _, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
 	defer cleanup()
 
 	flag.StringVar(&functionsConfigPath, "functions", "/opt/diwise/config/functions.csv", "configuration file for functions")
@@ -41,66 +41,68 @@ func main() {
 
 	var err error
 
-	dmClient := createDeviceManagementClientOrDie(ctx, logger)
+	dmClient := createDeviceManagementClientOrDie(ctx)
 	defer dmClient.Close(ctx)
 
-	msgCtx := createMessagingContextOrDie(ctx, logger)
-	storage := createDatabaseConnectionOrDie(ctx, logger)
+	msgCtx := createMessagingContextOrDie(ctx)
+	storage := createDatabaseConnectionOrDie(ctx)
 
 	var configFile *os.File
 
 	if functionsConfigPath != "" {
 		configFile, err = os.Open(functionsConfigPath)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("failed to open functions config file")
+			fatal(ctx, "failed to open functions config file", err)
 		}
 		defer configFile.Close()
 	}
 
 	_, api_, err := initialize(ctx, dmClient, msgCtx, configFile, storage)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("initialization failed")
+		fatal(ctx, "initialization failed", err)
 	}
 
-	servicePort := env.GetVariableOrDefault(logger, "SERVICE_PORT", "8080")
+	servicePort := env.GetVariableOrDefault(ctx, "SERVICE_PORT", "8080")
 	err = http.ListenAndServe(":"+servicePort, api_.Router())
 	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to start request router")
+		fatal(ctx, "failed to start request router", err)
 	}
 }
 
-func createDeviceManagementClientOrDie(ctx context.Context, logger zerolog.Logger) client.DeviceManagementClient {
-	dmURL := env.GetVariableOrDie(logger, "DEV_MGMT_URL", "url to iot-device-mgmt")
-	tokenURL := env.GetVariableOrDie(logger, "OAUTH2_TOKEN_URL", "a valid oauth2 token URL")
-	clientID := env.GetVariableOrDie(logger, "OAUTH2_CLIENT_ID", "a valid oauth2 client id")
-	clientSecret := env.GetVariableOrDie(logger, "OAUTH2_CLIENT_SECRET", "a valid oauth2 client secret")
+func createDeviceManagementClientOrDie(ctx context.Context) client.DeviceManagementClient {
+	dmURL := env.GetVariableOrDie(ctx, "DEV_MGMT_URL", "url to iot-device-mgmt")
+	tokenURL := env.GetVariableOrDie(ctx, "OAUTH2_TOKEN_URL", "a valid oauth2 token URL")
+	clientID := env.GetVariableOrDie(ctx, "OAUTH2_CLIENT_ID", "a valid oauth2 client id")
+	clientSecret := env.GetVariableOrDie(ctx, "OAUTH2_CLIENT_SECRET", "a valid oauth2 client secret")
 
 	dmClient, err := client.New(ctx, dmURL, tokenURL, clientID, clientSecret)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to create device managagement client")
+		fatal(ctx, "failed to create device managagement client", err)
 	}
 
 	return dmClient
 }
 
-func createMessagingContextOrDie(ctx context.Context, logger zerolog.Logger) messaging.MsgContext {
-	config := messaging.LoadConfiguration(serviceName, logger)
-	messenger, err := messaging.Initialize(config)
+func createMessagingContextOrDie(ctx context.Context) messaging.MsgContext {
+	logger := logging.GetFromContext(ctx)
+
+	config := messaging.LoadConfiguration(ctx, serviceName, logger)
+	messenger, err := messaging.Initialize(ctx, config)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to init messaging")
+		fatal(ctx, "failed to init messaging", err)
 	}
 
 	return messenger
 }
 
-func createDatabaseConnectionOrDie(ctx context.Context, logger zerolog.Logger) database.Storage {
-	storage, err := database.Connect(ctx, logger, database.LoadConfiguration(logger))
+func createDatabaseConnectionOrDie(ctx context.Context) database.Storage {
+	storage, err := database.Connect(ctx, database.LoadConfiguration(ctx))
 	if err != nil {
-		logger.Fatal().Err(err).Msg("database connect failed")
+		fatal(ctx, "database connect failed", err)
 	}
 	err = storage.Initialize(ctx)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("database initialize failed")
+		fatal(ctx, "database initialize failed", err)
 	}
 	return storage
 }
@@ -125,7 +127,7 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msg
 }
 
 func newCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {
-	return func(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger zerolog.Logger) error {
+	return func(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger *slog.Logger) error {
 		var err error
 
 		ctx, span := tracer.Start(ctx, "receive-command")
@@ -136,23 +138,23 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 		evt := events.MessageReceived{}
 		err = json.Unmarshal(wrapper.Body(), &evt)
 		if err != nil {
-			logger.Error().Err(err).Msg("failed to decode message from json")
+			logger.Error("failed to decode message from json", "err", err.Error())
 			return err
 		}
 
-		logger = logger.With().Str("device_id", evt.Device).Logger()
+		logger = logger.With(slog.String("device_id", evt.Device))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		messageAccepted, err := app.MessageReceived(ctx, evt)
 		if err != nil {
-			logger.Error().Err(err).Msg("message not accepted")
+			logger.Error("message not accepted", "err", err.Error())
 			return err
 		}
 
-		logger.Info().Msgf("publishing message to %s", messageAccepted.TopicName())
+		logger.Info("publishing message", "topic", messageAccepted.TopicName())
 		err = messenger.PublishOnTopic(ctx, messageAccepted)
 		if err != nil {
-			logger.Error().Err(err).Msg("failed to publish message")
+			logger.Error("failed to publish message", "err", err.Error())
 			return err
 		}
 
@@ -161,7 +163,7 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 }
 
 func newTopicMessageHandler(messenger messaging.MsgContext, app application.App) messaging.TopicMessageHandler {
-	return func(ctx context.Context, msg amqp.Delivery, logger zerolog.Logger) {
+	return func(ctx context.Context, msg amqp.Delivery, logger *slog.Logger) {
 		var err error
 
 		ctx, span := tracer.Start(ctx, "receive-message")
@@ -169,28 +171,34 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 
 		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
-		logger.Debug().Str("body", string(msg.Body)).Msg("received message")
+		logger.Debug("received message", "body", string(msg.Body))
 
 		evt := events.MessageAccepted{}
 
 		err = json.Unmarshal(msg.Body, &evt)
 		if err != nil {
-			logger.Error().Err(err).Msg("unable to unmarshal incoming message")
+			logger.Error("unable to unmarshal incoming message", "err", err.Error())
 			return
 		}
 
 		err = evt.Error()
 		if err != nil {
-			logger.Warn().Err(err).Msg("received malformed topic message")
+			logger.Warn("received malformed topic message", "err", err.Error())
 			return
 		}
 
-		logger = logger.With().Str("device_id", evt.Sensor).Logger()
+		logger = logger.With(slog.String("device_id", evt.Sensor))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		err = app.MessageAccepted(ctx, evt, messenger)
 		if err != nil {
-			logger.Error().Err(err).Msg("failed to handle message")
+			logger.Error("failed to handle message", "err", err.Error())
 		}
 	}
+}
+
+func fatal(ctx context.Context, msg string, err error) {
+	logger := logging.GetFromContext(ctx)
+	logger.Error(msg, "err", err.Error())
+	os.Exit(1)
 }
