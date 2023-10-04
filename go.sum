@@ -7,8 +7,8 @@ github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XL
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/diwise/iot-device-mgmt v0.0.0-20231003100302-06da8a3b9b74 h1:jnjWkIOILAQfdAqR7Xhkb5bO2zYDcieZB+b+UbSxdyY=
-github.com/diwise/iot-device-mgmt v0.0.0-20231003100302-06da8a3b9b74/go.mod h1:chP558ZuTSXVH8DkzXlOukYUmjInjWKIlRQRCxWRfBQ=
+github.com/diwise/iot-device-mgmt v0.0.0-20231004084956-25222ac40f26 h1:zkIzr2njIZM6WwqBvowzCQ0rDGgeLXJWpFk0HYygxnE=
+github.com/diwise/iot-device-mgmt v0.0.0-20231004084956-25222ac40f26/go.mod h1:jGrqVjEcP3ly+n4c5WYd0VO8M6B8lxV82VfEl98CyBI=
 github.com/diwise/messaging-golang v0.0.0-20231004082357-60ba8013c5b8 h1:/Tkp4ZB38E740YzIqVUYyD7JtTGJcbCoDl34Z7R5+ew=
 github.com/diwise/messaging-golang v0.0.0-20231004082357-60ba8013c5b8/go.mod h1:VUmBPfDlJHQbpgjjbjT60NRFd8h/jg2y9hn5WFNy/Ys=
 github.com/diwise/service-chassis v0.0.0-20231004081412-c07949c1b076 h1:TaMdi4x7wYVke9KBFqiaJKT1l40Cj+XpwP5zlBEV0xs=

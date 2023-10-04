@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.1
 
 require (
-	github.com/diwise/iot-device-mgmt v0.0.0-20231003100302-06da8a3b9b74
+	github.com/diwise/iot-device-mgmt v0.0.0-20231004084956-25222ac40f26
 	github.com/diwise/messaging-golang v0.0.0-20231004082357-60ba8013c5b8
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/rs/cors v1.9.0
