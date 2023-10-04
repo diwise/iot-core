@@ -17,7 +17,7 @@ const (
 )
 
 type Level interface {
-	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time) error) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time) error) (bool, any, error)
 	Current() float64
 	Offset() float64
 	Percent() float64
@@ -93,10 +93,10 @@ type level struct {
 	Offset_  *float64 `json:"offset,omitempty"`
 }
 
-func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, any, error) {
 
 	if !e.BaseNameMatches(lwm2m.Distance) {
-		return false, nil
+		return false, nil, nil
 	}
 
 	const SensorValue string = "5700"
@@ -111,7 +111,7 @@ func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 		l.Current_ = math.Round((l.maxDistance-distance)*l.cosAlpha*100) / 100.0
 
 		if !hasChanged(previousLevel, l.Current_) {
-			return false, nil
+			return false, nil, nil
 		}
 
 		if isNotZero(l.maxLevel) {
@@ -124,10 +124,10 @@ func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 			l.Offset_ = &offset
 		}
 
-		return true, onchange("level", l.Current_, ts)
+		return true, l, onchange("level", l.Current_, ts)
 	}
 
-	return false, nil
+	return false, nil, nil
 }
 
 func (l *level) Current() float64 {

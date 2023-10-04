@@ -11,7 +11,7 @@ import (
 const FunctionTypeName string = "timer"
 
 type Timer interface {
-	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error)
+	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, any, error)
 
 	State() bool
 }
@@ -32,9 +32,9 @@ type timer struct {
 	valueUpdater  *time.Ticker
 }
 
-func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool,any,  error) {
 	if !e.BaseNameMatches(lwm2m.DigitalInput) {
-		return false, nil
+		return false, nil, nil
 	}
 
 	const (
@@ -61,17 +61,17 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 				err = onchange("state", 0, ts)
 				if err != nil {
-					return true, err
+					return true, t, err
 				}
 
 				err = onchange("state", 1, ts)
 				if err != nil {
-					return true, err
+					return true, t, err
 				}
 
 				err = onchange("time", t.totalDuration.Minutes(), ts)
 				if err != nil {
-					return true, err
+					return true, t, err
 				}
 
 				if t.valueUpdater == nil {
@@ -94,12 +94,12 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 			} else {
 				err = onchange("state", 1, ts)
 				if err != nil {
-					return true, err
+					return true, t, err
 				}
 
 				err = onchange("state", 0, ts)
 				if err != nil {
-					return true, err
+					return true, t, err
 				}
 
 				t.EndTime = &ts
@@ -111,13 +111,13 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 				err = onchange("time", t.totalDuration.Minutes(), ts)
 				if err != nil {
-					return true, err
+					return true, t, err
 				}
 			}
 		}
 	}
 
-	return previousState != t.State_, nil
+	return previousState != t.State_, t, nil
 }
 
 func (t *timer) State() bool {

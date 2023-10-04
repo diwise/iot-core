@@ -14,7 +14,7 @@ const (
 )
 
 type Building interface {
-	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time) error) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time) error) (bool, any, error)
 
 	CurrentPower() float64
 	CurrentEnergy() float64
@@ -29,12 +29,13 @@ type building struct {
 	Power  float64 `json:"power"`
 }
 
-func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, any, error) {
 	if !e.BaseNameMatches(lwm2m.Power) && !e.BaseNameMatches(lwm2m.Energy) {
-		return false, nil
+		return false, nil, nil
 	}
 
 	const SensorValue string = "5700"
+	
 	r, ok := e.GetRecord(SensorValue)
 	ts, timeOk := e.GetTimeForRec(SensorValue)
 
@@ -48,7 +49,7 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 
 			if hasChanged(previousValue, value) {
 				err := onchange("power", value, ts)
-				return true, err
+				return true, b, err
 			}
 		} else if e.BaseNameMatches(lwm2m.Energy) {
 			previousValue := b.Energy
@@ -57,12 +58,12 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 
 			if hasChanged(previousValue, value) {
 				err := onchange("energy", value, ts)
-				return true, err
+				return true, b, err
 			}
 		}
 	}
 
-	return false, nil
+	return false, b, nil
 }
 
 func hasChanged(previousLevel, newLevel float64) bool {

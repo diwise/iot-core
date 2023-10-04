@@ -31,7 +31,7 @@ type location struct {
 	Longitude float64 `json:"longitude"`
 }
 
-type fnct struct {
+type fnctMetadata struct {
 	ID_      string    `json:"id"`
 	Name_    string    `json:"name"`
 	Type     string    `json:"type"`
@@ -39,6 +39,10 @@ type fnct struct {
 	Location *location `json:"location,omitempty"`
 	Tenant   string    `json:"tenant,omitempty"`
 	Source   string    `json:"source,omitempty"`
+}
+
+type fnct struct {
+	fnctMetadata
 
 	Counter      counters.Counter            `json:"counter,omitempty"`
 	Level        levels.Level                `json:"level,omitempty"`
@@ -48,7 +52,7 @@ type fnct struct {
 	Building     buildings.Building          `json:"building,omitempty"`
 	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`
 
-	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, error)
+	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, any, error)
 
 	defaultHistoryLabel string
 	storage             database.Storage
@@ -78,7 +82,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		return nil
 	}
 
-	changed, err := f.handle(ctx, e, onchange)
+	changed, diff, err := f.handle(ctx, e, onchange)
 	if err != nil {
 		return err
 	}
@@ -112,9 +116,12 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	}
 
 	if changed {
-		body, _ := json.Marshal(f)
-		logger.Debug().Str("body", string(body)).Msgf("publishing message to %s", f.TopicName())
-		msgctx.PublishOnTopic(ctx, f)
+		fu := NewFnctUpdated(*f, diff)
+		
+		body, _ := json.Marshal(fu)
+		logger.Debug().Str("body", string(body)).Msgf("publishing message to %s", fu.TopicName())
+
+		msgctx.PublishOnTopic(ctx, fu)
 	}
 
 	return nil
@@ -142,15 +149,27 @@ func (f *fnct) History(ctx context.Context, label string, lastN int) ([]LogValue
 	return loggedValues, nil
 }
 
-func (f *fnct) ContentType() string {
-	return "application/json"
-}
-
-func (f *fnct) TopicName() string {
-	return "function.updated"
-}
-
 type LogValue struct {
 	Value     float64   `json:"v"`
 	Timestamp time.Time `json:"ts"`
+}
+
+type fnctUpdated struct {
+	fnctMetadata
+	Data    any      `json:"data"`
+}
+
+func (f fnctUpdated) ContentType() string {
+	return "application/json"
+}
+
+func (f fnctUpdated) TopicName() string {
+	return "function.updated"
+}
+
+func NewFnctUpdated(f fnct, data any) fnctUpdated {
+	return fnctUpdated{
+		fnctMetadata: f.fnctMetadata,
+		Data: data,
+	}
 }

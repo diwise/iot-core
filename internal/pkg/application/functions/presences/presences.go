@@ -14,7 +14,7 @@ const (
 )
 
 type Presence interface {
-	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time) error) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time) error) (bool, any, error)
 	State() bool
 }
 
@@ -28,10 +28,10 @@ type presence struct {
 	State_ bool `json:"state"`
 }
 
-func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, any, error) {
 
 	if !e.BaseNameMatches(lwm2m.DigitalInput) && !e.BaseNameMatches(lwm2m.Presence) {
-		return false, nil
+		return false, nil, nil
 	}
 
 	const (
@@ -51,19 +51,19 @@ func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 			// Temporary fix to create square waves in the UI ...
 			err := onchange("presence", presenceValue[!t.State_], ts)
 			if err != nil {
-				return true, err
+				return true, t, err
 			}
 
 			err = onchange("presence", presenceValue[t.State_], ts)
 			if err != nil {
-				return true, err
+				return true, t, err
 			}
 
-			return true, nil
+			return true, t, nil
 		}
 	}
 
-	return false, nil
+	return false, nil, nil
 }
 
 func (t *presence) State() bool {

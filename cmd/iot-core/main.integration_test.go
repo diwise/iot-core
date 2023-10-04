@@ -75,7 +75,7 @@ func TestReceiveDigitalInputUpdateMessage(t *testing.T) {
 	msg := msgCtx.PublishOnTopicCalls()[1].Message
 	b, _ := json.Marshal(msg)
 
-	const expectation string = `{"id":"fid1","name":"name","type":"counter","subtype":"overflow","counter":{"count":2,"state":true}}`
+	const expectation string = `{"id":"fid1","name":"name","type":"counter","subtype":"overflow","data":{"count":2,"state":true}}`
 	is.Equal(string(b), expectation)
 }
 
