@@ -6,7 +6,7 @@ toolchain go1.21.1
 
 require (
 	github.com/diwise/iot-device-mgmt v0.0.0-20231003100302-06da8a3b9b74
-	github.com/diwise/messaging-golang v0.0.0-20230907151254-8928403cf42d
+	github.com/diwise/messaging-golang v0.0.0-20231004082357-60ba8013c5b8
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/rs/cors v1.9.0
 	go.opentelemetry.io/otel v1.19.0
@@ -42,7 +42,7 @@ require (
 
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
-	github.com/diwise/service-chassis v0.0.0-20231003093159-33c02f91595f
+	github.com/diwise/service-chassis v0.0.0-20231004081412-c07949c1b076
 	github.com/farshidtz/senml/v2 v2.0.0
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
