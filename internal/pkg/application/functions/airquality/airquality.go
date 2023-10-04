@@ -27,18 +27,18 @@ func New() AirQuality {
 type AQ struct{}
 
 type airquality struct {
-	Particulates_ *particulates `json:"particulates"`
-	Temperature_  *float64      `json:"temperature"`
+	Particulates_ *particulates `json:"particulates,omitempty"`
+	Temperature_  *float64      `json:"temperature,omitempty"`
 	Timestamp_    time.Time     `json:"timestamp"`
 }
 
 type particulates struct {
-	PM1  *float64 `json:"pm1"`
-	PM10 *float64 `json:"pm10"`
-	PM25 *float64 `json:"pm25"`
-	NO   *float64 `json:"no"`
-	NO2  *float64 `json:"no2"`
-	CO2  *float64 `json:"co2"`
+	PM1  *float64 `json:"pm1,omitempty"`
+	PM10 *float64 `json:"pm10,omitempty"`
+	PM25 *float64 `json:"pm25,omitempty"`
+	NO   *float64 `json:"no,omitempty"`
+	NO2  *float64 `json:"no2,omitempty"`
+	CO2  *float64 `json:"co2,omitempty"`
 }
 
 func (aq *airquality) Temperature() float64 {
