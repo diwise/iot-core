@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -129,8 +130,8 @@ func (aq *airquality) Handle(ctx context.Context, e *events.MessageAccepted, onc
 		aq.Timestamp_ = time.Now().UTC()
 	}
 
-	b, _ := json.MarshalIndent(aq, "", " ")
-	log.Debug().Msgf("AirQuality changed: %t.\n%s", hasChanged, string(b))
+	b, _ := json.Marshal(aq)
+	log.Debug(fmt.Sprintf("AirQuality changed: %t.\n%s", hasChanged, string(b)))
 
 	return hasChanged, errors.Join(errs...)
 }
