@@ -3,8 +3,11 @@ package functions
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/diwise/iot-core/internal/pkg/application/functions/airquality"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/buildings"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
@@ -45,6 +48,7 @@ type fnct struct {
 	Timer        timers.Timer                `json:"timer,omitempty"`
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 	Building     buildings.Building          `json:"building,omitempty"`
+	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`
 
 	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, error)
 
@@ -61,15 +65,15 @@ func (f *fnct) Name() string {
 }
 
 func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
-	logger := logging.GetFromContext(ctx).With().Str("function_id", f.ID()).Logger()
+	logger := logging.GetFromContext(ctx).With(slog.String("function_id", f.ID()))
 	ctx = logging.NewContextWithLogger(ctx, logger)
 
 	onchange := func(prop string, value float64, ts time.Time) error {
-		logger.Debug().Msgf("property %s changed to %f with time %s", prop, value, ts.Format(time.RFC3339Nano))
+		logger.Debug(fmt.Sprintf("property %s changed to %f with time %s", prop, value, ts.Format(time.RFC3339Nano)))
 
 		err := f.storage.Add(ctx, f.ID(), prop, value, ts)
 		if err != nil {
-			logger.Error().Err(err).Msgf("failed to add values to database")
+			logger.Error("failed to add values to database", "err", err.Error())
 			return err
 		}
 
@@ -81,7 +85,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		return err
 	}
 
-	logger.Debug().Msgf("handled accepted message (changed = %v)", changed)
+	logger.Debug("handled accepted message", "changed", changed)
 
 	if e.HasLocation() {
 		f.Location = &location{
@@ -111,7 +115,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 	if changed {
 		body, _ := json.Marshal(f)
-		logger.Debug().Str("body", string(body)).Msgf("publishing message to %s", f.TopicName())
+		logger.Debug("publishing message", "body", string(body), "topic", f.TopicName())
 		msgctx.PublishOnTopic(ctx, f)
 	}
 
