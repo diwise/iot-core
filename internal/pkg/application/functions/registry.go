@@ -13,6 +13,7 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/presences"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/stopwatch"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/timers"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/waterqualities"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
@@ -97,6 +98,10 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				f.AirQuality = airquality.New()
 				f.handle = f.AirQuality.Handle
 				f.defaultHistoryLabel = "temperature"
+			} else if f.Type == stopwatch.FunctionTypeName {
+				f.Stopwatch = stopwatch.New()
+				f.handle = f.Stopwatch.Handle
+				f.defaultHistoryLabel = "cumulativeTime"
 			} else {
 				numErrors++
 				if numErrors > 1 {
