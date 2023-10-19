@@ -101,7 +101,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 			} else if f.Type == stopwatch.FunctionTypeName {
 				f.Stopwatch = stopwatch.New()
 				f.handle = f.Stopwatch.Handle
-				f.defaultHistoryLabel = "cumulativeTime"
+				f.defaultHistoryLabel = "duration"
 			} else {
 				numErrors++
 				if numErrors > 1 {

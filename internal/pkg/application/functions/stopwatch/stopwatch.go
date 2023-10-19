@@ -48,12 +48,15 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 	}
 
 	const (
-		DigitalInputState string = "5500"
+		DigitalInputState   string = "5500"
+		DigitalInputCounter string = "5501"
 	)
 
 	currentState := sw.State_
+	currentCount := sw.Count_
 
 	r, stateOK := e.GetRecord(DigitalInputState)
+	c, counterOK := e.GetFloat64(DigitalInputCounter)
 	ts, timeOk := e.GetTimeForRec(DigitalInputState)
 
 	if stateOK && timeOk && r.BoolValue != nil {
@@ -67,7 +70,6 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 				sw.State_ = state
 				sw.StopTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
 				sw.Duration = nil
-				sw.Count_++
 
 				err = onchange("state", 0, ts)
 				if err != nil {
@@ -79,7 +81,15 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 					return true, err
 				}
 
-				err = onchange("count", float64(sw.Count_), ts)
+				if counterOK {
+					if int32(c) != currentCount {
+						sw.Count_ = int32(c)
+					}
+				} else {
+					sw.Count_++
+				}
+
+				err := onchange("count", float64(sw.Count_), ts)
 				if err != nil {
 					return true, err
 				}
@@ -112,7 +122,6 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 					return true, err
 				}
 			}
-
 		}
 	}
 
