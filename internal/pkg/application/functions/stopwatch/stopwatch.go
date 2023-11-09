@@ -80,19 +80,6 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 				if err != nil {
 					return true, err
 				}
-
-				if counterOK {
-					if int32(c) != currentCount {
-						sw.Count_ = int32(c)
-					}
-				} else {
-					sw.Count_++
-				}
-
-				err := onchange("count", float64(sw.Count_), ts)
-				if err != nil {
-					return true, err
-				}
 			} else {
 				sw.StopTime = &ts
 				sw.State_ = state
@@ -122,6 +109,28 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 					return true, err
 				}
 			}
+		} else if currentState {
+			duration := ts.Sub(sw.StartTime)
+			sw.Duration = &duration
+
+			dt := duration.Seconds()
+			err := onchange("duration", dt, ts)
+			if err != nil {
+				return true, err
+			}
+		}
+
+		if counterOK {
+			if int32(c) != currentCount {
+				sw.Count_ = int32(c)
+			}
+		} else {
+			sw.Count_++
+		}
+
+		err := onchange("count", float64(sw.Count_), ts)
+		if err != nil {
+			return true, err
 		}
 	}
 
