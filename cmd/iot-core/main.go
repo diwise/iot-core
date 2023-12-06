@@ -120,7 +120,7 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msg
 	app := application.New(msgproc, functionsRegistry)
 
 	needToDecideThis := "application/json"
-	msgctx.RegisterCommandHandler(needToDecideThis, newCommandHandler(msgctx, app))
+	msgctx.RegisterCommandHandler(messaging.MatchContentType(needToDecideThis), newCommandHandler(msgctx, app))
 
 	routingKey := "message.accepted"
 	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(msgctx, app))

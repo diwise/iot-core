@@ -112,7 +112,7 @@ func testSetup(t *testing.T) (*is.I, *dmctest.DeviceManagementClientMock, *messa
 		PublishOnTopicFunc: func(ctx context.Context, message messaging.TopicMessage) error {
 			return nil
 		},
-		RegisterCommandHandlerFunc: func(string, messaging.CommandHandler) error {
+		RegisterCommandHandlerFunc: func(messaging.MessageFilter, messaging.CommandHandler) error {
 			return nil
 		},
 		RegisterTopicMessageHandlerFunc: func(string, messaging.TopicMessageHandler) error {
