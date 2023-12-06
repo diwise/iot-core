@@ -22,7 +22,6 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel"
 )
 
@@ -45,6 +44,8 @@ func main() {
 	defer dmClient.Close(ctx)
 
 	msgCtx := createMessagingContextOrDie(ctx)
+	defer msgCtx.Close()
+
 	storage := createDatabaseConnectionOrDie(ctx)
 
 	var configFile *os.File
@@ -91,6 +92,7 @@ func createMessagingContextOrDie(ctx context.Context) messaging.MsgContext {
 	if err != nil {
 		fatal(ctx, "failed to init messaging", err)
 	}
+	messenger.Start()
 
 	return messenger
 }
@@ -127,13 +129,11 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msg
 }
 
 func newCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {
-	return func(ctx context.Context, wrapper messaging.CommandMessageWrapper, logger *slog.Logger) error {
+	return func(ctx context.Context, wrapper messaging.IncomingCommand, logger *slog.Logger) error {
 		var err error
 
 		ctx, span := tracer.Start(ctx, "receive-command")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
-
-		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
 		evt := events.MessageReceived{}
 		err = json.Unmarshal(wrapper.Body(), &evt)
@@ -163,19 +163,17 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 }
 
 func newTopicMessageHandler(messenger messaging.MsgContext, app application.App) messaging.TopicMessageHandler {
-	return func(ctx context.Context, msg amqp.Delivery, logger *slog.Logger) {
+	return func(ctx context.Context, msg messaging.IncomingTopicMessage, logger *slog.Logger) {
 		var err error
 
 		ctx, span := tracer.Start(ctx, "receive-message")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
-		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
-
-		logger.Debug("received message", "body", string(msg.Body))
+		logger.Debug("received message", "body", string(msg.Body()))
 
 		evt := events.MessageAccepted{}
 
-		err = json.Unmarshal(msg.Body, &evt)
+		err = json.Unmarshal(msg.Body(), &evt)
 		if err != nil {
 			logger.Error("unable to unmarshal incoming message", "err", err.Error())
 			return
