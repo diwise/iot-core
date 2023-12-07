@@ -1,6 +1,7 @@
 package events
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -48,6 +49,11 @@ func NewMessageAccepted(sensorID string, pack senml.Pack, decorators ...EventDec
 	}
 
 	return m
+}
+
+func (m *MessageAccepted) Body() []byte {
+	b, _ := json.Marshal(*m)
+	return b
 }
 
 func (m *MessageAccepted) ContentType() string {

@@ -6,7 +6,7 @@ toolchain go1.21.1
 
 require (
 	github.com/diwise/iot-device-mgmt v0.0.0-20231004084956-25222ac40f26
-	github.com/diwise/messaging-golang v0.0.0-20231004082357-60ba8013c5b8
+	github.com/diwise/messaging-golang v0.0.0-20231206181618-1b320d478afd
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/rs/cors v1.9.0
 	go.opentelemetry.io/otel v1.19.0
@@ -51,7 +51,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 // indirect
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/matryer/is v1.4.1
-	github.com/rabbitmq/amqp091-go v1.8.1
+	github.com/rabbitmq/amqp091-go v1.8.1 // indirect
 	go.opentelemetry.io/otel/metric v1.19.0 // indirect
 	go.opentelemetry.io/otel/trace v1.19.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
