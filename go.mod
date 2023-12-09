@@ -41,7 +41,7 @@ require (
 
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
-	github.com/diwise/service-chassis v0.0.0-20231209115336-6155f54c2bc5
+	github.com/diwise/service-chassis v0.0.0-20231209115716-62bdf2a78c57
 	github.com/farshidtz/senml/v2 v2.0.0
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
