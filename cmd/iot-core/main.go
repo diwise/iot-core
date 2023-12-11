@@ -11,7 +11,6 @@ import (
 
 	"github.com/diwise/iot-core/internal/pkg/application"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
-	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/internal/pkg/presentation/api"
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -110,25 +109,23 @@ func createDatabaseConnectionOrDie(ctx context.Context) database.Storage {
 }
 
 func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
-	msgproc := messageprocessor.NewMessageProcessor(dmClient)
-
 	functionsRegistry, err := functions.NewRegistry(ctx, fconfig, storage)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	app := application.New(msgproc, functionsRegistry)
+	app := application.New(dmClient, functionsRegistry, msgctx)
 
 	needToDecideThis := "application/json"
-	msgctx.RegisterCommandHandler(messaging.MatchContentType(needToDecideThis), newCommandHandler(msgctx, app))
+	msgctx.RegisterCommandHandler(messaging.MatchContentType(needToDecideThis), newCommandHandler(app))
 
 	routingKey := "message.accepted"
-	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(msgctx, app))
+	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(app))
 
 	return app, api.New(ctx, functionsRegistry), nil
 }
 
-func newCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {
+func newCommandHandler(app application.App) messaging.CommandHandler {
 	return func(ctx context.Context, wrapper messaging.IncomingCommand, logger *slog.Logger) error {
 		var err error
 
@@ -145,16 +142,9 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 		logger = logger.With(slog.String("device_id", evt.Device))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
-		messageAccepted, err := app.MessageReceived(ctx, evt)
+		err = app.MessageReceived(ctx, evt)
 		if err != nil {
 			logger.Error("message not accepted", "err", err.Error())
-			return err
-		}
-
-		logger.Info("publishing message", "topic", messageAccepted.TopicName())
-		err = messenger.PublishOnTopic(ctx, messageAccepted)
-		if err != nil {
-			logger.Error("failed to publish message", "err", err.Error())
 			return err
 		}
 
@@ -162,7 +152,7 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 	}
 }
 
-func newTopicMessageHandler(messenger messaging.MsgContext, app application.App) messaging.TopicMessageHandler {
+func newTopicMessageHandler(app application.App) messaging.TopicMessageHandler {
 	return func(ctx context.Context, msg messaging.IncomingTopicMessage, logger *slog.Logger) {
 		var err error
 
@@ -185,10 +175,10 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 			return
 		}
 
-		logger = logger.With(slog.String("device_id", evt.Sensor))
+		logger = logger.With(slog.String("device_id", evt.DeviceID))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
-		err = app.MessageAccepted(ctx, evt, messenger)
+		err = app.MessageAccepted(ctx, evt)
 		if err != nil {
 			logger.Error("failed to handle message", "err", err.Error())
 		}

@@ -47,12 +47,11 @@ func (sw *stopwatch) Count() int32 {
 func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	var err error
 	var stateChanged bool = false
-	
-	
+
 	if !e.BaseNameMatches(lwm2m.DigitalInput) {
 		return false, nil
 	}
-	
+
 	log := logging.GetFromContext(ctx)
 
 	const (
@@ -170,6 +169,6 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 	if err != nil {
 		return false, err
 	}
-	
+
 	return stateChanged, nil
 }

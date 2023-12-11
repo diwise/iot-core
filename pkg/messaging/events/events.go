@@ -12,6 +12,8 @@ import (
 	"github.com/farshidtz/senml/v2"
 )
 
+const contentTypeApplicationJson string = "application/json"
+
 type MessageReceived struct {
 	Device    string     `json:"deviceID"`
 	Pack      senml.Pack `json:"pack"`
@@ -19,12 +21,16 @@ type MessageReceived struct {
 }
 
 func (m *MessageReceived) ContentType() string {
-	return "application/json"
+	return contentTypeApplicationJson
 }
 
 func (m MessageReceived) DeviceID() string {
-	if m.Pack[0].Name == "0" {
-		return m.Pack[0].StringValue
+	p := m.Pack.Clone()
+	p.Normalize()
+	i := strings.Index(p[0].Name, "/")
+
+	if i > 0 {
+		return p[0].Name[:i]
 	}
 
 	return ""
@@ -37,14 +43,14 @@ func (m *MessageReceived) Body() []byte {
 
 type EventDecoratorFunc func(m *MessageAccepted)
 type MessageAccepted struct {
-	Sensor    string     `json:"sensorID"`
+	DeviceID  string     `json:"deviceID"`
 	Pack      senml.Pack `json:"pack"`
 	Timestamp string     `json:"timestamp"`
 }
 
-func NewMessageAccepted(sensorID string, pack senml.Pack, decorators ...EventDecoratorFunc) *MessageAccepted {
+func NewMessageAccepted(deviceID string, pack senml.Pack, decorators ...EventDecoratorFunc) *MessageAccepted {
 	m := &MessageAccepted{
-		Sensor:    sensorID,
+		DeviceID:  deviceID,
 		Pack:      pack,
 		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
 	}
@@ -62,7 +68,8 @@ func (m *MessageAccepted) Body() []byte {
 }
 
 func (m *MessageAccepted) ContentType() string {
-	return "application/json"
+	urn := strings.ReplaceAll(m.ObjectURN(), ":", ".")
+	return fmt.Sprintf("application/vnd.diwise.%s+json", urn)
 }
 
 func (m *MessageAccepted) TopicName() string {
@@ -70,7 +77,7 @@ func (m *MessageAccepted) TopicName() string {
 }
 
 func (m *MessageAccepted) Error() error {
-	if m.Sensor == "" {
+	if m.DeviceID == "" {
 		return errors.New("sensor id is missing")
 	}
 
@@ -166,6 +173,10 @@ func Tenant(t string) EventDecoratorFunc {
 		t = "default"
 	}
 	return Rec("tenant", t, nil, nil, 0, nil)
+}
+
+func (m MessageAccepted) ObjectURN() string {
+	return m.Pack[0].StringValue
 }
 
 func (m MessageAccepted) Latitude() float64 {

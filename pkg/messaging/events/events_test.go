@@ -15,7 +15,7 @@ func TestGetValuesFromPack(t *testing.T) {
 
 	dt := time.Date(2022, time.January, 1, 12, 0, 0, 0, time.UTC)
 
-	evt := NewMessageAccepted("sensor", senml.Pack{}, Rec("withValues", "str", &v, &b, float64(dt.Unix()), nil))
+	evt := NewMessageAccepted("sensor", senml.Pack{}, Rec("withValues", "urn:oma:lwm2m:ext:3303", &v, &b, float64(dt.Unix()), nil))
 
 	b, ok := evt.GetBool("withValues")
 	is.True(ok)
@@ -28,8 +28,9 @@ func TestGetValuesFromPack(t *testing.T) {
 
 	is.True(b)
 	is.Equal(v, 1.0)
-	is.Equal(str, "str")
+	is.Equal(str, "urn:oma:lwm2m:ext:3303")
 	is.Equal(float64(dt.Unix()), date)
+	is.Equal("application/vnd.diwise.urn.oma.lwm2m.ext.3303+json", evt.ContentType())
 }
 
 func TestNilValues(t *testing.T) {
@@ -68,6 +69,25 @@ func TestGetValuesFromPack2(t *testing.T) {
 	is.Equal(s, "str")
 	b2, _ := Get[bool](*evt, "basename", 1)
 	is.Equal(b2, true)
+}
+
+func TestGetDeviceIDFromMessageReceived(t *testing.T) {
+	m := MessageReceived{
+		Device: "deviceID",
+		Pack: senml.Pack{
+			senml.Record{
+				BaseName: "deviceID/3303/",
+			},
+			senml.Record{
+				Name:  "5700",
+				Value: &[]float64{1.0}[0],
+			},
+		},
+		Timestamp: time.Now().Format(time.RFC3339),
+	}
+
+	is := testSetup(t)
+	is.Equal(m.DeviceID(), "deviceID")
 }
 
 func testSetup(t *testing.T) *is.I {

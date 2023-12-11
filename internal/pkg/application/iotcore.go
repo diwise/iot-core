@@ -5,31 +5,33 @@ import (
 	"fmt"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
-	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 type App interface {
-	MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error
-	MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
+	MessageAccepted(ctx context.Context, evt events.MessageAccepted) error
+	MessageReceived(ctx context.Context, msg events.MessageReceived) error
 }
 
 type app struct {
-	msgproc_   messageprocessor.MessageProcessor
-	functions_ functions.Registry
+	msgCtx                 messaging.MsgContext
+	fnReg                  functions.Registry
+	deviceManagementClient client.DeviceManagementClient
 }
 
-func New(msgproc messageprocessor.MessageProcessor, functionRegistry functions.Registry) App {
+func New(dmc client.DeviceManagementClient, functionRegistry functions.Registry, msgCtx messaging.MsgContext) App {
 	return &app{
-		msgproc_:   msgproc,
-		functions_: functionRegistry,
+		msgCtx:                 msgCtx,
+		deviceManagementClient: dmc,
+		fnReg:                  functionRegistry,
 	}
 }
 
-func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
-	matchingFunctions, _ := a.functions_.Find(ctx, functions.MatchSensor(evt.Sensor))
+func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted) error {
+	matchingFunctions, _ := a.fnReg.Find(ctx, functions.MatchSensor(evt.DeviceID))
 
 	logger := logging.GetFromContext(ctx)
 	matchingCount := len(matchingFunctions)
@@ -41,7 +43,7 @@ func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, m
 	}
 
 	for _, f := range matchingFunctions {
-		if err := f.Handle(ctx, &evt, msgctx); err != nil {
+		if err := f.Handle(ctx, &evt, a.msgCtx); err != nil {
 			return err
 		}
 	}
@@ -49,11 +51,25 @@ func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, m
 	return nil
 }
 
-func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
-	messageAccepted, err := a.msgproc_.ProcessMessage(ctx, msg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to process message: %w", err)
+func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) error {
+	if msg.DeviceID() == "" {
+		return fmt.Errorf("message pack contains no DeviceID")
 	}
 
-	return messageAccepted, nil
+	device, err := a.deviceManagementClient.FindDeviceFromInternalID(ctx, msg.DeviceID())
+	if err != nil {
+		return fmt.Errorf("could not find device with internalID %s, %w", msg.DeviceID(), err)
+	}
+
+	messageAccepted := events.NewMessageAccepted(device.ID(), msg.Pack.Clone(),
+		events.Lat(device.Latitude()),
+		events.Lon(device.Longitude()),
+		events.Environment(device.Environment()),
+		events.Source(device.Source()),
+		events.Tenant(device.Tenant()))
+
+	log := logging.GetFromContext(ctx)
+	log.Debug("publishing message", "topic", messageAccepted.TopicName(), "content-type", messageAccepted.ContentType())
+
+	return a.msgCtx.PublishOnTopic(ctx, messageAccepted)
 }
