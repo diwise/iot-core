@@ -30,6 +30,11 @@ func (m MessageReceived) DeviceID() string {
 	return ""
 }
 
+func (m *MessageReceived) Body() []byte {
+	b, _ := json.Marshal(*m)
+	return b
+}
+
 type EventDecoratorFunc func(m *MessageAccepted)
 type MessageAccepted struct {
 	Sensor    string     `json:"sensorID"`

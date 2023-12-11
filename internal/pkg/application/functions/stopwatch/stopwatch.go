@@ -2,10 +2,12 @@ package stopwatch
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 const FunctionTypeName = "stopwatch"
@@ -43,96 +45,131 @@ func (sw *stopwatch) Count() int32 {
 }
 
 func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+	var err error
+	var stateChanged bool = false
+	
+	
 	if !e.BaseNameMatches(lwm2m.DigitalInput) {
 		return false, nil
 	}
+	
+	log := logging.GetFromContext(ctx)
 
 	const (
 		DigitalInputState   string = "5500"
 		DigitalInputCounter string = "5501"
 	)
 
-	currentState := sw.State_
-	currentCount := sw.Count_
-
 	r, stateOK := e.GetRecord(DigitalInputState)
 	c, counterOK := e.GetFloat64(DigitalInputCounter)
 	ts, timeOk := e.GetTimeForRec(DigitalInputState)
 
-	if stateOK && timeOk && r.BoolValue != nil {
-		state := *r.BoolValue
+	if !stateOK || !timeOk || r.BoolValue == nil {
+		return false, fmt.Errorf("no state or time for stopwatch")
+	}
 
-		if state != currentState {
-			var err error
+	currentState := sw.State_
+	currentCount := sw.Count_
 
-			if state {
-				sw.StartTime = ts
-				sw.State_ = state
-				sw.StopTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
-				sw.Duration = nil
+	state := *r.BoolValue
 
-				err = onchange("state", 0, ts)
-				if err != nil {
-					return true, err
-				}
+	// On
+	if state {
+		// Off -> On = Start new stopwatch
+		if !currentState {
+			log.Debug("stopwatch: Off -> On, start new stopwatch")
 
-				err = onchange("state", 1, ts)
-				if err != nil {
-					return true, err
-				}
-			} else {
-				sw.StopTime = &ts
-				sw.State_ = state
-				duration := ts.Sub(sw.StartTime)
-				sw.Duration = &duration
-				sw.CumulativeTime = sw.CumulativeTime + duration
+			sw.StartTime = ts
+			sw.State_ = state
+			sw.StopTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
+			sw.Duration = nil
 
-				err = onchange("state", 1, ts)
-				if err != nil {
-					return true, err
-				}
-
-				err = onchange("state", 0, ts)
-				if err != nil {
-					return true, err
-				}
-
-				dt := duration.Seconds()
-				err = onchange("duration", dt, ts)
-				if err != nil {
-					return true, err
-				}
-
-				ct := sw.CumulativeTime.Seconds()
-				err = onchange("cumulativeTime", ct, ts)
-				if err != nil {
-					return true, err
-				}
+			err = onchange("state", 0, ts)
+			if err != nil {
+				return false, err
 			}
-		} else if currentState {
+
+			err = onchange("state", 1, ts)
+			if err != nil {
+				return false, err
+			}
+
+			stateChanged = true
+		}
+
+		// On -> On = Update duration
+		if currentState {
+			log.Debug("stopwatch: On -> On, update duration")
+
 			duration := ts.Sub(sw.StartTime)
 			sw.Duration = &duration
 
 			dt := duration.Seconds()
 			err := onchange("duration", dt, ts)
 			if err != nil {
-				return true, err
+				return false, err
 			}
-		}
 
-		if counterOK {
-			if int32(c) != currentCount {
-				sw.Count_ = int32(c)
-			}
-		} else {
-			sw.Count_++
-		}
-
-		err := onchange("count", float64(sw.Count_), ts)
-		if err != nil {
-			return true, err
+			stateChanged = true
 		}
 	}
 
-	return currentState != sw.State_, nil
+	// Off
+	if !state {
+		// On -> Off = Stop stopwatch
+		if currentState {
+			log.Debug("stopwatch: On -> Off, stop stopwatch")
+
+			sw.StopTime = &ts
+			sw.State_ = state
+			duration := ts.Sub(sw.StartTime)
+			sw.Duration = &duration
+			sw.CumulativeTime = sw.CumulativeTime + duration
+
+			err = onchange("state", 1, ts)
+			if err != nil {
+				return true, err
+			}
+
+			err = onchange("state", 0, ts)
+			if err != nil {
+				return false, err
+			}
+
+			dt := duration.Seconds()
+			err = onchange("duration", dt, ts)
+			if err != nil {
+				return false, err
+			}
+
+			ct := sw.CumulativeTime.Seconds()
+			err = onchange("cumulativeTime", ct, ts)
+			if err != nil {
+				return false, err
+			}
+
+			stateChanged = true
+		}
+
+		// Off -> Off = Do nothing
+		if !currentState {
+			log.Debug("Off -> Off, do nothing")
+			return false, nil
+		}
+	}
+
+	if counterOK {
+		if int32(c) != currentCount {
+			sw.Count_ = int32(c)
+		}
+	} else {
+		sw.Count_++
+	}
+
+	err = onchange("count", float64(sw.Count_), ts)
+	if err != nil {
+		return false, err
+	}
+	
+	return stateChanged, nil
 }
