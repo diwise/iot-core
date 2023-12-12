@@ -128,7 +128,7 @@ func newStateJSON(sensorID string, on bool) []byte {
 }
 
 const messageJSONFormat string = `{
-	"sensorID":"%s",
+	"deviceID":"%s",
 	"pack":[
 		{"bn":"urn:oma:lwm2m:ext:3200","bt":1675805579,"n":"0","vs":"%s"},
 		{"n":"5500","vb":%t}
