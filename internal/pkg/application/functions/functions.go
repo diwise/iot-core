@@ -2,7 +2,6 @@ package functions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -116,9 +115,9 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	}
 
 	if changed {
-		body, _ := json.Marshal(f)
-		logger.Debug("publishing message", "body", string(body), "topic", f.TopicName())
-		msgctx.PublishOnTopic(ctx, f)
+		fumsg := NewFunctionUpdatedMessage(f)
+		logger.Debug("publishing message", "body", string(fumsg.Body()), "topic", fumsg.TopicName())
+		msgctx.PublishOnTopic(ctx, fumsg)
 	}
 
 	return nil
@@ -146,12 +145,9 @@ func (f *fnct) History(ctx context.Context, label string, lastN int) ([]LogValue
 	return loggedValues, nil
 }
 
-func (f *fnct) ContentType() string {
-	return "application/json"
-}
-
-func (f *fnct) TopicName() string {
-	return "function.updated"
+func NewFunctionUpdatedMessage(f *fnct) messaging.TopicMessage {
+	m, _ := messaging.NewTopicMessageJSON("function.updated", "application/json", *f)
+	return m
 }
 
 type LogValue struct {

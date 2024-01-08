@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -17,7 +16,6 @@ import (
 	dmctest "github.com/diwise/iot-device-mgmt/pkg/test"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/matryer/is"
-	"github.com/rabbitmq/amqp091-go"
 )
 
 func TestAPIfunctionsReturns200OK(t *testing.T) {
@@ -67,13 +65,19 @@ func TestReceiveDigitalInputUpdateMessage(t *testing.T) {
 	ctx := context.Background()
 	l := slog.New(slog.NewTextHandler(io.Discard, nil))
 
-	topicMessageHandler(ctx, amqp091.Delivery{Body: newStateJSON(sID, true)}, l)
-	topicMessageHandler(ctx, amqp091.Delivery{Body: newStateJSON(sID, false)}, l)
-	topicMessageHandler(ctx, amqp091.Delivery{Body: newStateJSON(sID, true)}, l)
+	topicMessageHandler(ctx, &messaging.IncomingTopicMessageMock{
+		BodyFunc: func() []byte { return newStateJSON(sID, true) },
+	}, l)
+	topicMessageHandler(ctx, &messaging.IncomingTopicMessageMock{
+		BodyFunc: func() []byte { return newStateJSON(sID, false) },
+	}, l)
+	topicMessageHandler(ctx, &messaging.IncomingTopicMessageMock{
+		BodyFunc: func() []byte { return newStateJSON(sID, true) },
+	}, l)
 
 	is.Equal(len(msgCtx.PublishOnTopicCalls()), 3) // should have been called three times
-	msg := msgCtx.PublishOnTopicCalls()[1].Message
-	b, _ := json.Marshal(msg)
+
+	b := msgCtx.PublishOnTopicCalls()[2].Message.Body()
 
 	const expectation string = `{"id":"fid1","name":"name","type":"counter","subtype":"overflow","counter":{"count":2,"state":true}}`
 	is.Equal(string(b), expectation)
@@ -108,10 +112,11 @@ func testSetup(t *testing.T) (*is.I, *dmctest.DeviceManagementClientMock, *messa
 		PublishOnTopicFunc: func(ctx context.Context, message messaging.TopicMessage) error {
 			return nil
 		},
-		RegisterCommandHandlerFunc: func(string, messaging.CommandHandler) error {
+		RegisterCommandHandlerFunc: func(messaging.MessageFilter, messaging.CommandHandler) error {
 			return nil
 		},
-		RegisterTopicMessageHandlerFunc: func(string, messaging.TopicMessageHandler) {
+		RegisterTopicMessageHandlerFunc: func(string, messaging.TopicMessageHandler) error {
+			return nil
 		},
 	}
 
