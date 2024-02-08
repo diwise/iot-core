@@ -42,30 +42,18 @@ func (t *state) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 	ts, timeOk := e.GetTimeForRec(DigitalInputState)
 
 	if stateOk && timeOk && r.BoolValue != nil {
-		state := *r.BoolValue
+		t.State_ = *r.BoolValue
+		stateValue := map[bool]float64{true: 1, false: 0}
 
-		if state != t.State_ {
-			t.State_ = state
-			stateValue := map[bool]float64{true: 1, false: 0}
-
-			// Temporary fix to create square waves in the UI ...
-			err := onchange("state", stateValue[!t.State_], ts)
-			if err != nil {
-				return true, err
-			}
-
-			err = onchange("state", stateValue[t.State_], ts)
-			if err != nil {
-				return true, err
-			}
-
-			return true, nil
+		// This does not actually check if state has changed. It simply sets "state" to the mapped value of t.State_
+		err := onchange("state", stateValue[t.State_], ts)
+		if err != nil {
+			return true, err
 		}
-	}
 
+	}
 	return false, nil
 }
-
 func (t *state) State() bool {
 	return t.State_
 }
