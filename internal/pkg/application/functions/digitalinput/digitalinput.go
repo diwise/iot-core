@@ -1,4 +1,4 @@
-package states
+package digitalinput
 
 import (
 	"context"
@@ -13,23 +13,23 @@ const (
 	FunctionTypeName string = "state"
 )
 
-type State interface {
+type DigitalInput interface {
 	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time) error) (bool, error)
 	State() bool
 }
 
-func New(v float64) State {
-	return &state{
+func New(v float64) DigitalInput {
+	return &digitalinput{
 		State_: (math.Abs(v) >= 0.001),
 	}
 }
 
-type state struct {
+type digitalinput struct {
 	Timestamp string `json:"timestamp"`
 	State_    bool   `json:"state"`
 }
 
-func (t *state) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
 	if !e.BaseNameMatches(lwm2m.DigitalInput) {
 		return false, nil
@@ -53,10 +53,10 @@ func (t *state) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 		if err != nil {
 			return true, err
 		}
-
 	}
+
 	return false, nil
 }
-func (t *state) State() bool {
+func (t *digitalinput) State() bool {
 	return t.State_
 }

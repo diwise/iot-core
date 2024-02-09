@@ -11,9 +11,9 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/functions/airquality"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/buildings"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/digitalinput"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/presences"
-	"github.com/diwise/iot-core/internal/pkg/application/functions/states"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/stopwatch"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/timers"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/waterqualities"
@@ -103,14 +103,14 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				f.Stopwatch = stopwatch.New()
 				f.handle = f.Stopwatch.Handle
 				f.defaultHistoryLabel = "duration"
-			} else if f.Type == states.FunctionTypeName {
-				f.defaultHistoryLabel = "state"
+			} else if f.Type == digitalinput.FunctionTypeName {
+				f.defaultHistoryLabel = "digitalinput"
 				l := lastLogValue(ctx, storage, f)
 
-				logger.Debug("new state created", "function_id", f.ID_, "value", l.Value)
+				logger.Debug("new digital input created", "function_id", f.ID_, "value", l.Value)
 
-				f.State = states.New(l.Value)
-				f.handle = f.State.Handle
+				f.DigitalInput = digitalinput.New(l.Value)
+				f.handle = f.DigitalInput.Handle
 			} else {
 				numErrors++
 				if numErrors > 1 {
