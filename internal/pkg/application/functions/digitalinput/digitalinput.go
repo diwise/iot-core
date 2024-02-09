@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	FunctionTypeName string = "state"
+	FunctionTypeName string = "digitalinput"
 )
 
 type DigitalInput interface {
