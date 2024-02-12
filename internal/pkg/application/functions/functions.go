@@ -9,6 +9,7 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/functions/airquality"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/buildings"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/digitalinput"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/presences"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/stopwatch"
@@ -50,6 +51,7 @@ type fnct struct {
 	Building     buildings.Building          `json:"building,omitempty"`
 	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`
 	Stopwatch    stopwatch.Stopwatch         `json:"Stopwatch,omitempty"`
+	DigitalInput digitalinput.DigitalInput   `json:"DigitalInput,omitempty"`
 
 	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, error)
 
