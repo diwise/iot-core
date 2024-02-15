@@ -40,22 +40,49 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 	)
 
 	r, stateOk := e.GetRecord(DigitalInputState)
-	ts, timeOk := e.GetTimeForRec(DigitalInputState)
 
-	if stateOk && timeOk && r.BoolValue != nil {
-		t.State_ = *r.BoolValue
-		t.Timestamp = ts.Format(time.RFC3339)
+	ts := e.Timestamp
 
-		stateValue := map[bool]float64{true: 1, false: 0}
+	stateValue := map[bool]float64{true: 1, false: 0}
+	hasChanged := false
 
-		// This does not actually check if state has changed. It simply sets "state" to the mapped value of t.State_
-		err := onchange("state", stateValue[t.State_], ts)
+	if stateOk && r.BoolValue != nil {
+
+		timestamp, err := time.Parse(time.RFC3339, ts)
 		if err != nil {
-			return true, err
+			return hasChanged, err
 		}
+
+		if t.State_ != *r.BoolValue {
+			hasChanged = true
+			t.State_ = *r.BoolValue
+
+			timestamp, err := time.Parse(time.RFC3339, ts)
+			if err != nil {
+				return hasChanged, err
+			}
+
+			err = onchange("state", stateValue[t.State_], timestamp)
+			if err != nil {
+				return hasChanged, err
+			}
+
+		}
+
+		if t.Timestamp != ts {
+			hasChanged = true
+			t.Timestamp = ts
+
+			err := onchange("timestamp", 1, timestamp)
+			if err != nil {
+				return hasChanged, err
+			}
+
+		}
+
 	}
 
-	return false, nil
+	return hasChanged, nil
 }
 func (t *digitalinput) State() bool {
 	return t.State_
