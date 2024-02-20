@@ -40,40 +40,19 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 	)
 
 	r, stateOk := e.GetRecord(DigitalInputState)
-
-	ts := e.Timestamp
+	ts, timeOk := e.GetTimeForRec(DigitalInputState)
 
 	stateValue := map[bool]float64{true: 1, false: 0}
 	hasChanged := false
 
-	if stateOk && r.BoolValue != nil {
-
-		timestamp, err := time.Parse(time.RFC3339, ts)
-		if err != nil {
-			return hasChanged, err
-		}
+	if stateOk && timeOk && r.BoolValue != nil {
+		t.Timestamp = ts.Format(time.RFC3339)
 
 		if t.State_ != *r.BoolValue {
 			hasChanged = true
 			t.State_ = *r.BoolValue
 
-			timestamp, err := time.Parse(time.RFC3339, ts)
-			if err != nil {
-				return hasChanged, err
-			}
-
-			err = onchange("state", stateValue[t.State_], timestamp)
-			if err != nil {
-				return hasChanged, err
-			}
-
-		}
-
-		if t.Timestamp != ts {
-			hasChanged = true
-			t.Timestamp = ts
-
-			err := onchange("timestamp", 1, timestamp)
+			err := onchange("state", stateValue[t.State_], ts)
 			if err != nil {
 				return hasChanged, err
 			}
