@@ -14,7 +14,7 @@ const (
 )
 
 type DigitalInput interface {
-	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time) error) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, bool, func(string, float64, time.Time) error) (bool, error)
 	State() bool
 }
 
@@ -29,7 +29,7 @@ type digitalinput struct {
 	State_    bool   `json:"state"`
 }
 
-func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, onupdate bool, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
 	if !e.BaseNameMatches(lwm2m.DigitalInput) {
 		return false, nil
@@ -44,17 +44,13 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 	ts := e.Timestamp
 
 	stateValue := map[bool]float64{true: 1, false: 0}
+
 	hasChanged := false
 
 	if stateOk && r.BoolValue != nil {
-
-		timestamp, err := time.Parse(time.RFC3339, ts)
-		if err != nil {
-			return hasChanged, err
-		}
-
 		if t.State_ != *r.BoolValue {
 			hasChanged = true
+
 			t.State_ = *r.BoolValue
 
 			timestamp, err := time.Parse(time.RFC3339, ts)
@@ -62,28 +58,34 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 				return hasChanged, err
 			}
 
+			t.Timestamp = ts
+
 			err = onchange("state", stateValue[t.State_], timestamp)
 			if err != nil {
 				return hasChanged, err
 			}
 
-		}
+		} else if t.State_ == *r.BoolValue && onupdate {
+			hasChanged = onupdate
 
-		if t.Timestamp != ts {
-			hasChanged = true
-			t.Timestamp = ts
-
-			err := onchange("timestamp", 1, timestamp)
+			timestamp, err := time.Parse(time.RFC3339, ts)
 			if err != nil {
 				return hasChanged, err
 			}
 
+			t.Timestamp = ts
+
+			err = onchange("timestamp", 1, timestamp)
+			if err != nil {
+				return hasChanged, err
+			}
 		}
 
 	}
 
 	return hasChanged, nil
 }
+
 func (t *digitalinput) State() bool {
 	return t.State_
 }

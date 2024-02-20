@@ -14,7 +14,7 @@ const (
 )
 
 type Presence interface {
-	Handle(context.Context, *events.MessageAccepted, func(string, float64, time.Time) error) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, bool, func(string, float64, time.Time) error) (bool, error)
 	State() bool
 }
 
@@ -28,7 +28,7 @@ type presence struct {
 	State_ bool `json:"state"`
 }
 
-func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onupdate bool, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
 	if !e.BaseNameMatches(lwm2m.DigitalInput) && !e.BaseNameMatches(lwm2m.Presence) {
 		return false, nil

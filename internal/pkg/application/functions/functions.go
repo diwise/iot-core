@@ -42,6 +42,7 @@ type fnct struct {
 	Location *location `json:"location,omitempty"`
 	Tenant   string    `json:"tenant,omitempty"`
 	Source   string    `json:"source,omitempty"`
+	OnUpdate string    `json:"onupdate"`
 
 	Counter      counters.Counter            `json:"counter,omitempty"`
 	Level        levels.Level                `json:"level,omitempty"`
@@ -49,11 +50,11 @@ type fnct struct {
 	Timer        timers.Timer                `json:"timer,omitempty"`
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 	Building     buildings.Building          `json:"building,omitempty"`
-	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`
-	Stopwatch    stopwatch.Stopwatch         `json:"Stopwatch,omitempty"`
-	DigitalInput digitalinput.DigitalInput   `json:"DigitalInput,omitempty"`
+	AirQuality   airquality.AirQuality       `json:"airquality,omitempty"`
+	Stopwatch    stopwatch.Stopwatch         `json:"stopwatch,omitempty"`
+	DigitalInput digitalinput.DigitalInput   `json:"digitalinput,omitempty"`
 
-	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, error)
+	handle func(context.Context, *events.MessageAccepted, bool, func(prop string, value float64, ts time.Time) error) (bool, error)
 
 	defaultHistoryLabel string
 	storage             database.Storage
@@ -83,7 +84,9 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		return nil
 	}
 
-	changed, err := f.handle(ctx, e, onchange)
+	onupdate := map[string]bool{"true": true, "false": false}
+
+	changed, err := f.handle(ctx, e, onupdate[f.OnUpdate], onchange)
 	if err != nil {
 		return err
 	}

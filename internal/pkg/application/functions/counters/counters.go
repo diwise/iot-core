@@ -15,7 +15,7 @@ const (
 )
 
 type Counter interface {
-	Handle(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, bool, func(prop string, value float64, ts time.Time) error) (bool, error)
 	Count() int
 	State() bool
 }
@@ -35,7 +35,7 @@ type counter struct {
 	State_ bool `json:"state"`
 }
 
-func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onupdate bool, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	if !e.BaseNameMatches(lwm2m.DigitalInput) {
 		return false, nil
 	}

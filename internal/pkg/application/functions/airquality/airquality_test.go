@@ -15,7 +15,7 @@ func TestAirQuality(t *testing.T) {
 	is := is.New(t)
 
 	aq := New()
-	aq.Handle(context.Background(), newAirQuality(1.0, "2023-02-07T21:32:59.682607Z"), func(prop string, value float64, ts time.Time) error {
+	aq.Handle(context.Background(), newAirQuality(1.0, "2023-02-07T21:32:59.682607Z"), false, func(prop string, value float64, ts time.Time) error {
 		return nil
 	})
 

@@ -16,7 +16,7 @@ const (
 )
 
 type AirQuality interface {
-	Handle(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, error)
+	Handle(context.Context, *events.MessageAccepted, bool, func(prop string, value float64, ts time.Time) error) (bool, error)
 	Temperature() float64
 }
 
@@ -56,7 +56,7 @@ const (
 	lwm2mCO2         string = "17"
 )
 
-func (aq *airquality) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (aq *airquality) Handle(ctx context.Context, e *events.MessageAccepted, onupdate bool, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	log := logging.GetFromContext(ctx)
 
 	temp, tempOk := e.GetFloat64(lwm2mTemperature)

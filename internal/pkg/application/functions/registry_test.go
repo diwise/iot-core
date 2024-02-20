@@ -14,7 +14,7 @@ func TestCreateRegistry(t *testing.T) {
 	is := is.New(t)
 	sensorId := "testId"
 
-	config := "functionID;name;counter;overflow;" + sensorId
+	config := "functionID;name;counter;overflow;" + sensorId + ";false"
 	reg, err := NewRegistry(context.Background(), bytes.NewBufferString(config), &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
@@ -37,7 +37,7 @@ func TestCreateRegistry(t *testing.T) {
 func TestFindNonMatchingFunctionReturnsEmptySlice(t *testing.T) {
 	is := is.New(t)
 
-	config := "functionID;name;counter;overflow;sensorId"
+	config := "functionID;name;counter;overflow;sensorId;false"
 	reg, err := NewRegistry(context.Background(), bytes.NewBufferString(config), &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil

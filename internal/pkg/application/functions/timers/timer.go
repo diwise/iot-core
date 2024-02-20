@@ -11,7 +11,7 @@ import (
 const FunctionTypeName string = "timer"
 
 type Timer interface {
-	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error)
+	Handle(ctx context.Context, e *events.MessageAccepted, onupdate bool, onchange func(prop string, value float64, ts time.Time) error) (bool, error)
 
 	State() bool
 }
@@ -32,7 +32,7 @@ type timer struct {
 	valueUpdater  *time.Ticker
 }
 
-func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onupdate bool, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	if !e.BaseNameMatches(lwm2m.DigitalInput) {
 		return false, nil
 	}
