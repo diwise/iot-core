@@ -21,7 +21,7 @@ import (
 func TestAPIfunctionsReturns200OK(t *testing.T) {
 	is, dmClient, msgCtx := testSetup(t)
 
-	fconf := bytes.NewBufferString("fid1;name;counter;overflow;internalID")
+	fconf := bytes.NewBufferString("fid1;name;counter;overflow;internalID;false")
 	_, api, err := initialize(context.Background(), dmClient, msgCtx, fconf, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
@@ -46,7 +46,7 @@ func TestReceiveDigitalInputUpdateMessage(t *testing.T) {
 	is, dmClient, msgCtx := testSetup(t)
 	sID := "internalID"
 
-	fconf := bytes.NewBufferString("fid1;name;counter;overflow;" + sID)
+	fconf := bytes.NewBufferString("fid1;name;counter;overflow;" + sID + ";false")
 	_, _, err := initialize(context.Background(), dmClient, msgCtx, fconf, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
@@ -79,7 +79,7 @@ func TestReceiveDigitalInputUpdateMessage(t *testing.T) {
 
 	b := msgCtx.PublishOnTopicCalls()[2].Message.Body()
 
-	const expectation string = `{"id":"fid1","name":"name","type":"counter","subtype":"overflow","counter":{"count":2,"state":true}}`
+	const expectation string = `{"id":"fid1","name":"name","type":"counter","subtype":"overflow","onupdate":false,"counter":{"count":2,"state":true}}`
 	is.Equal(string(b), expectation)
 }
 
