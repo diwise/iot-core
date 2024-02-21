@@ -42,20 +42,26 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 	r, stateOk := e.GetRecord(DigitalInputState)
 	ts, timeOk := e.GetTimeForRec(DigitalInputState)
 
+	stateValue := map[bool]float64{true: 1, false: 0}
+	hasChanged := false
+
 	if stateOk && timeOk && r.BoolValue != nil {
-		t.State_ = *r.BoolValue
 		t.Timestamp = ts.Format(time.RFC3339)
 
-		stateValue := map[bool]float64{true: 1, false: 0}
+		if t.State_ != *r.BoolValue {
+			hasChanged = true
+			t.State_ = *r.BoolValue
 
-		// This does not actually check if state has changed. It simply sets "state" to the mapped value of t.State_
-		err := onchange("state", stateValue[t.State_], ts)
-		if err != nil {
-			return true, err
+			err := onchange("state", stateValue[t.State_], ts)
+			if err != nil {
+				return hasChanged, err
+			}
+
 		}
+
 	}
 
-	return false, nil
+	return hasChanged, nil
 }
 func (t *digitalinput) State() bool {
 	return t.State_

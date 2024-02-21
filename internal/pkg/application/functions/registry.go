@@ -48,11 +48,12 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 
 		if tokenCount >= 4 {
 			f := &fnct{
-				ID_:     tokens[0],
-				Name_:   tokens[1],
-				Type:    tokens[2],
-				SubType: tokens[3],
-				storage: storage,
+				ID_:      tokens[0],
+				Name_:    tokens[1],
+				Type:     tokens[2],
+				SubType:  tokens[3],
+				OnUpdate: tokens[5] == "true",
+				storage:  storage,
 			}
 
 			if f.Type == counters.FunctionTypeName {
