@@ -30,7 +30,7 @@ type presence struct {
 
 func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
-	if !e.BaseNameMatches(lwm2m.DigitalInput) && !e.BaseNameMatches(lwm2m.Presence) {
+	if !e.ObjectURNMatches(lwm2m.DigitalInput) && !e.ObjectURNMatches(lwm2m.Presence) {
 		return false, nil
 	}
 
@@ -39,7 +39,7 @@ func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 	)
 
 	r, stateOk := e.GetRecord(DigitalInputState)
-	ts, timeOk := e.GetTimeForRec(DigitalInputState)
+	ts, timeOk := e.GetTime(DigitalInputState)
 
 	if stateOk && timeOk && r.BoolValue != nil {
 		state := *r.BoolValue

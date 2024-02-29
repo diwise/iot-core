@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions/airquality"
@@ -148,7 +149,8 @@ func (f *fnct) History(ctx context.Context, label string, lastN int) ([]LogValue
 }
 
 func NewFunctionUpdatedMessage(f *fnct) messaging.TopicMessage {
-	m, _ := messaging.NewTopicMessageJSON("function.updated", "application/json", *f)
+	contentType := strings.ToLower(fmt.Sprintf("application/vnd+diwise.%s.%s+json", f.Type, f.SubType))
+	m, _ := messaging.NewTopicMessageJSON("function.updated", contentType, *f)
 	return m
 }
 

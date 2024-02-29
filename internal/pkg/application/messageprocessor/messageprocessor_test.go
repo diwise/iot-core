@@ -23,12 +23,12 @@ func TestThatProcessMessageReadsSenMLPackProperly(t *testing.T) {
 	msg, err := m.ProcessMessage(context.Background(), events.MessageReceived{
 		Device:    "devID",
 		Pack:      pack,
-		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+		Timestamp: time.Now().UTC(),
 	})
 
 	is.True(msg != nil)
 	is.NoErr(err)
-	is.True(msg.Sensor == "internalID")
+	is.True(msg.DeviceID == "internalID")
 }
 
 func testSetup(t *testing.T) (*is.I, *dmctest.DeviceManagementClientMock, *slog.Logger) {

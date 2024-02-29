@@ -15,19 +15,29 @@ import (
 type MessageReceived struct {
 	Device    string     `json:"deviceID"`
 	Pack      senml.Pack `json:"pack"`
-	Timestamp string     `json:"timestamp"`
+	Timestamp time.Time  `json:"timestamp"`
 }
 
 func (m *MessageReceived) ContentType() string {
-	return "application/json"
+	urn := strings.ReplaceAll(m.Urn(), ":", ".")
+	return fmt.Sprintf("application/vnd+diwise.%s+json", urn)
 }
 
 func (m MessageReceived) DeviceID() string {
-	if m.Pack[0].Name == "0" {
-		return m.Pack[0].StringValue
+	if m.Pack[0].Name != "0" {
+		return ""
 	}
 
-	return ""
+	parts := strings.Split(m.Pack[0].BaseName, "/")
+
+	return parts[0]
+}
+
+func (m MessageReceived) Urn() string {
+	if m.Pack[0].Name != "0" {
+		return ""
+	}
+	return m.Pack[0].StringValue
 }
 
 func (m *MessageReceived) Body() []byte {
@@ -37,16 +47,16 @@ func (m *MessageReceived) Body() []byte {
 
 type EventDecoratorFunc func(m *MessageAccepted)
 type MessageAccepted struct {
-	Sensor    string     `json:"sensorID"`
+	DeviceID  string     `json:"deviceID"`
 	Pack      senml.Pack `json:"pack"`
-	Timestamp string     `json:"timestamp"`
+	Timestamp time.Time  `json:"timestamp"`
 }
 
-func NewMessageAccepted(sensorID string, pack senml.Pack, decorators ...EventDecoratorFunc) *MessageAccepted {
+func NewMessageAccepted(deviceID string, pack senml.Pack, decorators ...EventDecoratorFunc) *MessageAccepted {
 	m := &MessageAccepted{
-		Sensor:    sensorID,
+		DeviceID:  deviceID,
 		Pack:      pack,
-		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
+		Timestamp: time.Now().UTC(),
 	}
 
 	for _, d := range decorators {
@@ -60,9 +70,16 @@ func (m *MessageAccepted) Body() []byte {
 	b, _ := json.Marshal(*m)
 	return b
 }
+func (m MessageAccepted) Urn() string {
+	if m.Pack[0].Name != "0" {
+		return ""
+	}
+	return m.Pack[0].StringValue
+}
 
 func (m *MessageAccepted) ContentType() string {
-	return "application/json"
+	urn := strings.ReplaceAll(m.Urn(), ":", ".")
+	return fmt.Sprintf("application/vnd+diwise.%s+json", urn)
 }
 
 func (m *MessageAccepted) TopicName() string {
@@ -70,11 +87,11 @@ func (m *MessageAccepted) TopicName() string {
 }
 
 func (m *MessageAccepted) Error() error {
-	if m.Sensor == "" {
+	if m.DeviceID == "" {
 		return errors.New("sensor id is missing")
 	}
 
-	if m.Timestamp == "" {
+	if m.Timestamp.IsZero() {
 		return errors.New("timestamp is mising")
 	}
 
@@ -223,18 +240,6 @@ func (m MessageAccepted) GetBool(name string) (bool, bool) {
 	return false, false
 }
 
-func (m MessageAccepted) GetTime(name string) (float64, bool) {
-	for _, r := range m.Pack {
-		if strings.EqualFold(r.Name, name) {
-			if r.Time != 0 {
-				return r.Time, true
-			}
-			return 0, false
-		}
-	}
-	return 0, false
-}
-
 func (m MessageAccepted) GetRecord(name string) (senml.Record, bool) {
 	for _, r := range m.Pack {
 		if strings.EqualFold(r.Name, name) {
@@ -244,24 +249,16 @@ func (m MessageAccepted) GetRecord(name string) (senml.Record, bool) {
 	return senml.Record{}, false
 }
 
-func (m MessageAccepted) GetTimeForRec(name string) (time.Time, bool) {
-	btime := m.Pack[0].BaseTime
+func (m MessageAccepted) GetTime(name string) (time.Time, bool) {
+	clone := m.Pack.Clone()
+	bn := clone[0].BaseName
+	n := fmt.Sprintf("%s%s", bn, name)
 
-	var now = float64(time.Now().UnixNano()) / 1000000000
-	const pivot = 268435456 // rfc8428: values less than 2**28 represent time relative to the current time.
+	clone.Normalize()
 
-	//TODO: remove this "fix" when time is correctly used
-	for _, r := range m.Pack {
-		if strings.EqualFold(r.Name, name) {
-			if r.Time > 0 {
-				if r.Time < pivot {
-					return time.Unix(int64(now+r.Time), 0).UTC(), true
-				}
-
-				return time.Unix(int64(r.Time), 0).UTC(), true
-			}
-
-			return time.Unix(int64(btime), 0).UTC(), true
+	for _, r := range clone {
+		if strings.EqualFold(n, r.Name) {
+			return time.Unix(int64(r.Time), 0).UTC(), true
 		}
 	}
 
@@ -276,13 +273,13 @@ func (m MessageAccepted) Tenant() string {
 	return ""
 }
 
-func (m MessageAccepted) BaseName() string {
-	return m.Pack[0].BaseName
+func (m MessageAccepted) ObjectURN() string {
+	return m.Pack[0].StringValue
 }
 
-func (m MessageAccepted) BaseNameMatches(name string) bool {
-	baseName := m.BaseName()
-	return (baseName == name)
+func (m MessageAccepted) ObjectURNMatches(objectURN string) bool {
+	urn := m.ObjectURN()
+	return (urn == objectURN)
 }
 
 func (m MessageAccepted) BaseTime() float64 {
@@ -290,7 +287,7 @@ func (m MessageAccepted) BaseTime() float64 {
 }
 
 func Get[T float64 | string | bool](m MessageAccepted, baseName string, id int) (T, bool) {
-	if strings.EqualFold(m.BaseName(), baseName) {
+	if strings.EqualFold(m.ObjectURN(), baseName) {
 		n := fmt.Sprint(id)
 		t := *new(T)
 

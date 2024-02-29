@@ -36,7 +36,7 @@ type counter struct {
 }
 
 func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-	if !e.BaseNameMatches(lwm2m.DigitalInput) {
+	if !e.ObjectURNMatches(lwm2m.DigitalInput) {
 		return false, nil
 	}
 
@@ -70,8 +70,8 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 		}
 	}
 
-	countTs, countTimeOk := e.GetTimeForRec(DigitalInputCounter)
-	stateTs, stateTimeOk := e.GetTimeForRec(DigitalInputState)
+	countTs, countTimeOk := e.GetTime(DigitalInputCounter)
+	stateTs, stateTimeOk := e.GetTime(DigitalInputState)
 
 	changed := false
 	errs := make([]error, 0)

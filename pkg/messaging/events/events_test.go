@@ -29,7 +29,7 @@ func TestGetValuesFromPack(t *testing.T) {
 	is.True(b)
 	is.Equal(v, 1.0)
 	is.Equal(str, "str")
-	is.Equal(float64(dt.Unix()), date)
+	is.Equal(dt, date)
 }
 
 func TestNilValues(t *testing.T) {

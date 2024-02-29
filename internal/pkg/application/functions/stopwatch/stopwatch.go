@@ -47,12 +47,11 @@ func (sw *stopwatch) Count() int32 {
 func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	var err error
 	var stateChanged bool = false
-	
-	
-	if !e.BaseNameMatches(lwm2m.DigitalInput) {
+
+	if !e.ObjectURNMatches(lwm2m.DigitalInput) {
 		return false, nil
 	}
-	
+
 	log := logging.GetFromContext(ctx)
 
 	const (
@@ -62,7 +61,7 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 
 	r, stateOK := e.GetRecord(DigitalInputState)
 	c, counterOK := e.GetFloat64(DigitalInputCounter)
-	ts, timeOk := e.GetTimeForRec(DigitalInputState)
+	ts, timeOk := e.GetTime(DigitalInputState)
 
 	if !stateOK || !timeOk || r.BoolValue == nil {
 		return false, fmt.Errorf("no state or time for stopwatch")
@@ -170,6 +169,6 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 	if err != nil {
 		return false, err
 	}
-	
+
 	return stateChanged, nil
 }

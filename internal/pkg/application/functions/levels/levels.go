@@ -95,11 +95,11 @@ type level struct {
 
 func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
-	if e.BaseNameMatches(lwm2m.Distance) {
+	if e.ObjectURNMatches(lwm2m.Distance) {
 		return l.handleDistance(e, onchange)
 	}
 
-	if e.BaseNameMatches(lwm2m.FillingLevel) {
+	if e.ObjectURNMatches(lwm2m.FillingLevel) {
 		return l.handleFillingLevel(e, onchange)
 	}
 
@@ -139,7 +139,7 @@ func (l *level) handleDistance(e *events.MessageAccepted, onchange func(prop str
 
 	const SensorValue string = "5700"
 	r, ok := e.GetRecord(SensorValue)
-	ts, timeOk := e.GetTimeForRec(SensorValue)
+	ts, timeOk := e.GetTime(SensorValue)
 
 	if ok && timeOk && r.Value != nil {
 		distance := *r.Value

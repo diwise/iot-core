@@ -30,18 +30,18 @@ type building struct {
 }
 
 func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-	if !e.BaseNameMatches(lwm2m.Power) && !e.BaseNameMatches(lwm2m.Energy) {
+	if !e.ObjectURNMatches(lwm2m.Power) && !e.ObjectURNMatches(lwm2m.Energy) {
 		return false, nil
 	}
 
 	const SensorValue string = "5700"
 	r, ok := e.GetRecord(SensorValue)
-	ts, timeOk := e.GetTimeForRec(SensorValue)
+	ts, timeOk := e.GetTime(SensorValue)
 
 	if ok && timeOk && r.Value != nil {
 		value := *r.Value
 
-		if e.BaseNameMatches(lwm2m.Power) {
+		if e.ObjectURNMatches(lwm2m.Power) {
 			previousValue := b.Power
 			value = value / 1000.0 // convert from Watt to kW
 			b.Power = value
@@ -50,7 +50,7 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 				err := onchange("power", value, ts)
 				return true, err
 			}
-		} else if e.BaseNameMatches(lwm2m.Energy) {
+		} else if e.ObjectURNMatches(lwm2m.Energy) {
 			previousValue := b.Energy
 			value = value / 3600000.0 // convert from Joule to kWh
 			b.Energy = value

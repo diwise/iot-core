@@ -137,7 +137,7 @@ func (aq *airquality) Handle(ctx context.Context, e *events.MessageAccepted, onc
 }
 
 func getTime(e *events.MessageAccepted, name string) time.Time {
-	t, tOk := e.GetTimeForRec(name)
+	t, tOk := e.GetTime(name)
 	if tOk {
 		return t
 	}
