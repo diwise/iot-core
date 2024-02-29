@@ -95,9 +95,47 @@ type level struct {
 
 func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
-	if !e.BaseNameMatches(lwm2m.Distance) {
-		return false, nil
+	if e.BaseNameMatches(lwm2m.Distance) {
+		return l.handleDistance(e, onchange)
 	}
+
+	if e.BaseNameMatches(lwm2m.FillingLevel) {
+		return l.handleFillingLevel(e, onchange)
+	}
+
+	return false, nil
+}
+
+func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+
+	const (
+		ActualFillingPercentage string = "2"
+		HighThreshold           string = "4"
+	)
+
+	percent, percentOk := e.GetFloat64(ActualFillingPercentage)
+	highThreshold, highThresholdOk := e.GetFloat64(HighThreshold)
+
+	if highThresholdOk {
+		l.maxLevel = highThreshold
+	}
+
+	if percentOk {
+		previousPercent := *l.Percent_
+
+		if !hasChanged(previousPercent, *l.Percent_) {
+			return false, nil
+		}
+
+		l.Percent_ = &percent
+
+		return true, onchange("percent", *l.Percent_, time.Now().UTC()) //TODO: use time from package
+	}
+
+	return false, nil
+}
+
+func (l *level) handleDistance(e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
 	const SensorValue string = "5700"
 	r, ok := e.GetRecord(SensorValue)
