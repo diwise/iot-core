@@ -149,7 +149,7 @@ func (f *fnct) History(ctx context.Context, label string, lastN int) ([]LogValue
 }
 
 func NewFunctionUpdatedMessage(f *fnct) messaging.TopicMessage {
-	contentType := strings.ToLower(fmt.Sprintf("application/vnd+diwise.%s.%s+json", f.Type, f.SubType))
+	contentType := strings.ToLower(fmt.Sprintf("application/vnd.diwise.%s.%s+json", f.Type, f.SubType))
 	m, _ := messaging.NewTopicMessageJSON("function.updated", contentType, *f)
 	return m
 }

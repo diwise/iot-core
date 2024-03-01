@@ -73,10 +73,9 @@ func newFillingLevel(actualFillingPercentage, highThreshold float64, containerFu
 	return e
 }
 
-const fillingLevelJSONFormat string = `{
-	"sensorID":"sensorID",
+const fillingLevelJSONFormat string = `{	
 	"pack":[
-		{"bn":"urn:oma:lwm2m:ext:3330","bt":1675801037,"n":"0","vs":"testId"},
+		{"bn":"testid/3435/","bt":1675801037,"n":"0","vs":"urn:oma:lwm2m:ext:3435"},	
 		{"n":"2","v":%f},
 		{"n":"4","v":%f},
 		{"n":"5","vb":%t},
@@ -85,10 +84,9 @@ const fillingLevelJSONFormat string = `{
 	"timestamp":"2023-02-07T20:17:17.312028Z"
 }`
 
-const distanceJSONFormat string = `{
-	"sensorID":"sensorID",
+const distanceJSONFormat string = `{	
 	"pack":[
-		{"bn":"urn:oma:lwm2m:ext:3435","bt":1675801037,"n":"0","vs":"testId"},
+		{"bn":"testid/3330/","bt":1675801037,"n":"0","vs":"urn:oma:lwm2m:ext:3330"},		
 		{"n":"5700","u":"m","v":%f}
 	],
 	"timestamp":"2023-02-07T20:17:17.312028Z"

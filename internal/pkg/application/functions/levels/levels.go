@@ -123,7 +123,7 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 	if percentOk {
 		previousPercent := *l.Percent_
 
-		if !hasChanged(previousPercent, *l.Percent_) {
+		if !hasChanged(previousPercent, percent) {
 			return false, nil
 		}
 
