@@ -46,10 +46,9 @@ func newState(on bool, timestamp string) *events.MessageAccepted {
 	return e
 }
 
-const messageJSONFormat string = `{
-	"sensorID":"testId",
+const messageJSONFormat string = `{	
 	"pack":[
-		{"bn":"urn:oma:lwm2m:ext:3200","bt":%d,"n":"0","vs":"testId"},
+		{"bn":"testid/3200/","bt":%d,"n":"0","vs":"urn:oma:lwm2m:ext:3200"},
 		{"n":"5500","vb":%t}
 	],
 	"timestamp":"%s"

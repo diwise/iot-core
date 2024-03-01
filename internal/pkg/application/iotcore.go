@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
-	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
@@ -17,19 +17,23 @@ type App interface {
 }
 
 type app struct {
-	msgproc_   messageprocessor.MessageProcessor
-	functions_ functions.Registry
+	client       client.DeviceManagementClient
+	fnctRegistry functions.Registry
 }
 
-func New(msgproc messageprocessor.MessageProcessor, functionRegistry functions.Registry) App {
+func New(client client.DeviceManagementClient, functionRegistry functions.Registry) App {
 	return &app{
-		msgproc_:   msgproc,
-		functions_: functionRegistry,
+		client:       client,
+		fnctRegistry: functionRegistry,
 	}
 }
 
 func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
-	matchingFunctions, _ := a.functions_.Find(ctx, functions.MatchSensor(evt.Sensor))
+	if evt.Error() != nil {
+		return evt.Error()
+	}
+
+	matchingFunctions, _ := a.fnctRegistry.Find(ctx, functions.MatchSensor(evt.DeviceID()))
 
 	logger := logging.GetFromContext(ctx)
 	matchingCount := len(matchingFunctions)
@@ -50,10 +54,19 @@ func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, m
 }
 
 func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
-	messageAccepted, err := a.msgproc_.ProcessMessage(ctx, msg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to process message: %w", err)
+	if msg.Error() != nil {
+		return nil, msg.Error()
 	}
 
-	return messageAccepted, nil
+	device, err := a.client.FindDeviceFromInternalID(ctx, msg.DeviceID())
+	if err != nil {
+		return nil, fmt.Errorf("could not find device with internalID %s, %w", msg.DeviceID(), err)
+	}
+
+	return events.NewMessageAccepted(msg.Pack().Clone(),
+		events.Lat(device.Latitude()),
+		events.Lon(device.Longitude()),
+		events.Environment(device.Environment()),
+		events.Source(device.Source()),
+		events.Tenant(device.Tenant())), nil
 }

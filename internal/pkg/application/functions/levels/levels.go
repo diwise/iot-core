@@ -95,17 +95,64 @@ type level struct {
 
 func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
-	if !e.BaseNameMatches(lwm2m.Distance) {
-		return false, nil
+	if events.Matches(e, lwm2m.Distance) {
+		return l.handleDistance(e, onchange)
 	}
 
+	if events.Matches(e, lwm2m.FillingLevel) {
+		return l.handleFillingLevel(e, onchange)
+	}
+
+	return false, nil
+}
+
+func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+
+	const (
+		ActualFillingPercentage string = "2"
+		HighThreshold           string = "4"
+	)
+
+	percent, percentOk := events.GetFloat(e, ActualFillingPercentage)
+	ts, timeOk := events.GetTime(e, ActualFillingPercentage)
+	highThreshold, highThresholdOk := events.GetFloat(e, HighThreshold)
+
+	if !timeOk {
+		ts = time.Now().UTC()
+	}
+
+	if highThresholdOk {
+		if highThreshold > l.maxLevel {
+			l.maxLevel = highThreshold
+		}
+	}
+
+	if percentOk {
+		previousPercent := *l.Percent_
+
+		if !hasChanged(previousPercent, percent) {
+			return false, nil
+		}
+
+		l.Percent_ = &percent
+
+		return true, onchange("percent", *l.Percent_, ts)
+	}
+
+	return false, nil
+}
+
+func (l *level) handleDistance(e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+
 	const SensorValue string = "5700"
-	r, ok := e.GetRecord(SensorValue)
-	ts, timeOk := e.GetTimeForRec(SensorValue)
+	r, ok := events.GetRecord(e, SensorValue)
+	ts, timeOk := events.GetTime(e, SensorValue)
 
 	if ok && timeOk && r.Value != nil {
 		distance := *r.Value
 		previousLevel := l.Current_
+
+		//TODO: calc maxDistance?
 
 		// Calculate the current level using the configured angle (if any) and round to two decimals
 		l.Current_ = math.Round((l.maxDistance-distance)*l.cosAlpha*100) / 100.0

@@ -25,13 +25,12 @@ func New(v float64) DigitalInput {
 }
 
 type digitalinput struct {
-	Timestamp string `json:"timestamp"`
-	State_    bool   `json:"state"`
+	Timestamp time.Time `json:"timestamp"`
+	State_    bool      `json:"state"`
 }
 
 func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-
-	if !e.BaseNameMatches(lwm2m.DigitalInput) {
+	if !events.Matches(e, lwm2m.DigitalInput) {
 		return false, nil
 	}
 
@@ -39,30 +38,28 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 		DigitalInputState string = "5500"
 	)
 
-	r, stateOk := e.GetRecord(DigitalInputState)
-	ts, timeOk := e.GetTimeForRec(DigitalInputState)
-
 	stateValue := map[bool]float64{true: 1, false: 0}
 	hasChanged := false
 
-	if stateOk && timeOk && r.BoolValue != nil {
-		t.Timestamp = ts.Format(time.RFC3339)
+	vb, ok := events.GetBool(e, DigitalInputState)
 
-		if t.State_ != *r.BoolValue {
+	ts := e.Timestamp() // TODO: time from pack not message?
+
+	if ok {
+		if t.State_ != vb {
 			hasChanged = true
-			t.State_ = *r.BoolValue
+			t.State_ = vb
 
 			err := onchange("state", stateValue[t.State_], ts)
 			if err != nil {
 				return hasChanged, err
 			}
-
 		}
-
 	}
 
 	return hasChanged, nil
 }
+
 func (t *digitalinput) State() bool {
 	return t.State_
 }

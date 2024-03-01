@@ -15,32 +15,32 @@ func TestGetValuesFromPack(t *testing.T) {
 
 	dt := time.Date(2022, time.January, 1, 12, 0, 0, 0, time.UTC)
 
-	evt := NewMessageAccepted("sensor", senml.Pack{}, Rec("withValues", "str", &v, &b, float64(dt.Unix()), nil))
+	evt := NewMessageAccepted(senml.Pack{}, Rec("withValues", "str", &v, &b, float64(dt.Unix()), nil))
 
-	b, ok := evt.GetBool("withValues")
+	b, ok := GetBool(evt, "withValues")
 	is.True(ok)
-	v, ok = evt.GetFloat64("withValues")
+	v, ok = GetFloat(evt, "withValues")
 	is.True(ok)
-	str, ok := evt.GetString("withValues")
+	str, ok := GetString(evt, "withValues")
 	is.True(ok)
-	date, ok := evt.GetTime("withValues")
+	date, ok := GetTime(evt, "withValues")
 	is.True(ok)
 
 	is.True(b)
 	is.Equal(v, 1.0)
 	is.Equal(str, "str")
-	is.Equal(float64(dt.Unix()), date)
+	is.Equal(dt, date)
 }
 
 func TestNilValues(t *testing.T) {
 	is := testSetup(t)
 
-	evt := NewMessageAccepted("sensor", senml.Pack{}, Rec("nil", "", nil, nil, 0, nil))
-	v, ok := evt.GetFloat64("nil")
+	evt := NewMessageAccepted(senml.Pack{}, Rec("nil", "", nil, nil, 0, nil))
+	v, ok := GetFloat(evt, "nil")
 	is.True(!ok)
-	s, ok := evt.GetString("nil")
+	s, ok := GetString(evt, "nil")
 	is.True(ok)
-	b, ok := evt.GetBool("nil")
+	b, ok := GetBool(evt, "nil")
 	is.True(!ok)
 
 	is.Equal(v, 0.0)
@@ -60,13 +60,13 @@ func TestGetValuesFromPack2(t *testing.T) {
 		},
 	}
 
-	evt := NewMessageAccepted("sensor", baseRec, Rec("1", "str", &v, &b, float64(dt.Unix()), nil))
+	evt := NewMessageAccepted(baseRec, Rec("1", "str", &v, &b, float64(dt.Unix()), nil))
 
-	f, _ := Get[float64](*evt, "basename", 1)
+	f, _ := Get[float64](evt, 1)
 	is.Equal(1.0, f)
-	s, _ := Get[string](*evt, "basename", 1)
+	s, _ := Get[string](evt, 1)
 	is.Equal(s, "str")
-	b2, _ := Get[bool](*evt, "basename", 1)
+	b2, _ := Get[bool](evt, 1)
 	is.Equal(b2, true)
 }
 

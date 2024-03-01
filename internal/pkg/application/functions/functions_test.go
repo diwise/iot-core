@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,8 +35,8 @@ func TestCounter(t *testing.T) {
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
-	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, time.Now().UTC(), BoolValue("5500", true, time.Now().UTC()))
-	acceptedMessage := events.NewMessageAccepted("sensorID", pack)
+	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, time.Now().UTC(), BoolValue("5500", true, time.Now().UTC().Unix()))
+	acceptedMessage := events.NewMessageAccepted(pack)
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
@@ -68,7 +69,7 @@ func TestLevel(t *testing.T) {
 
 	v := 2.1
 	pack := NewSenMLPack(sensorId, lwm2m.Distance, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
-	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
+	acceptedMessage := events.NewMessageAccepted(pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 	is.Equal(len(f), 1) // should find one matching function
@@ -102,7 +103,7 @@ func TestLevelFromAnAngle(t *testing.T) {
 
 	v := 2.1
 	pack := NewSenMLPack(sensorId, lwm2m.Distance, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
-	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
+	acceptedMessage := events.NewMessageAccepted(pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 	is.Equal(len(f), 1) // should find one matching function
@@ -137,8 +138,8 @@ func TestTimer(t *testing.T) {
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
 	packTime := time.Now().UTC()
-	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, packTime, BoolValue("5500", true, packTime))
-	acceptedMessage := events.NewMessageAccepted("sensorID", pack)
+	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, packTime, BoolValue("5500", true, 0))
+	acceptedMessage := events.NewMessageAccepted(pack)
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
@@ -168,7 +169,7 @@ func TestWaterQuality(t *testing.T) {
 	v := 2.34
 	ts, _ := time.Parse(time.RFC3339Nano, "2023-06-05T11:26:57Z")
 	pack := NewSenMLPack(sensorId, lwm2m.Temperature, ts, Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))
-	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
+	acceptedMessage := events.NewMessageAccepted(pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 	is.Equal(len(f), 1) // should find one matching function
@@ -204,7 +205,7 @@ func TestAddToHistory(t *testing.T) {
 
 	newMessageAccepted := func(v float64, t time.Time) *events.MessageAccepted {
 		pack := NewSenMLPack(sensorId, lwm2m.Temperature, t, Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))
-		return events.NewMessageAccepted(sensorId, pack)
+		return events.NewMessageAccepted(pack)
 	}
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
@@ -240,11 +241,13 @@ type senML struct {
 func NewSenMLPack(deviceID, baseName string, baseTime time.Time, decorators ...SenMLDecoratorFunc) senml.Pack {
 	s := &senML{}
 
+	parts := strings.Split(baseName, ":")
+
 	s.Pack = append(s.Pack, senml.Record{
-		BaseName:    baseName,
+		BaseName:    fmt.Sprintf("%s/%s/", deviceID, parts[len(parts)-1]),
 		BaseTime:    float64(baseTime.Unix()),
 		Name:        "0",
-		StringValue: deviceID,
+		StringValue: baseName,
 	})
 
 	for _, d := range decorators {
@@ -254,8 +257,17 @@ func NewSenMLPack(deviceID, baseName string, baseTime time.Time, decorators ...S
 	return s.Pack
 }
 
-func BoolValue(n string, vb bool, t time.Time) SenMLDecoratorFunc {
-	return Rec(n, nil, nil, "", &t, "", &vb)
+func BoolValue(n string, vb bool, unixTime int64) SenMLDecoratorFunc {
+	var t *time.Time
+
+	if unixTime == 0 {
+		t = nil
+	} else {
+		ut := time.Unix(unixTime, 0)
+		t = &ut
+	}
+
+	return Rec(n, nil, nil, "", t, "", &vb)
 }
 
 func Rec(n string, v, sum *float64, vs string, t *time.Time, u string, vb *bool) SenMLDecoratorFunc {
