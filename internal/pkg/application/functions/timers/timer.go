@@ -43,8 +43,8 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 	previousState := t.State_
 
-	r, stateOK := events.GetR(e, DigitalInputState)
-	ts, timeOk := events.GetT(e, DigitalInputState)
+	r, stateOK := events.GetRecord(e, DigitalInputState)
+	ts, timeOk := events.GetTime(e, DigitalInputState)
 
 	if stateOK && timeOk && r.BoolValue != nil {
 		state := *r.BoolValue

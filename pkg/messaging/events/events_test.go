@@ -17,13 +17,13 @@ func TestGetValuesFromPack(t *testing.T) {
 
 	evt := NewMessageAccepted(senml.Pack{}, Rec("withValues", "str", &v, &b, float64(dt.Unix()), nil))
 
-	b, ok := GetVB(evt, "withValues")
+	b, ok := GetBool(evt, "withValues")
 	is.True(ok)
-	v, ok = GetV(evt, "withValues")
+	v, ok = GetFloat(evt, "withValues")
 	is.True(ok)
-	str, ok := GetVS(evt, "withValues")
+	str, ok := GetString(evt, "withValues")
 	is.True(ok)
-	date, ok := GetT(evt, "withValues")
+	date, ok := GetTime(evt, "withValues")
 	is.True(ok)
 
 	is.True(b)
@@ -36,11 +36,11 @@ func TestNilValues(t *testing.T) {
 	is := testSetup(t)
 
 	evt := NewMessageAccepted(senml.Pack{}, Rec("nil", "", nil, nil, 0, nil))
-	v, ok := GetV(evt, "nil")
+	v, ok := GetFloat(evt, "nil")
 	is.True(!ok)
-	s, ok := GetVS(evt, "nil")
+	s, ok := GetString(evt, "nil")
 	is.True(ok)
-	b, ok := GetVB(evt, "nil")
+	b, ok := GetBool(evt, "nil")
 	is.True(!ok)
 
 	is.Equal(v, 0.0)

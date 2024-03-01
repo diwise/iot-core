@@ -33,8 +33,8 @@ func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, o
 
 	const SensorValue string = "5700"
 
-	r, tempOk := events.GetR(e, SensorValue)
-	ts, timeOk := events.GetT(e, SensorValue)
+	r, tempOk := events.GetRecord(e, SensorValue)
+	ts, timeOk := events.GetTime(e, SensorValue)
 
 	if tempOk && timeOk && r.Value != nil && ts.After(wq.Timestamp) {
 		temp := math.Round(*r.Value*10) / 10

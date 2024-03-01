@@ -143,8 +143,8 @@ func GetLatLon(m SenMLMessage) (float64, float64, bool) {
 	return lat, lon, (lat != math.SmallestNonzeroFloat64 && lon != math.SmallestNonzeroFloat64)
 }
 
-func GetV(m SenMLMessage, name string) (float64, bool) {
-	if r, ok := GetR(m, name); ok {
+func GetFloat(m SenMLMessage, name string) (float64, bool) {
+	if r, ok := GetRecord(m, name); ok {
 		if r.Value != nil {
 			return *r.Value, true
 		}
@@ -153,15 +153,15 @@ func GetV(m SenMLMessage, name string) (float64, bool) {
 	return 0, false
 }
 
-func GetVS(m SenMLMessage, name string) (string, bool) {
-	if r, ok := GetR(m, name); ok {
+func GetString(m SenMLMessage, name string) (string, bool) {
+	if r, ok := GetRecord(m, name); ok {
 		return r.StringValue, true
 	}
 	return "", false
 }
 
-func GetVB(m SenMLMessage, name string) (bool, bool) {
-	if r, ok := GetR(m, name); ok {
+func GetBool(m SenMLMessage, name string) (bool, bool) {
+	if r, ok := GetRecord(m, name); ok {
 		if r.BoolValue != nil {
 			return *r.BoolValue, true
 		}
@@ -170,7 +170,7 @@ func GetVB(m SenMLMessage, name string) (bool, bool) {
 	return false, false
 }
 
-func GetT(m SenMLMessage, name string) (time.Time, bool) {
+func GetTime(m SenMLMessage, name string) (time.Time, bool) {
 	clone := m.Pack().Clone()
 	bn := clone[0].BaseName
 	n := fmt.Sprintf("%s%s", bn, name)
@@ -186,7 +186,7 @@ func GetT(m SenMLMessage, name string) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-func GetR(m SenMLMessage, name string) (senml.Record, bool) {
+func GetRecord(m SenMLMessage, name string) (senml.Record, bool) {
 	for _, r := range m.Pack() {
 		if strings.EqualFold(r.Name, name) {
 			return r, true
@@ -206,19 +206,19 @@ func Get[T float64 | string | bool](m SenMLMessage, id int) (T, bool) {
 
 	switch reflect.TypeOf(t).Kind() {
 	case reflect.Float64:
-		if v, ok := GetV(m, n); ok {
+		if v, ok := GetFloat(m, n); ok {
 			if r, ok := reflect.ValueOf(v).Interface().(T); ok {
 				return r, true
 			}
 		}
 	case reflect.Bool:
-		if vb, ok := GetVB(m, n); ok {
+		if vb, ok := GetBool(m, n); ok {
 			if r, ok := reflect.ValueOf(vb).Interface().(T); ok {
 				return r, true
 			}
 		}
 	case reflect.String:
-		if vs, ok := GetVS(m, n); ok {
+		if vs, ok := GetString(m, n); ok {
 			if r, ok := reflect.ValueOf(vs).Interface().(T); ok {
 				return r, true
 			}

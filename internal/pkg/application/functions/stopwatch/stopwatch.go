@@ -59,9 +59,9 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 		DigitalInputCounter string = "5501"
 	)
 
-	r, stateOK := events.GetR(e,DigitalInputState)
-	c, counterOK := events.GetV(e, DigitalInputCounter)
-	ts, timeOk := events.GetT(e, DigitalInputState)
+	r, stateOK := events.GetRecord(e, DigitalInputState)
+	c, counterOK := events.GetFloat(e, DigitalInputCounter)
+	ts, timeOk := events.GetTime(e, DigitalInputState)
 
 	if !stateOK || !timeOk || r.BoolValue == nil {
 		return false, fmt.Errorf("no state or time for stopwatch")

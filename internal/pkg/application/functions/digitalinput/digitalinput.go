@@ -39,7 +39,7 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 		DigitalInputState string = "5500"
 	)
 
-	r, stateOk := events.GetR(e, DigitalInputState)
+	r, stateOk := events.GetRecord(e, DigitalInputState)
 
 	ts := e.Timestamp()
 

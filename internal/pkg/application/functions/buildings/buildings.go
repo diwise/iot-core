@@ -35,8 +35,8 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 	}
 
 	const SensorValue string = "5700"
-	r, ok := events.GetR(e, SensorValue)
-	ts, timeOk := events.GetT(e, SensorValue)
+	r, ok := events.GetRecord(e, SensorValue)
+	ts, timeOk := events.GetTime(e, SensorValue)
 
 	if ok && timeOk && r.Value != nil {
 		value := *r.Value

@@ -48,8 +48,8 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 	previousCount := c.Count_
 	previousState := c.State_
 
-	countRec, countOk := events.GetR(e, DigitalInputCounter)
-	stateRec, stateOk := events.GetR(e, DigitalInputState)
+	countRec, countOk := events.GetRecord(e, DigitalInputCounter)
+	stateRec, stateOk := events.GetRecord(e, DigitalInputState)
 
 	if countOk && countRec.Value != nil && stateRec.BoolValue != nil {
 		count := *countRec.Value
@@ -70,8 +70,8 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 		}
 	}
 
-	countTs, countTimeOk := events.GetT(e, DigitalInputCounter)
-	stateTs, stateTimeOk := events.GetT(e, DigitalInputState)
+	countTs, countTimeOk := events.GetTime(e, DigitalInputCounter)
+	stateTs, stateTimeOk := events.GetTime(e, DigitalInputState)
 
 	changed := false
 	errs := make([]error, 0)

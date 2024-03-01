@@ -113,8 +113,8 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 		HighThreshold           string = "4"
 	)
 
-	percent, percentOk := events.GetV(e, ActualFillingPercentage)
-	highThreshold, highThresholdOk := events.GetV(e, HighThreshold)
+	percent, percentOk := events.GetFloat(e, ActualFillingPercentage)
+	highThreshold, highThresholdOk := events.GetFloat(e, HighThreshold)
 
 	if highThresholdOk {
 		l.maxLevel = highThreshold
@@ -138,8 +138,8 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 func (l *level) handleDistance(e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
 	const SensorValue string = "5700"
-	r, ok := events.GetR(e, SensorValue)
-	ts, timeOk := events.GetT(e, SensorValue)
+	r, ok := events.GetRecord(e, SensorValue)
+	ts, timeOk := events.GetTime(e, SensorValue)
 
 	if ok && timeOk && r.Value != nil {
 		distance := *r.Value

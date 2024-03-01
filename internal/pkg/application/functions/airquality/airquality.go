@@ -59,13 +59,13 @@ const (
 func (aq *airquality) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	log := logging.GetFromContext(ctx)
 
-	temp, tempOk := events.GetV(e,lwm2mTemperature)
-	pm1, pm1Ok := events.GetV(e,lwm2mPM1)
-	pm10, pm10Ok := events.GetV(e,lwm2mPM10)
-	pm25, pm25Ok := events.GetV(e,lwm2mPM25)
-	no, noOk := events.GetV(e,lwm2mNO)
-	no2, no2Ok := events.GetV(e,lwm2mNO2)
-	co2, co2Ok := events.GetV(e,lwm2mCO2)
+	temp, tempOk := events.GetFloat(e, lwm2mTemperature)
+	pm1, pm1Ok := events.GetFloat(e, lwm2mPM1)
+	pm10, pm10Ok := events.GetFloat(e, lwm2mPM10)
+	pm25, pm25Ok := events.GetFloat(e, lwm2mPM25)
+	no, noOk := events.GetFloat(e, lwm2mNO)
+	no2, no2Ok := events.GetFloat(e, lwm2mNO2)
+	co2, co2Ok := events.GetFloat(e, lwm2mCO2)
 
 	hasChanged := false
 	var errs []error
@@ -137,7 +137,7 @@ func (aq *airquality) Handle(ctx context.Context, e *events.MessageAccepted, onc
 }
 
 func getTime(e *events.MessageAccepted, name string) time.Time {
-	t, tOk := events.GetT(e,name)
+	t, tOk := events.GetTime(e, name)
 	if tOk {
 		return t
 	}

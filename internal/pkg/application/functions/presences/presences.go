@@ -38,8 +38,8 @@ func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 		DigitalInputState string = "5500"
 	)
 
-	r, stateOk := events.GetR(e, DigitalInputState)
-	ts, timeOk := events.GetT(e, DigitalInputState)
+	r, stateOk := events.GetRecord(e, DigitalInputState)
+	ts, timeOk := events.GetTime(e, DigitalInputState)
 
 	if stateOk && timeOk && r.BoolValue != nil {
 		state := *r.BoolValue
