@@ -48,7 +48,7 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 	var err error
 	var stateChanged bool = false
 
-	if !events.ObjectURNMatches(e, lwm2m.DigitalInput) {
+	if !events.Matches(e, lwm2m.DigitalInput) {
 		return false, nil
 	}
 

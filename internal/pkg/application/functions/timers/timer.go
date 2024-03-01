@@ -33,7 +33,7 @@ type timer struct {
 }
 
 func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-	if !events.ObjectURNMatches(e, lwm2m.DigitalInput) {
+	if !events.Matches(e, lwm2m.DigitalInput) {
 		return false, nil
 	}
 

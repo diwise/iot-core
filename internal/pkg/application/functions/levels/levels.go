@@ -95,11 +95,11 @@ type level struct {
 
 func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
-	if events.ObjectURNMatches(e, lwm2m.Distance) {
+	if events.Matches(e, lwm2m.Distance) {
 		return l.handleDistance(e, onchange)
 	}
 
-	if events.ObjectURNMatches(e, lwm2m.FillingLevel) {
+	if events.Matches(e, lwm2m.FillingLevel) {
 		return l.handleFillingLevel(e, onchange)
 	}
 

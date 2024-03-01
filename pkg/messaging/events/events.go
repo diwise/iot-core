@@ -195,7 +195,7 @@ func GetRecord(m SenMLMessage, name string) (senml.Record, bool) {
 	return senml.Record{}, false
 }
 
-func ObjectURNMatches(m SenMLMessage, objectURN string) bool {
+func Matches(m SenMLMessage, objectURN string) bool {
 	return (urn(m) == objectURN)
 }
 
