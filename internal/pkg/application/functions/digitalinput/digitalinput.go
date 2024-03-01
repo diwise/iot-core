@@ -30,7 +30,6 @@ type digitalinput struct {
 }
 
 func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-
 	if !events.Matches(e, lwm2m.DigitalInput) {
 		return false, nil
 	}
@@ -39,29 +38,19 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 		DigitalInputState string = "5500"
 	)
 
-	r, stateOk := events.GetRecord(e, DigitalInputState)
-
-	ts := e.Timestamp() // TODO: time from pack not message?
-
 	stateValue := map[bool]float64{true: 1, false: 0}
 	hasChanged := false
 
-	if stateOk && r.BoolValue != nil {
-		if t.State_ != *r.BoolValue {
+	vb, ok := events.GetBool(e, DigitalInputState)
+
+	ts := e.Timestamp() // TODO: time from pack not message?
+
+	if ok {
+		if t.State_ != vb {
 			hasChanged = true
-			t.State_ = *r.BoolValue
+			t.State_ = vb
 
 			err := onchange("state", stateValue[t.State_], ts)
-			if err != nil {
-				return hasChanged, err
-			}
-		}
-
-		if t.Timestamp != ts {
-			hasChanged = true
-			t.Timestamp = ts
-
-			err := onchange("timestamp", 1, ts)			
 			if err != nil {
 				return hasChanged, err
 			}
@@ -70,6 +59,7 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 
 	return hasChanged, nil
 }
+
 func (t *digitalinput) State() bool {
 	return t.State_
 }
