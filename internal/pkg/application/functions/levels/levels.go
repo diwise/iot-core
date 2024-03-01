@@ -114,10 +114,17 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 	)
 
 	percent, percentOk := events.GetFloat(e, ActualFillingPercentage)
+	ts, timeOk := events.GetTime(e, ActualFillingPercentage)
 	highThreshold, highThresholdOk := events.GetFloat(e, HighThreshold)
 
+	if !timeOk {
+		ts = time.Now().UTC()
+	}
+
 	if highThresholdOk {
-		l.maxLevel = highThreshold
+		if highThreshold > l.maxLevel {
+			l.maxLevel = highThreshold
+		}
 	}
 
 	if percentOk {
@@ -129,7 +136,7 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 
 		l.Percent_ = &percent
 
-		return true, onchange("percent", *l.Percent_, time.Now().UTC()) //TODO: use time from package
+		return true, onchange("percent", *l.Percent_, ts)
 	}
 
 	return false, nil
@@ -144,6 +151,8 @@ func (l *level) handleDistance(e *events.MessageAccepted, onchange func(prop str
 	if ok && timeOk && r.Value != nil {
 		distance := *r.Value
 		previousLevel := l.Current_
+
+		//TODO: calc maxDistance?
 
 		// Calculate the current level using the configured angle (if any) and round to two decimals
 		l.Current_ = math.Round((l.maxDistance-distance)*l.cosAlpha*100) / 100.0
