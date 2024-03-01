@@ -29,6 +29,10 @@ func New(client client.DeviceManagementClient, functionRegistry functions.Regist
 }
 
 func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
+	if evt.Error() != nil {
+		return evt.Error()
+	}
+
 	matchingFunctions, _ := a.fnctRegistry.Find(ctx, functions.MatchSensor(evt.DeviceID()))
 
 	logger := logging.GetFromContext(ctx)
@@ -50,9 +54,8 @@ func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, m
 }
 
 func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
-
-	if msg.DeviceID() == "" {
-		return nil, fmt.Errorf("message pack contains no DeviceID")
+	if msg.Error() != nil {
+		return nil, msg.Error()
 	}
 
 	device, err := a.client.FindDeviceFromInternalID(ctx, msg.DeviceID())
