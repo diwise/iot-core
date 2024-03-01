@@ -11,8 +11,7 @@ import (
 	"strings"
 
 	"github.com/diwise/iot-core/internal/pkg/application"
-	"github.com/diwise/iot-core/internal/pkg/application/functions"
-	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
+	"github.com/diwise/iot-core/internal/pkg/application/functions"	
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/internal/pkg/presentation/api"
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -110,15 +109,13 @@ func createDatabaseConnectionOrDie(ctx context.Context) database.Storage {
 	return storage
 }
 
-func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
-	msgproc := messageprocessor.NewMessageProcessor(dmClient)
-
+func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {	
 	functionsRegistry, err := functions.NewRegistry(ctx, fconfig, storage)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	app := application.New(msgproc, functionsRegistry)
+	app := application.New(dmClient, functionsRegistry)
 
 	msgctx.RegisterCommandHandler(func(m messaging.Message) bool {
 		return strings.Contains(m.ContentType(), "application/vnd.oma.lwm2m")
