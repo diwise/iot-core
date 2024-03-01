@@ -41,18 +41,17 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 
 	r, stateOk := events.GetRecord(e, DigitalInputState)
 
-	ts := e.Timestamp()
+	ts := e.Timestamp() // TODO: time from pack not message?
 
 	stateValue := map[bool]float64{true: 1, false: 0}
 	hasChanged := false
 
 	if stateOk && r.BoolValue != nil {
-
 		if t.State_ != *r.BoolValue {
 			hasChanged = true
 			t.State_ = *r.BoolValue
 
-			err := onchange("state", stateValue[t.State_], e.Timestamp())
+			err := onchange("state", stateValue[t.State_], ts)
 			if err != nil {
 				return hasChanged, err
 			}
@@ -62,7 +61,7 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 			hasChanged = true
 			t.Timestamp = ts
 
-			err := onchange("timestamp", 1, e.Timestamp())
+			err := onchange("timestamp", 1, ts)			
 			if err != nil {
 				return hasChanged, err
 			}

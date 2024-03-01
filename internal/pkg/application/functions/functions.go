@@ -43,6 +43,7 @@ type fnct struct {
 	Location *location `json:"location,omitempty"`
 	Tenant   string    `json:"tenant,omitempty"`
 	Source   string    `json:"source,omitempty"`
+	OnUpdate bool      `json:"onupdate"`
 
 	Counter      counters.Counter            `json:"counter,omitempty"`
 	Level        levels.Level                `json:"level,omitempty"`
@@ -117,7 +118,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		f.Source = source
 	}
 
-	if changed {
+	if changed || f.OnUpdate {
 		fumsg := NewFunctionUpdatedMessage(f)
 		logger.Debug("publishing message", "body", string(fumsg.Body()), "topic", fumsg.TopicName())
 		msgctx.PublishOnTopic(ctx, fumsg)
