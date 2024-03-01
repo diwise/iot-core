@@ -31,7 +31,7 @@ type digitalinput struct {
 
 func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
-	if !e.ObjectURNMatches(lwm2m.DigitalInput) {
+	if !events.ObjectURNMatches(e, lwm2m.DigitalInput) {
 		return false, nil
 	}
 
@@ -39,9 +39,9 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 		DigitalInputState string = "5500"
 	)
 
-	r, stateOk := e.GetRecord(DigitalInputState)
+	r, stateOk := events.GetR(e, DigitalInputState)
 
-	ts := e.Timestamp
+	ts := e.Timestamp()
 
 	stateValue := map[bool]float64{true: 1, false: 0}
 	hasChanged := false
@@ -52,7 +52,7 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 			hasChanged = true
 			t.State_ = *r.BoolValue
 
-			err := onchange("state", stateValue[t.State_], e.Timestamp)
+			err := onchange("state", stateValue[t.State_], e.Timestamp())
 			if err != nil {
 				return hasChanged, err
 			}
@@ -62,7 +62,7 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 			hasChanged = true
 			t.Timestamp = ts
 
-			err := onchange("timestamp", 1, e.Timestamp)
+			err := onchange("timestamp", 1, e.Timestamp())
 			if err != nil {
 				return hasChanged, err
 			}

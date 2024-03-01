@@ -91,16 +91,16 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 	logger.Debug("handled accepted message", "changed", changed)
 
-	if e.HasLocation() {
+	if lat, lon, ok := events.GetLatLon(e); ok {
 		f.Location = &location{
-			Latitude:  e.Latitude(),
-			Longitude: e.Longitude(),
+			Latitude: lat,
+			Longitude: lon,
 		}
 	}
 
 	// TODO: We need to be able to have tenant info before the first packet arrives,
 	// 			so this lazy init version wont work in the long run ...
-	tenant, ok := e.GetString("tenant")
+	tenant, ok := events.GetVS(e, "tenant")
 	if ok {
 		// Temporary fix to force an update the first time a function is called
 		if f.Tenant == "" {
@@ -109,7 +109,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		f.Tenant = tenant
 	}
 
-	source, ok := e.GetString("source")
+	source, ok := events.GetVS(e, "source")
 	if ok {
 		if f.Source == "" {
 			changed = true

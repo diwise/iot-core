@@ -95,11 +95,11 @@ type level struct {
 
 func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
-	if e.ObjectURNMatches(lwm2m.Distance) {
+	if events.ObjectURNMatches(e, lwm2m.Distance) {
 		return l.handleDistance(e, onchange)
 	}
 
-	if e.ObjectURNMatches(lwm2m.FillingLevel) {
+	if events.ObjectURNMatches(e, lwm2m.FillingLevel) {
 		return l.handleFillingLevel(e, onchange)
 	}
 
@@ -113,8 +113,8 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 		HighThreshold           string = "4"
 	)
 
-	percent, percentOk := e.GetFloat64(ActualFillingPercentage)
-	highThreshold, highThresholdOk := e.GetFloat64(HighThreshold)
+	percent, percentOk := events.GetV(e, ActualFillingPercentage)
+	highThreshold, highThresholdOk := events.GetV(e, HighThreshold)
 
 	if highThresholdOk {
 		l.maxLevel = highThreshold
@@ -138,8 +138,8 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 func (l *level) handleDistance(e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
 	const SensorValue string = "5700"
-	r, ok := e.GetRecord(SensorValue)
-	ts, timeOk := e.GetTime(SensorValue)
+	r, ok := events.GetR(e, SensorValue)
+	ts, timeOk := events.GetT(e, SensorValue)
 
 	if ok && timeOk && r.Value != nil {
 		distance := *r.Value

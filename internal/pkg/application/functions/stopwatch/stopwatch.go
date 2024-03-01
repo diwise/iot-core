@@ -48,7 +48,7 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 	var err error
 	var stateChanged bool = false
 
-	if !e.ObjectURNMatches(lwm2m.DigitalInput) {
+	if !events.ObjectURNMatches(e, lwm2m.DigitalInput) {
 		return false, nil
 	}
 
@@ -59,9 +59,9 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 		DigitalInputCounter string = "5501"
 	)
 
-	r, stateOK := e.GetRecord(DigitalInputState)
-	c, counterOK := e.GetFloat64(DigitalInputCounter)
-	ts, timeOk := e.GetTime(DigitalInputState)
+	r, stateOK := events.GetR(e,DigitalInputState)
+	c, counterOK := events.GetV(e, DigitalInputCounter)
+	ts, timeOk := events.GetT(e, DigitalInputState)
 
 	if !stateOK || !timeOk || r.BoolValue == nil {
 		return false, fmt.Errorf("no state or time for stopwatch")

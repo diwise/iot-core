@@ -34,7 +34,7 @@ func (m *messageProcessor) ProcessMessage(ctx context.Context, msg events.Messag
 		return nil, fmt.Errorf("could not find device with internalID %s, %w", msg.DeviceID(), err)
 	}
 
-	return events.NewMessageAccepted(device.ID(), msg.Pack.Clone(),
+	return events.NewMessageAccepted(msg.Pack().Clone(),
 		events.Lat(device.Latitude()),
 		events.Lon(device.Longitude()),
 		events.Environment(device.Environment()),

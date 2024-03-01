@@ -29,7 +29,7 @@ func New(msgproc messageprocessor.MessageProcessor, functionRegistry functions.R
 }
 
 func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
-	matchingFunctions, _ := a.functions_.Find(ctx, functions.MatchSensor(evt.DeviceID))
+	matchingFunctions, _ := a.functions_.Find(ctx, functions.MatchSensor(evt.DeviceID()))
 
 	logger := logging.GetFromContext(ctx)
 	matchingCount := len(matchingFunctions)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"time"
@@ -12,51 +13,70 @@ import (
 	"github.com/farshidtz/senml/v2"
 )
 
-type MessageReceived struct {
-	Device    string     `json:"deviceID"`
-	Pack      senml.Pack `json:"pack"`
-	Timestamp time.Time  `json:"timestamp"`
+type SenMLMessage interface {
+	DeviceID() string
+	Pack() senml.Pack
+	Timestamp() time.Time
 }
 
-func (m *MessageReceived) ContentType() string {
-	urn := strings.ReplaceAll(m.Urn(), ":", ".")
-	return fmt.Sprintf("application/vnd+diwise.%s+json", urn)
+type MessageReceived struct {
+	Pack_      senml.Pack `json:"pack"`
+	Timestamp_ time.Time  `json:"timestamp"`
+}
+
+func NewMessageReceived(pack senml.Pack) MessageReceived {
+	return MessageReceived{
+		Pack_:      pack,
+		Timestamp_: time.Now().UTC(),
+	}
 }
 
 func (m MessageReceived) DeviceID() string {
-	if m.Pack[0].Name != "0" {
-		return ""
-	}
-
-	parts := strings.Split(m.Pack[0].BaseName, "/")
-
-	return parts[0]
+	return deviceID(m)
 }
 
-func (m MessageReceived) Urn() string {
-	if m.Pack[0].Name != "0" {
-		return ""
-	}
-	return m.Pack[0].StringValue
+func (m MessageReceived) Pack() senml.Pack {
+	return m.Pack_
 }
 
-func (m *MessageReceived) Body() []byte {
-	b, _ := json.Marshal(*m)
+func (m MessageReceived) Timestamp() time.Time {
+	return m.Timestamp_
+}
+
+func (m MessageReceived) Body() []byte {
+	b, _ := json.Marshal(m)
 	return b
 }
 
-type EventDecoratorFunc func(m *MessageAccepted)
-type MessageAccepted struct {
-	DeviceID  string     `json:"deviceID"`
-	Pack      senml.Pack `json:"pack"`
-	Timestamp time.Time  `json:"timestamp"`
+func (m MessageReceived) ContentType() string {
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", objectID(m))
 }
 
-func NewMessageAccepted(deviceID string, pack senml.Pack, decorators ...EventDecoratorFunc) *MessageAccepted {
+func (m MessageReceived) Error() error {
+	if m.DeviceID() == "" {
+		return errors.New("device id is missing")
+	}
+
+	if m.Timestamp().IsZero() {
+		return errors.New("timestamp is mising")
+	}
+
+	if len(m.Pack()) == 0 {
+		return errors.New("pack is empty")
+	}
+
+	return nil
+}
+
+type MessageAccepted struct {
+	Pack_      senml.Pack `json:"pack"`
+	Timestamp_ time.Time  `json:"timestamp"`
+}
+
+func NewMessageAccepted(pack senml.Pack, decorators ...EventDecoratorFunc) *MessageAccepted {
 	m := &MessageAccepted{
-		DeviceID:  deviceID,
-		Pack:      pack,
-		Timestamp: time.Now().UTC(),
+		Pack_:      pack,
+		Timestamp_: time.Now().UTC(),
 	}
 
 	for _, d := range decorators {
@@ -66,191 +86,92 @@ func NewMessageAccepted(deviceID string, pack senml.Pack, decorators ...EventDec
 	return m
 }
 
-func (m *MessageAccepted) Body() []byte {
-	b, _ := json.Marshal(*m)
+func (m MessageAccepted) DeviceID() string {
+	return deviceID(m)
+}
+
+func (m MessageAccepted) Pack() senml.Pack {
+	return m.Pack_
+}
+
+func (m MessageAccepted) Timestamp() time.Time {
+	return m.Timestamp_
+}
+
+func (m MessageAccepted) Body() []byte {
+	b, _ := json.Marshal(m)
 	return b
 }
-func (m MessageAccepted) Urn() string {
-	if m.Pack[0].Name != "0" {
-		return ""
-	}
-	return m.Pack[0].StringValue
+
+func (m MessageAccepted) ContentType() string {
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", objectID(m))
 }
 
-func (m *MessageAccepted) ContentType() string {
-	urn := strings.ReplaceAll(m.Urn(), ":", ".")
-	return fmt.Sprintf("application/vnd+diwise.%s+json", urn)
-}
-
-func (m *MessageAccepted) TopicName() string {
+func (m MessageAccepted) TopicName() string {
 	return topics.MessageAccepted
 }
 
-func (m *MessageAccepted) Error() error {
-	if m.DeviceID == "" {
-		return errors.New("sensor id is missing")
+func (m MessageAccepted) Error() error {
+	if m.DeviceID() == "" {
+		return errors.New("device id is missing")
 	}
 
-	if m.Timestamp.IsZero() {
+	if m.Timestamp().IsZero() {
 		return errors.New("timestamp is mising")
 	}
 
-	if len(m.Pack) == 0 {
+	if len(m.Pack_) == 0 {
 		return errors.New("pack is empty")
 	}
 
 	return nil
 }
 
-func Rec(n, vs string, v *float64, vb *bool, t float64, sum *float64) EventDecoratorFunc {
-	return func(m *MessageAccepted) {
-		for _, r := range m.Pack {
-			if strings.EqualFold(r.Name, n) {
-				r.StringValue = vs
-				r.Value = v
-				r.BoolValue = vb
-				r.Time = t
-				r.Sum = sum
-				return
-			}
-		}
+func GetLatLon(m SenMLMessage) (float64, float64, bool) {
+	lat := math.SmallestNonzeroFloat64
+	lon := math.SmallestNonzeroFloat64
 
-		rec := senml.Record{
-			Name:        n,
-			StringValue: vs,
-			Value:       v,
-			BoolValue:   vb,
-			Time:        t,
-			Sum:         sum,
-		}
-
-		m.Pack = append(m.Pack, rec)
-	}
-}
-
-func Lat(t float64) EventDecoratorFunc {
-	return func(m *MessageAccepted) {
-		for _, r := range m.Pack {
-			if r.Unit == senml.UnitLat {
-				r.Value = &t
-				return
-			}
-		}
-
-		lat := &senml.Record{
-			Unit:  senml.UnitLat,
-			Value: &t,
-		}
-
-		m.Pack = append(m.Pack, *lat)
-	}
-}
-
-func Lon(t float64) EventDecoratorFunc {
-	return func(m *MessageAccepted) {
-		for _, r := range m.Pack {
-			if r.Unit == senml.UnitLon {
-				r.Value = &t
-				return
-			}
-		}
-
-		lat := &senml.Record{
-			Unit:  senml.UnitLon,
-			Value: &t,
-		}
-
-		m.Pack = append(m.Pack, *lat)
-	}
-}
-
-func Environment(e string) EventDecoratorFunc {
-	if strings.EqualFold(e, "") {
-		return func(m *MessageAccepted) {}
-	}
-	return Rec("env", e, nil, nil, 0, nil)
-}
-
-func Source(s string) EventDecoratorFunc {
-	if strings.EqualFold(s, "") {
-		return func(m *MessageAccepted) {}
-	}
-	return Rec("source", s, nil, nil, 0, nil)
-}
-
-func Tenant(t string) EventDecoratorFunc {
-	if strings.EqualFold(t, "") {
-		t = "default"
-	}
-	return Rec("tenant", t, nil, nil, 0, nil)
-}
-
-func (m MessageAccepted) Latitude() float64 {
-	for _, r := range m.Pack {
-		if r.Unit == senml.UnitLat {
-			return *r.Value
-		}
-	}
-	return 0
-}
-
-func (m MessageAccepted) Longitude() float64 {
-	for _, r := range m.Pack {
+	for _, r := range m.Pack() {
 		if r.Unit == senml.UnitLon {
-			return *r.Value
+			lon = *r.Value
+		}
+		if r.Unit == senml.UnitLat {
+			lat = *r.Value
 		}
 	}
-	return 0
+
+	return lat, lon, (lat != math.SmallestNonzeroFloat64 && lon != math.SmallestNonzeroFloat64)
 }
 
-func (m MessageAccepted) HasLocation() bool {
-	return m.Latitude() != 0 || m.Longitude() != 0
-}
-
-func (m MessageAccepted) GetFloat64(name string) (float64, bool) {
-	for _, r := range m.Pack {
-		if strings.EqualFold(r.Name, name) {
-			if r.Value != nil {
-				return *r.Value, true
-			}
-			return 0, false
+func GetV(m SenMLMessage, name string) (float64, bool) {
+	if r, ok := GetR(m, name); ok {
+		if r.Value != nil {
+			return *r.Value, true
 		}
+		return 0, false
 	}
 	return 0, false
 }
 
-func (m MessageAccepted) GetString(name string) (string, bool) {
-	for _, r := range m.Pack {
-		if strings.EqualFold(r.Name, name) {
-			return r.StringValue, true
-		}
+func GetVS(m SenMLMessage, name string) (string, bool) {
+	if r, ok := GetR(m, name); ok {
+		return r.StringValue, true
 	}
 	return "", false
 }
 
-func (m MessageAccepted) GetBool(name string) (bool, bool) {
-	for _, r := range m.Pack {
-		if strings.EqualFold(r.Name, name) {
-			if r.BoolValue != nil {
-				return *r.BoolValue, true
-			}
-			return false, false
+func GetVB(m SenMLMessage, name string) (bool, bool) {
+	if r, ok := GetR(m, name); ok {
+		if r.BoolValue != nil {
+			return *r.BoolValue, true
 		}
+		return false, false
 	}
 	return false, false
 }
 
-func (m MessageAccepted) GetRecord(name string) (senml.Record, bool) {
-	for _, r := range m.Pack {
-		if strings.EqualFold(r.Name, name) {
-			return r, true
-		}
-	}
-	return senml.Record{}, false
-}
-
-func (m MessageAccepted) GetTime(name string) (time.Time, bool) {
-	clone := m.Pack.Clone()
+func GetT(m SenMLMessage, name string) (time.Time, bool) {
+	clone := m.Pack().Clone()
 	bn := clone[0].BaseName
 	n := fmt.Sprintf("%s%s", bn, name)
 
@@ -265,54 +186,68 @@ func (m MessageAccepted) GetTime(name string) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-func (m MessageAccepted) Tenant() string {
-	if s, ok := m.GetString("tenant"); ok {
-		return s
-	}
-
-	return ""
-}
-
-func (m MessageAccepted) ObjectURN() string {
-	return m.Pack[0].StringValue
-}
-
-func (m MessageAccepted) ObjectURNMatches(objectURN string) bool {
-	urn := m.ObjectURN()
-	return (urn == objectURN)
-}
-
-func (m MessageAccepted) BaseTime() float64 {
-	return m.Pack[0].BaseTime
-}
-
-func Get[T float64 | string | bool](m MessageAccepted, baseName string, id int) (T, bool) {
-	if strings.EqualFold(m.ObjectURN(), baseName) {
-		n := fmt.Sprint(id)
-		t := *new(T)
-
-		switch reflect.TypeOf(t).Kind() {
-		case reflect.Float64:
-			if v, ok := m.GetFloat64(n); ok {
-				if r, ok := reflect.ValueOf(v).Interface().(T); ok {
-					return r, true
-				}
-			}
-		case reflect.Bool:
-			if vb, ok := m.GetBool(n); ok {
-				if r, ok := reflect.ValueOf(vb).Interface().(T); ok {
-					return r, true
-				}
-			}
-		case reflect.String:
-			if vs, ok := m.GetString(n); ok {
-				if r, ok := reflect.ValueOf(vs).Interface().(T); ok {
-					return r, true
-				}
-			}
-		default:
-			return *new(T), false
+func GetR(m SenMLMessage, name string) (senml.Record, bool) {
+	for _, r := range m.Pack() {
+		if strings.EqualFold(r.Name, name) {
+			return r, true
 		}
 	}
+	return senml.Record{}, false
+}
+
+func ObjectURNMatches(m SenMLMessage, objectURN string) bool {
+	return (urn(m) == objectURN)
+}
+
+func Get[T float64 | string | bool](m SenMLMessage, id int) (T, bool) {
+
+	n := fmt.Sprint(id)
+	t := *new(T)
+
+	switch reflect.TypeOf(t).Kind() {
+	case reflect.Float64:
+		if v, ok := GetV(m, n); ok {
+			if r, ok := reflect.ValueOf(v).Interface().(T); ok {
+				return r, true
+			}
+		}
+	case reflect.Bool:
+		if vb, ok := GetVB(m, n); ok {
+			if r, ok := reflect.ValueOf(vb).Interface().(T); ok {
+				return r, true
+			}
+		}
+	case reflect.String:
+		if vs, ok := GetVS(m, n); ok {
+			if r, ok := reflect.ValueOf(vs).Interface().(T); ok {
+				return r, true
+			}
+		}
+
+	default:
+		return *new(T), false
+	}
+
 	return *new(T), false
+}
+
+func deviceID(m SenMLMessage) string {
+	if m.Pack()[0].Name != "0" {
+		return ""
+	}
+	parts := strings.Split(m.Pack()[0].BaseName, "/")
+
+	return parts[0]
+}
+
+func urn(m SenMLMessage) string {
+	if m.Pack()[0].Name != "0" {
+		return ""
+	}
+	return m.Pack()[0].StringValue
+}
+
+func objectID(m SenMLMessage) string {
+	parts := strings.Split(urn(m), ":")
+	return parts[len(parts)-1]
 }

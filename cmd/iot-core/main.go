@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/diwise/iot-core/internal/pkg/application"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
@@ -119,8 +120,9 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msg
 
 	app := application.New(msgproc, functionsRegistry)
 
-	needToDecideThis := "application/json"
-	msgctx.RegisterCommandHandler(messaging.MatchContentType(needToDecideThis), newCommandHandler(msgctx, app))
+	msgctx.RegisterCommandHandler(func(m messaging.Message) bool {
+		return strings.Contains(m.ContentType(), "application/vnd.oma.lwm2m")
+	}, newCommandHandler(msgctx, app))
 
 	routingKey := "message.accepted"
 	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(msgctx, app))
@@ -142,7 +144,7 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 			return err
 		}
 
-		logger = logger.With(slog.String("device_id", evt.Device))
+		logger = logger.With(slog.String("device_id", evt.DeviceID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		messageAccepted, err := app.MessageReceived(ctx, evt)
@@ -185,7 +187,7 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 			return
 		}
 
-		logger = logger.With(slog.String("device_id", evt.DeviceID))
+		logger = logger.With(slog.String("device_id", evt.DeviceID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		err = app.MessageAccepted(ctx, evt, messenger)

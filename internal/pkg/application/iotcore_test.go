@@ -26,7 +26,7 @@ func testSetup(t *testing.T) (*is.I, *messageprocessor.MessageProcessorMock) {
 
 	m := &messageprocessor.MessageProcessorMock{
 		ProcessMessageFunc: func(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
-			return events.NewMessageAccepted("internalID", senml.Pack{}), nil
+			return events.NewMessageAccepted(senml.Pack{}), nil
 		},
 	}
 
