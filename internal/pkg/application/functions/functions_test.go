@@ -12,7 +12,7 @@ import (
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
-	"github.com/farshidtz/senml/v2"
+	"github.com/diwise/senml"
 	"github.com/matryer/is"
 )
 
@@ -137,7 +137,7 @@ func TestTimer(t *testing.T) {
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
-	packTime := time.Now().UTC()
+	packTime := time.Now()
 	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, packTime, BoolValue("5500", true, 0))
 	acceptedMessage := events.NewMessageAccepted(pack)
 
@@ -167,8 +167,8 @@ func TestWaterQuality(t *testing.T) {
 		}})
 
 	v := 2.34
-	ts, _ := time.Parse(time.RFC3339Nano, "2023-06-05T11:26:57Z")
-	pack := NewSenMLPack(sensorId, lwm2m.Temperature, ts, Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))
+	ts, _ := time.Parse(time.RFC3339, "2023-06-05T11:26:57Z")
+	pack := NewSenMLPack(sensorId, lwm2m.Temperature, ts.UTC(), Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))
 	acceptedMessage := events.NewMessageAccepted(pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
@@ -180,7 +180,7 @@ func TestWaterQuality(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"waterquality","subtype":"beach","onupdate":false,"waterquality":{"temperature":2.3,"timestamp":"2023-06-05T11:26:57Z"}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"waterquality","subtype":"beach","onupdate":false,"waterquality":{"temperature":2.3,"timestamp":"2023-06-05T13:26:57+02:00"}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 

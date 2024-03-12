@@ -19,6 +19,7 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/senml"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
@@ -92,7 +93,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 	logger.Debug("handled accepted message", "changed", changed)
 
-	if lat, lon, ok := events.GetLatLon(e); ok {
+	if lat, lon, ok := e.Pack.GetLatLon(); ok {
 		f.Location = &location{
 			Latitude:  lat,
 			Longitude: lon,
@@ -101,7 +102,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 	// TODO: We need to be able to have tenant info before the first packet arrives,
 	// 			so this lazy init version wont work in the long run ...
-	tenant, ok := events.GetString(e, "tenant")
+	tenant, ok := e.Pack.GetStringValue(senml.FindByName("tenant"))
 	if ok {
 		// Temporary fix to force an update the first time a function is called
 		if f.Tenant == "" {
@@ -110,7 +111,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		f.Tenant = tenant
 	}
 
-	source, ok := events.GetString(e, "source")
+	source, ok := e.Pack.GetStringValue(senml.FindByName("source"))
 	if ok {
 		if f.Source == "" {
 			changed = true

@@ -10,6 +10,7 @@ import (
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/senml"
 )
 
 const (
@@ -95,11 +96,11 @@ type level struct {
 
 func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
-	if events.Matches(e, lwm2m.Distance) {
+	if events.Matches(*e, lwm2m.Distance) {
 		return l.handleDistance(e, onchange)
 	}
 
-	if events.Matches(e, lwm2m.FillingLevel) {
+	if events.Matches(*e, lwm2m.FillingLevel) {
 		return l.handleFillingLevel(e, onchange)
 	}
 
@@ -113,9 +114,9 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 		HighThreshold           string = "4"
 	)
 
-	percent, percentOk := events.GetFloat(e, ActualFillingPercentage)
-	ts, timeOk := events.GetTime(e, ActualFillingPercentage)
-	highThreshold, highThresholdOk := events.GetFloat(e, HighThreshold)
+	percent, percentOk := e.Pack.GetValue(senml.FindByName(ActualFillingPercentage))
+	ts, timeOk := e.Pack.GetTime(senml.FindByName(ActualFillingPercentage))
+	highThreshold, highThresholdOk := e.Pack.GetValue(senml.FindByName(HighThreshold))
 
 	if !timeOk {
 		ts = time.Now().UTC()
@@ -145,8 +146,8 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 func (l *level) handleDistance(e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
 	const SensorValue string = "5700"
-	r, ok := events.GetRecord(e, SensorValue)
-	ts, timeOk := events.GetTime(e, SensorValue)
+	r, ok := e.Pack.GetRecord(senml.FindByName(SensorValue))
+	ts, timeOk := e.Pack.GetTime(senml.FindByName(SensorValue))
 
 	if ok && timeOk && r.Value != nil {
 		distance := *r.Value

@@ -7,6 +7,7 @@ import (
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/senml"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
@@ -48,7 +49,7 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 	var err error
 	var stateChanged bool = false
 
-	if !events.Matches(e, lwm2m.DigitalInput) {
+	if !events.Matches(*e, lwm2m.DigitalInput) {
 		return false, nil
 	}
 
@@ -59,9 +60,9 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 		DigitalInputCounter string = "5501"
 	)
 
-	r, stateOK := events.GetRecord(e, DigitalInputState)
-	c, counterOK := events.GetFloat(e, DigitalInputCounter)
-	ts, timeOk := events.GetTime(e, DigitalInputState)
+	r, stateOK := e.Pack.GetRecord(senml.FindByName(DigitalInputState))
+	c, counterOK := e.Pack.GetValue(senml.FindByName(DigitalInputCounter))
+	ts, timeOk := e.Pack.GetTime(senml.FindByName(DigitalInputState))
 
 	if !stateOK || !timeOk || r.BoolValue == nil {
 		return false, fmt.Errorf("no state or time for stopwatch")

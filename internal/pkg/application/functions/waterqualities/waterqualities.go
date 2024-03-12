@@ -7,6 +7,7 @@ import (
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/senml"
 )
 
 const (
@@ -27,14 +28,14 @@ type waterquality struct {
 }
 
 func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-	if !events.Matches(e, lwm2m.Temperature) {
+	if !events.Matches(*e, lwm2m.Temperature) {
 		return false, nil
 	}
 
 	const SensorValue string = "5700"
 
-	r, tempOk := events.GetRecord(e, SensorValue)
-	ts, timeOk := events.GetTime(e, SensorValue)
+	r, tempOk := e.Pack.GetRecord(senml.FindByName(SensorValue))
+	ts, timeOk := e.Pack.GetTime(senml.FindByName(SensorValue))
 
 	if tempOk && timeOk && r.Value != nil && ts.After(wq.Timestamp) {
 		temp := math.Round(*r.Value*10) / 10

@@ -1,10 +1,11 @@
 module github.com/diwise/iot-core
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/diwise/iot-device-mgmt v0.0.0-20240116090705-22302c74e598
 	github.com/diwise/messaging-golang v0.0.0-20240126121333-1e56bea211f9
+	github.com/diwise/senml v0.0.0-20240312095754-96c1d2ee070d
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/rs/cors v1.10.1
 	go.opentelemetry.io/otel v1.24.0
@@ -13,7 +14,6 @@ require (
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.6.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
@@ -38,7 +38,6 @@ require (
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/diwise/service-chassis v0.0.0-20240208114035-ce4e0da5ec05
-	github.com/farshidtz/senml/v2 v2.0.0
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

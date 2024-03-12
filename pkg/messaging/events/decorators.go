@@ -3,14 +3,14 @@ package events
 import (
 	"strings"
 
-	"github.com/farshidtz/senml/v2"
+	"github.com/diwise/senml"
 )
 
 type EventDecoratorFunc func(m *MessageAccepted)
 
 func Rec(n, vs string, v *float64, vb *bool, t float64, sum *float64) EventDecoratorFunc {
 	return func(m *MessageAccepted) {
-		for _, r := range m.Pack_ {
+		for _, r := range m.Pack {
 			if strings.EqualFold(r.Name, n) {
 				r.StringValue = vs
 				r.Value = v
@@ -30,13 +30,13 @@ func Rec(n, vs string, v *float64, vb *bool, t float64, sum *float64) EventDecor
 			Sum:         sum,
 		}
 
-		m.Pack_ = append(m.Pack_, rec)
+		m.Pack = append(m.Pack, rec)
 	}
 }
 
 func Lat(t float64) EventDecoratorFunc {
 	return func(m *MessageAccepted) {
-		for _, r := range m.Pack_ {
+		for _, r := range m.Pack {
 			if r.Unit == senml.UnitLat {
 				r.Value = &t
 				return
@@ -48,13 +48,13 @@ func Lat(t float64) EventDecoratorFunc {
 			Value: &t,
 		}
 
-		m.Pack_ = append(m.Pack_, *lat)
+		m.Pack = append(m.Pack, *lat)
 	}
 }
 
 func Lon(t float64) EventDecoratorFunc {
 	return func(m *MessageAccepted) {
-		for _, r := range m.Pack_ {
+		for _, r := range m.Pack {
 			if r.Unit == senml.UnitLon {
 				r.Value = &t
 				return
@@ -66,7 +66,7 @@ func Lon(t float64) EventDecoratorFunc {
 			Value: &t,
 		}
 
-		m.Pack_ = append(m.Pack_, *lat)
+		m.Pack = append(m.Pack, *lat)
 	}
 }
 

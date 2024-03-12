@@ -7,6 +7,7 @@ import (
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/senml"
 )
 
 const (
@@ -30,7 +31,7 @@ type digitalinput struct {
 }
 
 func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-	if !events.Matches(e, lwm2m.DigitalInput) {
+	if !events.Matches(*e, lwm2m.DigitalInput) {
 		return false, nil
 	}
 
@@ -41,9 +42,9 @@ func (t *digitalinput) Handle(ctx context.Context, e *events.MessageAccepted, on
 	stateValue := map[bool]float64{true: 1, false: 0}
 	hasChanged := false
 
-	vb, ok := events.GetBool(e, DigitalInputState)
+	vb, ok := e.Pack.GetBoolValue(senml.FindByName(DigitalInputState))
 
-	ts := e.Timestamp() // TODO: time from pack not message?
+	ts := e.Timestamp // TODO: time from pack not message?
 
 	if ok {
 		if t.State_ != vb {

@@ -63,7 +63,7 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 		return nil, fmt.Errorf("could not find device with internalID %s, %w", msg.DeviceID(), err)
 	}
 
-	return events.NewMessageAccepted(msg.Pack().Clone(),
+	return events.NewMessageAccepted(msg.Pack.Clone(),
 		events.Lat(device.Latitude()),
 		events.Lon(device.Longitude()),
 		events.Environment(device.Environment()),
