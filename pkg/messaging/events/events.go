@@ -74,6 +74,14 @@ func (m MessageAccepted) DeviceID() string {
 	return getDeviceID(m.Pack)
 }
 
+func (m MessageAccepted) Tenant() string {
+	s, ok := m.Pack.GetStringValue(senml.FindByName("tenant"))
+	if !ok {
+		return ""
+	}
+	return s
+}
+
 func (m MessageAccepted) Body() []byte {
 	b, _ := json.Marshal(m)
 	return b
