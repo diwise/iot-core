@@ -37,14 +37,15 @@ type location struct {
 }
 
 type fnct struct {
-	ID_      string    `json:"id"`
-	Name_    string    `json:"name"`
-	Type     string    `json:"type"`
-	SubType  string    `json:"subtype"`
-	Location *location `json:"location,omitempty"`
-	Tenant   string    `json:"tenant,omitempty"`
-	Source   string    `json:"source,omitempty"`
-	OnUpdate bool      `json:"onupdate"`
+	ID_       string    `json:"id"`
+	Name_     string    `json:"name"`
+	Type      string    `json:"type"`
+	SubType   string    `json:"subtype"`
+	Location  *location `json:"location,omitempty"`
+	Tenant    string    `json:"tenant,omitempty"`
+	Source    string    `json:"source,omitempty"`
+	OnUpdate  bool      `json:"onupdate"`
+	Timestamp time.Time `json:"timestamp,omitempty"`
 
 	Counter      counters.Counter            `json:"counter,omitempty"`
 	Level        levels.Level                `json:"level,omitempty"`
@@ -81,6 +82,10 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		if err != nil {
 			logger.Error("failed to add values to database", "err", err.Error())
 			return err
+		}
+
+		if ts.After(f.Timestamp) {
+			f.Timestamp = ts
 		}
 
 		return nil

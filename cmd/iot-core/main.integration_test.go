@@ -79,7 +79,7 @@ func TestReceiveDigitalInputUpdateMessage(t *testing.T) {
 
 	b := msgCtx.PublishOnTopicCalls()[2].Message.Body()
 
-	const expectation string = `{"id":"fid1","name":"name","type":"counter","subtype":"overflow","onupdate":false,"counter":{"count":2,"state":true}}`
+	const expectation string = `{"id":"fid1","name":"name","type":"counter","subtype":"overflow","onupdate":false,"timestamp":"2023-02-07T22:32:59+01:00","counter":{"count":2,"state":true}}`
 	is.Equal(string(b), expectation)
 }
 
