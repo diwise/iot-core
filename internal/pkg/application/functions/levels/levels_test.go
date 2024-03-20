@@ -55,6 +55,17 @@ func TestFillingLevel(t *testing.T) {
 	is.Equal(lvl.Percent(), 53.0)
 }
 
+func TestLevelWithMaxDAndMaxL(t *testing.T) {
+	is := is.New(t)
+	lvl, err := New("maxd=0.94,maxl=0.79", 0)
+	is.NoErr(err)
+	lvl.Handle(context.Background(), newDistance(0.4), func(s string, f float64, t time.Time) error {
+		return nil
+	})
+	is.Equal(lvl.Current(), (0.94-0.4))
+	is.Equal(lvl.Percent(), 68.35443037974683)
+}
+
 func newDistance(distance float64) *events.MessageAccepted {
 	e := &events.MessageAccepted{}
 

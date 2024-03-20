@@ -114,12 +114,11 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 		HighThreshold           string = "4"
 	)
 
-	percent, percentOk := e.Pack.GetValue(senml.FindByName(ActualFillingPercentage))
-	ts, timeOk := e.Pack.GetTime(senml.FindByName(ActualFillingPercentage))
+	percent, ok := e.Pack.GetRecord(senml.FindByName(ActualFillingPercentage))
 	highThreshold, highThresholdOk := e.Pack.GetValue(senml.FindByName(HighThreshold))
 
-	if !timeOk {
-		ts = time.Now().UTC()
+	if !ok {
+		return false, nil
 	}
 
 	if highThresholdOk {
@@ -128,18 +127,28 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 		}
 	}
 
-	if percentOk {
+	if ok {
 		previousPercent := 0.0
 
 		if l.Percent_ != nil {
 			previousPercent = *l.Percent_
 		}
 
-		if !hasChanged(previousPercent, percent) {
+		p, ok := percent.GetValue()
+		if !ok {
 			return false, nil
 		}
 
-		l.Percent_ = &percent
+		if !hasChanged(previousPercent, p) {
+			return false, nil
+		}
+
+		l.Percent_ = &p
+
+		ts, ok := percent.GetTime()
+		if !ok {
+			ts = time.Now().UTC()
+		}
 
 		return true, onchange("percent", *l.Percent_, ts)
 	}
@@ -148,38 +157,44 @@ func (l *level) handleFillingLevel(e *events.MessageAccepted, onchange func(prop
 }
 
 func (l *level) handleDistance(e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-
 	const SensorValue string = "5700"
-	r, ok := e.Pack.GetRecord(senml.FindByName(SensorValue))
-	ts, timeOk := e.Pack.GetTime(senml.FindByName(SensorValue))
 
-	if ok && timeOk && r.Value != nil {
-		distance := *r.Value
-		previousLevel := l.Current_
-
-		//TODO: calc maxDistance?
-
-		// Calculate the current level using the configured angle (if any) and round to two decimals
-		l.Current_ = math.Round((l.maxDistance-distance)*l.cosAlpha*100) / 100.0
-
-		if !hasChanged(previousLevel, l.Current_) {
-			return false, nil
-		}
-
-		if isNotZero(l.maxLevel) {
-			pct := math.Min((l.Current_*100.0)/l.maxLevel, 100.0)
-			l.Percent_ = &pct
-		}
-
-		if isNotZero(l.meanLevel) {
-			offset := l.Current_ - l.meanLevel
-			l.Offset_ = &offset
-		}
-
-		return true, onchange("level", l.Current_, ts)
+	sensorValue, ok := e.Pack.GetRecord(senml.FindByName(SensorValue))
+	if !ok {
+		return false, nil
 	}
 
-	return false, nil
+	distance, ok := sensorValue.GetValue()
+	if !ok {
+		return false, nil
+	}
+
+	previousLevel := l.Current_
+
+	// Calculate the current level using the configured angle (if any) and round to two decimals
+	l.Current_ = math.Round((l.maxDistance-distance)*l.cosAlpha*100) / 100.0
+
+	if !hasChanged(previousLevel, l.Current_) {
+		return false, nil
+	}
+
+	if isNotZero(l.maxLevel) {
+		pct := math.Min((l.Current_*100.0)/l.maxLevel, 100.0)
+		l.Percent_ = &pct
+	}
+
+	if isNotZero(l.meanLevel) {
+		offset := l.Current_ - l.meanLevel
+		l.Offset_ = &offset
+	}
+
+	ts, ok := sensorValue.GetTime()
+	if !ok {
+		ts = time.Now().UTC()
+	}
+
+	return true, onchange("level", l.Current_, ts)
+
 }
 
 func (l *level) Current() float64 {
