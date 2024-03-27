@@ -74,6 +74,10 @@ func (m MessageAccepted) DeviceID() string {
 	return getDeviceID(m.Pack)
 }
 
+func (m MessageAccepted) ObjectID() string {
+	return getObjectID(m.Pack)
+}
+
 func (m MessageAccepted) Tenant() string {
 	s, ok := m.Pack.GetStringValue(senml.FindByName("tenant"))
 	if !ok {
@@ -111,6 +115,8 @@ func (m MessageAccepted) Error() error {
 	return nil
 }
 
+var ErrNoMatch = fmt.Errorf("event mismatch")
+
 func Matches(m MessageAccepted, objectURN string) bool {
 	return (getObjectURN(m.Pack) == objectURN)
 }
@@ -132,6 +138,15 @@ func getObjectURN(m senml.Pack) string {
 }
 
 func getObjectID(m senml.Pack) string {
-	parts := strings.Split(getObjectURN(m), ":")
+	urn := getObjectURN(m)
+	if urn == "" {
+		return ""
+	}
+
+	if !strings.Contains(urn, ":") {
+		return ""
+	}
+
+	parts := strings.Split(urn, ":")
 	return parts[len(parts)-1]
 }

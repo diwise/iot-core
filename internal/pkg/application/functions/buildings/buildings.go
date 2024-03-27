@@ -32,7 +32,7 @@ type building struct {
 
 func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	if !events.Matches(*e, lwm2m.Power) && !events.Matches(*e, lwm2m.Energy) {
-		return false, nil
+		return false, events.ErrNoMatch
 	}
 
 	const SensorValue string = "5700"

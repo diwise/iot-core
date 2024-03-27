@@ -2,6 +2,7 @@ package functions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -72,15 +73,16 @@ func (f *fnct) Name() string {
 }
 
 func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
-	logger := logging.GetFromContext(ctx).With(slog.String("function_id", f.ID()))
-	ctx = logging.NewContextWithLogger(ctx, logger)
+	log := logging.GetFromContext(ctx)
+	log = log.With(slog.String("function_id", f.ID()))
+	ctx = logging.NewContextWithLogger(ctx, log)
 
 	onchange := func(prop string, value float64, ts time.Time) error {
-		logger.Debug(fmt.Sprintf("property %s changed to %f with time %s", prop, value, ts.Format(time.RFC3339Nano)))
+		log.Debug(fmt.Sprintf("property %s changed to %f with time %s", prop, value, ts.Format(time.RFC3339)))
 
 		err := f.storage.Add(ctx, f.ID(), prop, value, ts)
 		if err != nil {
-			logger.Error("failed to add values to database", "err", err.Error())
+			log.Error("failed to add values to database", "err", err.Error())
 			return err
 		}
 
@@ -93,41 +95,54 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 	changed, err := f.handle(ctx, e, onchange)
 	if err != nil {
+		if errors.Is(err, events.ErrNoMatch) {
+			log.Debug(fmt.Sprintf("%s function should not handle this message type (%s)", f.Type, e.ObjectID()))
+			return nil
+		}
 		return err
 	}
 
-	logger.Debug("handled accepted message", "changed", changed)
+	log.Debug(fmt.Sprintf("function %s handled incoming message.accepted of type %s, change is %t", f.Type, e.ObjectID(), changed))
 
 	if lat, lon, ok := e.Pack.GetLatLon(); ok {
-		f.Location = &location{
-			Latitude:  lat,
-			Longitude: lon,
+		if f.Location == nil {
+			log.Debug("add location to function")
+			f.Location = &location{
+				Latitude:  lat,
+				Longitude: lon,
+			}
+			changed = true
 		}
 	}
 
 	// TODO: We need to be able to have tenant info before the first packet arrives,
-	// 			so this lazy init version wont work in the long run ...
-	tenant, ok := e.Pack.GetStringValue(senml.FindByName("tenant"))
-	if ok {
+	// 	     so this lazy init version wont work in the long run ...
+	if tenant, ok := e.Pack.GetStringValue(senml.FindByName("tenant")); ok {
 		// Temporary fix to force an update the first time a function is called
 		if f.Tenant == "" {
+			log.Debug("add tenant to function")
+			f.Tenant = tenant
 			changed = true
 		}
-		f.Tenant = tenant
 	}
 
-	source, ok := e.Pack.GetStringValue(senml.FindByName("source"))
-	if ok {
+	if source, ok := e.Pack.GetStringValue(senml.FindByName("source")); ok {
+		// Temporary fix to force an update the first time a function is called
 		if f.Source == "" {
+			log.Debug("add source to function")
+			f.Source = source
 			changed = true
 		}
-		f.Source = source
 	}
 
 	if changed || f.OnUpdate {
 		fumsg := NewFunctionUpdatedMessage(f)
-		logger.Debug("publishing message", "body", string(fumsg.Body()), "topic", fumsg.TopicName())
-		msgctx.PublishOnTopic(ctx, fumsg)
+		log.Debug("publishing message", slog.String("body", string(fumsg.Body())), slog.String("topic", fumsg.TopicName()), slog.String("content-type", fumsg.ContentType()), slog.Bool("changed", changed), slog.Bool("onupdate", f.OnUpdate))
+
+		err := msgctx.PublishOnTopic(ctx, fumsg)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -159,6 +174,10 @@ func NewFunctionUpdatedMessage(f *fnct) messaging.TopicMessage {
 	subType := ""
 	if len(f.SubType) > 0 {
 		subType = fmt.Sprintf(".%s", f.SubType)
+	}
+
+	if f.Timestamp.IsZero() {
+		f.Timestamp = time.Now().UTC()
 	}
 
 	contentType := strings.ToLower(fmt.Sprintf("application/vnd.diwise.%s%s+json", f.Type, subType))

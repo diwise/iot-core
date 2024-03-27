@@ -50,7 +50,7 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 	var stateChanged bool = false
 
 	if !events.Matches(*e, lwm2m.DigitalInput) {
-		return false, nil
+		return false, events.ErrNoMatch
 	}
 
 	log := logging.GetFromContext(ctx)

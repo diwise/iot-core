@@ -32,7 +32,6 @@ func TestGetValuesFromPack(t *testing.T) {
 	is.Equal(dt, date.UTC())
 }
 
-
 func testSetup(t *testing.T) *is.I {
 	is := is.New(t)
 	return is

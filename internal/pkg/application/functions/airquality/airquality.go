@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/senml"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
@@ -59,6 +60,10 @@ const (
 
 func (aq *airquality) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	log := logging.GetFromContext(ctx)
+
+	if !events.Matches(*e, lwm2m.AirQuality) {
+		return false, events.ErrNoMatch
+	}
 
 	temp, tempOk := e.Pack.GetValue(senml.FindByName(lwm2mTemperature))
 	pm1, pm1Ok := e.Pack.GetValue(senml.FindByName(lwm2mPM1))

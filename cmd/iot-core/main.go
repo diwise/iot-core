@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"io"
 	"log/slog"
@@ -133,6 +134,7 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 
 		ctx, span := tracer.Start(ctx, "receive-command")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
+		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
 		evt := events.MessageReceived{}
 		err = json.Unmarshal(wrapper.Body(), &evt)
@@ -146,6 +148,11 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 
 		messageAccepted, err := app.MessageReceived(ctx, evt)
 		if err != nil {
+			if errors.Is(err, application.ErrCouldNotFindDevice) {
+				logger.Debug("could not find device, message not accepted")
+				return nil
+			}
+
 			logger.Error("message not accepted", "err", err.Error())
 			return err
 		}
@@ -167,8 +174,7 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 
 		ctx, span := tracer.Start(ctx, "receive-message")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
-
-		logger.Debug("received message", "body", string(msg.Body()))
+		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
 		evt := events.MessageAccepted{}
 
@@ -184,7 +190,7 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 			return
 		}
 
-		logger = logger.With(slog.String("device_id", evt.DeviceID()))
+		logger = logger.With(slog.String("device_id", evt.DeviceID()), slog.String("object_id", evt.ObjectID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		err = app.MessageAccepted(ctx, evt, messenger)

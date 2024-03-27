@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -19,6 +20,7 @@ type App interface {
 type app struct {
 	client       client.DeviceManagementClient
 	fnctRegistry functions.Registry
+	mu           sync.Mutex
 }
 
 func New(client client.DeviceManagementClient, functionRegistry functions.Registry) App {
@@ -33,16 +35,20 @@ func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, m
 		return evt.Error()
 	}
 
-	matchingFunctions, _ := a.fnctRegistry.Find(ctx, functions.MatchSensor(evt.DeviceID()))
-
 	logger := logging.GetFromContext(ctx)
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	matchingFunctions, _ := a.fnctRegistry.Find(ctx, functions.MatchSensor(evt.DeviceID()))
 	matchingCount := len(matchingFunctions)
 
-	if matchingCount > 0 {
-		logger.Debug("found matching functions", "count", matchingCount)
-	} else {
+	if matchingCount == 0 {
 		logger.Debug("no matching functions found")
+		return nil
 	}
+
+	logger.Debug("found matching functions", "count", matchingCount)
 
 	for _, f := range matchingFunctions {
 		if err := f.Handle(ctx, &evt, msgctx); err != nil {
@@ -53,20 +59,32 @@ func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, m
 	return nil
 }
 
+var ErrCouldNotFindDevice = fmt.Errorf("could not find device")
+
 func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
 	if msg.Error() != nil {
 		return nil, msg.Error()
 	}
 
+	log := logging.GetFromContext(ctx)
+	log.Debug(fmt.Sprintf("received message of type %s for device %s", msg.ContentType(), msg.DeviceID()))
+
 	device, err := a.client.FindDeviceFromInternalID(ctx, msg.DeviceID())
 	if err != nil {
-		return nil, fmt.Errorf("could not find device with internalID %s, %w", msg.DeviceID(), err)
+		log.Debug(fmt.Sprintf("could not find device with internalID %s", msg.DeviceID()), "err", err.Error())
+		return nil, ErrCouldNotFindDevice		
 	}
 
-	return events.NewMessageAccepted(msg.Pack.Clone(),
+	clone := msg.Pack.Clone()
+
+	ma := events.NewMessageAccepted(clone,
 		events.Lat(device.Latitude()),
 		events.Lon(device.Longitude()),
 		events.Environment(device.Environment()),
 		events.Source(device.Source()),
-		events.Tenant(device.Tenant())), nil
+		events.Tenant(device.Tenant()))
+
+	log.Debug(fmt.Sprintf("message.accepted created for device %s with object type %s", ma.DeviceID(), ma.ObjectID()))
+
+	return ma, nil
 }

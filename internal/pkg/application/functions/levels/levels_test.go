@@ -62,7 +62,7 @@ func TestLevelWithMaxDAndMaxL(t *testing.T) {
 	lvl.Handle(context.Background(), newDistance(0.4), func(s string, f float64, t time.Time) error {
 		return nil
 	})
-	is.Equal(lvl.Current(), (0.94-0.4))
+	is.Equal(lvl.Current(), (0.94 - 0.4))
 	is.Equal(lvl.Percent(), 68.35443037974683)
 }
 

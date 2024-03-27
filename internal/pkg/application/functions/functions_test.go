@@ -143,7 +143,7 @@ func TestTimer(t *testing.T) {
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
-	packTime, _ := time.Parse(time.RFC3339, "2024-03-20T12:19:48+01:00")	
+	packTime, _ := time.Parse(time.RFC3339, "2024-03-20T12:19:48+01:00")
 	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, packTime, BoolValue("5500", true, 0))
 	acceptedMessage := events.NewMessageAccepted(pack)
 

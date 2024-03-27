@@ -29,7 +29,7 @@ type waterquality struct {
 
 func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	if !events.Matches(*e, lwm2m.Temperature) {
-		return false, nil
+		return false, events.ErrNoMatch
 	}
 
 	const SensorValue string = "5700"
