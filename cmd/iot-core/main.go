@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -146,7 +147,7 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 		logger = logger.With(slog.String("device_id", evt.DeviceID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
-		messageAccepted, err := app.MessageReceived(ctx, evt)
+		m, err := app.MessageReceived(ctx, evt)
 		if err != nil {
 			if errors.Is(err, application.ErrCouldNotFindDevice) {
 				logger.Debug("could not find device, message not accepted")
@@ -157,8 +158,9 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 			return err
 		}
 
-		logger.Info("publishing message", "topic", messageAccepted.TopicName())
-		err = messenger.PublishOnTopic(ctx, messageAccepted)
+		logger.Debug("publishing message", slog.String("device_id", m.DeviceID()), slog.String("object_id", m.ObjectID()), slog.String("topic", m.TopicName()))
+
+		err = messenger.PublishOnTopic(ctx, m)
 		if err != nil {
 			logger.Error("failed to publish message", "err", err.Error())
 			return err
@@ -189,6 +191,8 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 			logger.Warn("received malformed topic message", "err", err.Error())
 			return
 		}
+
+		logger.Debug(fmt.Sprintf("handling topic message for %s with type %s and content-type %s", evt.DeviceID(), evt.ObjectID(), evt.ContentType()))
 
 		logger = logger.With(slog.String("device_id", evt.DeviceID()), slog.String("object_id", evt.ObjectID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
