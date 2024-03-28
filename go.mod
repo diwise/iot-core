@@ -4,7 +4,7 @@ go 1.22.0
 
 require (
 	github.com/diwise/iot-device-mgmt v0.0.0-20240116090705-22302c74e598
-	github.com/diwise/messaging-golang v0.0.0-20240126121333-1e56bea211f9
+	github.com/diwise/messaging-golang v0.0.0-20240328100115-197aa8e3a58d
 	github.com/diwise/senml v0.0.0-20240320103927-03207b97394b
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/rs/cors v1.10.1
