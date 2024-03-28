@@ -7,6 +7,7 @@ import (
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/senml"
 )
 
 const (
@@ -30,16 +31,16 @@ type presence struct {
 
 func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
-	if !e.BaseNameMatches(lwm2m.DigitalInput) && !e.BaseNameMatches(lwm2m.Presence) {
-		return false, nil
+	if !events.Matches(*e, lwm2m.DigitalInput) && !events.Matches(*e, lwm2m.Presence) {
+		return false, events.ErrNoMatch
 	}
 
 	const (
 		DigitalInputState string = "5500"
 	)
 
-	r, stateOk := e.GetRecord(DigitalInputState)
-	ts, timeOk := e.GetTimeForRec(DigitalInputState)
+	r, stateOk := e.Pack.GetRecord(senml.FindByName(DigitalInputState))
+	ts, timeOk := e.Pack.GetTime(senml.FindByName(DigitalInputState))
 
 	if stateOk && timeOk && r.BoolValue != nil {
 		state := *r.BoolValue

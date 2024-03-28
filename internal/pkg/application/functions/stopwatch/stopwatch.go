@@ -7,6 +7,7 @@ import (
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/senml"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
@@ -47,12 +48,11 @@ func (sw *stopwatch) Count() int32 {
 func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	var err error
 	var stateChanged bool = false
-	
-	
-	if !e.BaseNameMatches(lwm2m.DigitalInput) {
-		return false, nil
+
+	if !events.Matches(*e, lwm2m.DigitalInput) {
+		return false, events.ErrNoMatch
 	}
-	
+
 	log := logging.GetFromContext(ctx)
 
 	const (
@@ -60,9 +60,9 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 		DigitalInputCounter string = "5501"
 	)
 
-	r, stateOK := e.GetRecord(DigitalInputState)
-	c, counterOK := e.GetFloat64(DigitalInputCounter)
-	ts, timeOk := e.GetTimeForRec(DigitalInputState)
+	r, stateOK := e.Pack.GetRecord(senml.FindByName(DigitalInputState))
+	c, counterOK := e.Pack.GetValue(senml.FindByName(DigitalInputCounter))
+	ts, timeOk := e.Pack.GetTime(senml.FindByName(DigitalInputState))
 
 	if !stateOK || !timeOk || r.BoolValue == nil {
 		return false, fmt.Errorf("no state or time for stopwatch")
@@ -170,6 +170,6 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 	if err != nil {
 		return false, err
 	}
-	
+
 	return stateChanged, nil
 }

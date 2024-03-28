@@ -38,10 +38,9 @@ func newValue(baseName string, value float64) *events.MessageAccepted {
 	return e
 }
 
-const messageJSONFormat string = `{
-	"sensorID":"sensorID",
+const messageJSONFormat string = `{	
 	"pack":[
-		{"bn":"%s","bt":1675801037,"n":"0","vs":"testId"},
+		{"bn":"testid","bt":1675801037,"n":"0","vs":"%s"},
 		{"n":"5700","u":"m","v":%f}
 	],
 	"timestamp":"2023-02-07T20:17:17.312028Z"

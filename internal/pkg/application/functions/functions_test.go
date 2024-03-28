@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
-	"github.com/farshidtz/senml/v2"
+	"github.com/diwise/senml"
 	"github.com/matryer/is"
 )
 
@@ -34,8 +35,10 @@ func TestCounter(t *testing.T) {
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
-	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, time.Now().UTC(), BoolValue("5500", true, time.Now().UTC()))
-	acceptedMessage := events.NewMessageAccepted("sensorID", pack)
+	ts, _ := time.Parse(time.RFC3339, "2024-03-20T12:19:48+01:00")
+
+	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, ts, BoolValue("5500", true, 0))
+	acceptedMessage := events.NewMessageAccepted(pack)
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
@@ -43,7 +46,7 @@ func TestCounter(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"counter","subtype":"overflow","onupdate":false,"counter":{"count":1,"state":true}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"counter","subtype":"overflow","onupdate":false,"timestamp":"2024-03-20T12:19:48+01:00","counter":{"count":1,"state":true}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -66,9 +69,11 @@ func TestLevel(t *testing.T) {
 		},
 	})
 
+	ts, _ := time.Parse(time.RFC3339, "2024-03-20T12:19:48+01:00")
+
 	v := 2.1
-	pack := NewSenMLPack(sensorId, lwm2m.Distance, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
-	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
+	pack := NewSenMLPack(sensorId, lwm2m.Distance, ts, Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
+	acceptedMessage := events.NewMessageAccepted(pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 	is.Equal(len(f), 1) // should find one matching function
@@ -79,7 +84,7 @@ func TestLevel(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","onupdate":false,"level":{"current":-2.1}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","onupdate":false,"timestamp":"2024-03-20T12:19:48+01:00","level":{"current":-2.1}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -100,9 +105,11 @@ func TestLevelFromAnAngle(t *testing.T) {
 		},
 	})
 
+	ts, _ := time.Parse(time.RFC3339, "2024-03-20T12:19:48+01:00")
+
 	v := 2.1
-	pack := NewSenMLPack(sensorId, lwm2m.Distance, time.Now().UTC(), Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
-	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
+	pack := NewSenMLPack(sensorId, lwm2m.Distance, ts, Rec("5700", &v, nil, "", nil, senml.UnitMeter, nil))
+	acceptedMessage := events.NewMessageAccepted(pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 	is.Equal(len(f), 1) // should find one matching function
@@ -113,7 +120,7 @@ func TestLevelFromAnAngle(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","onupdate":false,"level":{"current":-2.1}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","onupdate":false,"timestamp":"2024-03-20T12:19:48+01:00","level":{"current":-2.1}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -136,9 +143,9 @@ func TestTimer(t *testing.T) {
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
-	packTime := time.Now().UTC()
-	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, packTime, BoolValue("5500", true, packTime))
-	acceptedMessage := events.NewMessageAccepted("sensorID", pack)
+	packTime, _ := time.Parse(time.RFC3339, "2024-03-20T12:19:48+01:00")
+	pack := NewSenMLPack(sensorId, lwm2m.DigitalInput, packTime, BoolValue("5500", true, 0))
+	acceptedMessage := events.NewMessageAccepted(pack)
 
 	err := f[0].Handle(ctx, acceptedMessage, msgctx)
 	is.NoErr(err)
@@ -146,7 +153,7 @@ func TestTimer(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectationFmt string = `{"id":"functionID","name":"name","type":"timer","subtype":"overflow","onupdate":false,"timer":{"startTime":"%s","state":true}}`
+	const expectationFmt string = `{"id":"functionID","name":"name","type":"timer","subtype":"overflow","onupdate":false,"timestamp":"2024-03-20T12:19:48+01:00","timer":{"startTime":"%s","state":true}}`
 	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, packTime.Format(time.RFC3339)))
 }
 
@@ -166,9 +173,9 @@ func TestWaterQuality(t *testing.T) {
 		}})
 
 	v := 2.34
-	ts, _ := time.Parse(time.RFC3339Nano, "2023-06-05T11:26:57Z")
+	ts, _ := time.Parse(time.RFC3339, "2023-06-05T11:26:57Z")
 	pack := NewSenMLPack(sensorId, lwm2m.Temperature, ts, Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))
-	acceptedMessage := events.NewMessageAccepted(sensorId, pack)
+	acceptedMessage := events.NewMessageAccepted(pack)
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 	is.Equal(len(f), 1) // should find one matching function
@@ -179,7 +186,7 @@ func TestWaterQuality(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"waterquality","subtype":"beach","onupdate":false,"waterquality":{"temperature":2.3,"timestamp":"2023-06-05T11:26:57Z"}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"waterquality","subtype":"beach","onupdate":false,"timestamp":"2023-06-05T13:26:57+02:00","waterquality":{"temperature":2.3,"timestamp":"2023-06-05T13:26:57+02:00"}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -204,7 +211,7 @@ func TestAddToHistory(t *testing.T) {
 
 	newMessageAccepted := func(v float64, t time.Time) *events.MessageAccepted {
 		pack := NewSenMLPack(sensorId, lwm2m.Temperature, t, Rec("5700", &v, nil, "", nil, senml.UnitCelsius, nil))
-		return events.NewMessageAccepted(sensorId, pack)
+		return events.NewMessageAccepted(pack)
 	}
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
@@ -240,11 +247,13 @@ type senML struct {
 func NewSenMLPack(deviceID, baseName string, baseTime time.Time, decorators ...SenMLDecoratorFunc) senml.Pack {
 	s := &senML{}
 
+	parts := strings.Split(baseName, ":")
+
 	s.Pack = append(s.Pack, senml.Record{
-		BaseName:    baseName,
+		BaseName:    fmt.Sprintf("%s/%s/", deviceID, parts[len(parts)-1]),
 		BaseTime:    float64(baseTime.Unix()),
 		Name:        "0",
-		StringValue: deviceID,
+		StringValue: baseName,
 	})
 
 	for _, d := range decorators {
@@ -254,8 +263,17 @@ func NewSenMLPack(deviceID, baseName string, baseTime time.Time, decorators ...S
 	return s.Pack
 }
 
-func BoolValue(n string, vb bool, t time.Time) SenMLDecoratorFunc {
-	return Rec(n, nil, nil, "", &t, "", &vb)
+func BoolValue(n string, vb bool, unixTime int64) SenMLDecoratorFunc {
+	var t *time.Time
+
+	if unixTime == 0 {
+		t = nil
+	} else {
+		ut := time.Unix(unixTime, 0)
+		t = &ut
+	}
+
+	return Rec(n, nil, nil, "", t, "", &vb)
 }
 
 func Rec(n string, v, sum *float64, vs string, t *time.Time, u string, vb *bool) SenMLDecoratorFunc {

@@ -13,4 +13,5 @@ const (
 	Watermeter   string = lwm2mPrefix + "3424"
 	Power        string = lwm2mPrefix + "3328"
 	Energy       string = lwm2mPrefix + "3331"
+	FillingLevel string = lwm2mPrefix + "3435"
 )

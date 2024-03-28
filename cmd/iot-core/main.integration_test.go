@@ -38,7 +38,7 @@ func TestAPIfunctionsReturns200OK(t *testing.T) {
 	server := httptest.NewServer(api.Router())
 	defer server.Close()
 
-	resp, _ := testRequest(is, server, http.MethodGet, "/api/functions", nil)
+	resp, _ := testRequest(server, http.MethodGet, "/api/functions", nil)
 	is.Equal(resp.StatusCode, http.StatusOK)
 }
 
@@ -79,11 +79,11 @@ func TestReceiveDigitalInputUpdateMessage(t *testing.T) {
 
 	b := msgCtx.PublishOnTopicCalls()[2].Message.Body()
 
-	const expectation string = `{"id":"fid1","name":"name","type":"counter","subtype":"overflow","onupdate":false,"counter":{"count":2,"state":true}}`
+	const expectation string = `{"id":"fid1","name":"name","type":"counter","subtype":"overflow","onupdate":false,"timestamp":"2023-02-07T22:32:59+01:00","counter":{"count":2,"state":true}}`
 	is.Equal(string(b), expectation)
 }
 
-func testRequest(is *is.I, ts *httptest.Server, method, path string, body io.Reader) (*http.Response, string) {
+func testRequest(ts *httptest.Server, method, path string, body io.Reader) (*http.Response, string) {
 	req, _ := http.NewRequest(method, ts.URL+path, body)
 	resp, _ := http.DefaultClient.Do(req)
 	respBody, _ := io.ReadAll(resp.Body)
@@ -124,13 +124,12 @@ func testSetup(t *testing.T) (*is.I, *dmctest.DeviceManagementClientMock, *messa
 }
 
 func newStateJSON(sensorID string, on bool) []byte {
-	return []byte(fmt.Sprintf(messageJSONFormat, sensorID, sensorID, on))
+	return []byte(fmt.Sprintf(messageJSONFormat, sensorID, on))
 }
 
-const messageJSONFormat string = `{
-	"sensorID":"%s",
+const messageJSONFormat string = `{	
 	"pack":[
-		{"bn":"urn:oma:lwm2m:ext:3200","bt":1675805579,"n":"0","vs":"%s"},
+		{"bn":"%s/3200/","bt":1675805579,"n":"0","vs":"urn:oma:lwm2m:ext:3200"},
 		{"n":"5500","vb":%t}
 	],
 	"timestamp":"2023-02-07T21:32:59.682607Z"

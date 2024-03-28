@@ -33,7 +33,7 @@ func newAirQuality(t float64, timestamp string) *events.MessageAccepted {
 const messageJSONFormat string = `{
 	"sensorID":"testId",
 	"pack":[
-		{"bn":"urn:oma:lwm2m:ext:3428","bt":1675805579,"n":"0","vs":"testId"},
+		{"bn":"testId/3428","bt":1675805579,"n":"0","vs":"urn:oma:lwm2m:ext:3428"},
 		{"n":"5700","v":%f},
 		{"n":"5","v":%f},
 		{"n":"1","v":%f},
