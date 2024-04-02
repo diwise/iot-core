@@ -6,6 +6,7 @@ import (
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/senml"
 )
 
 const FunctionTypeName string = "timer"
@@ -33,8 +34,8 @@ type timer struct {
 }
 
 func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-	if !e.BaseNameMatches(lwm2m.DigitalInput) {
-		return false, nil
+	if !events.Matches(*e, lwm2m.DigitalInput) {
+		return false, events.ErrNoMatch
 	}
 
 	const (
@@ -43,8 +44,8 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 	previousState := t.State_
 
-	r, stateOK := e.GetRecord(DigitalInputState)
-	ts, timeOk := e.GetTimeForRec(DigitalInputState)
+	r, stateOK := e.Pack.GetRecord(senml.FindByName(DigitalInputState))
+	ts, timeOk := e.Pack.GetTime(senml.FindByName(DigitalInputState))
 
 	if stateOK && timeOk && r.BoolValue != nil {
 		state := *r.BoolValue

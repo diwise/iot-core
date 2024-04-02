@@ -3,10 +3,11 @@ package application
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
-	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
@@ -17,28 +18,37 @@ type App interface {
 }
 
 type app struct {
-	msgproc_   messageprocessor.MessageProcessor
-	functions_ functions.Registry
+	client       client.DeviceManagementClient
+	fnctRegistry functions.Registry
+	mu           sync.Mutex
 }
 
-func New(msgproc messageprocessor.MessageProcessor, functionRegistry functions.Registry) App {
+func New(client client.DeviceManagementClient, functionRegistry functions.Registry) App {
 	return &app{
-		msgproc_:   msgproc,
-		functions_: functionRegistry,
+		client:       client,
+		fnctRegistry: functionRegistry,
 	}
 }
 
 func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
-	matchingFunctions, _ := a.functions_.Find(ctx, functions.MatchSensor(evt.Sensor))
+	if evt.Error() != nil {
+		return evt.Error()
+	}
 
 	logger := logging.GetFromContext(ctx)
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	matchingFunctions, _ := a.fnctRegistry.Find(ctx, functions.MatchSensor(evt.DeviceID()))
 	matchingCount := len(matchingFunctions)
 
-	if matchingCount > 0 {
-		logger.Debug("found matching functions", "count", matchingCount)
-	} else {
+	if matchingCount == 0 {
 		logger.Debug("no matching functions found")
+		return nil
 	}
+
+	logger.Debug("found matching functions", "count", matchingCount)
 
 	for _, f := range matchingFunctions {
 		if err := f.Handle(ctx, &evt, msgctx); err != nil {
@@ -49,11 +59,32 @@ func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, m
 	return nil
 }
 
+var ErrCouldNotFindDevice = fmt.Errorf("could not find device")
+
 func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
-	messageAccepted, err := a.msgproc_.ProcessMessage(ctx, msg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to process message: %w", err)
+	if msg.Error() != nil {
+		return nil, msg.Error()
 	}
 
-	return messageAccepted, nil
+	log := logging.GetFromContext(ctx)
+	log.Debug(fmt.Sprintf("received message of type %s for device %s", msg.ContentType(), msg.DeviceID()))
+
+	device, err := a.client.FindDeviceFromInternalID(ctx, msg.DeviceID())
+	if err != nil {
+		log.Debug(fmt.Sprintf("could not find device with internalID %s", msg.DeviceID()), "err", err.Error())
+		return nil, ErrCouldNotFindDevice		
+	}
+
+	clone := msg.Pack.Clone()
+
+	ma := events.NewMessageAccepted(clone,
+		events.Lat(device.Latitude()),
+		events.Lon(device.Longitude()),
+		events.Environment(device.Environment()),
+		events.Source(device.Source()),
+		events.Tenant(device.Tenant()))
+
+	log.Debug(fmt.Sprintf("message.accepted created for device %s with object type %s", ma.DeviceID(), ma.ObjectID()))
+
+	return ma, nil
 }

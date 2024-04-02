@@ -44,18 +44,60 @@ func TestLevelWithOverflowCapsPctTo100(t *testing.T) {
 	is.Equal(lvl.Percent(), 100.0)
 }
 
+func TestFillingLevel(t *testing.T) {
+	is := is.New(t)
+
+	lvl, err := New("maxd=4,maxl=3", 0)
+	is.NoErr(err)
+
+	lvl.Handle(context.Background(), newFillingLevel(53, 80, false, false), func(string, float64, time.Time) error { return nil })
+
+	is.Equal(lvl.Percent(), 53.0)
+}
+
+func TestLevelWithMaxDAndMaxL(t *testing.T) {
+	is := is.New(t)
+	lvl, err := New("maxd=0.94,maxl=0.79", 0)
+	is.NoErr(err)
+	lvl.Handle(context.Background(), newDistance(0.4), func(s string, f float64, t time.Time) error {
+		return nil
+	})
+	is.Equal(lvl.Current(), (0.94 - 0.4))
+	is.Equal(lvl.Percent(), 68.35443037974683)
+}
+
 func newDistance(distance float64) *events.MessageAccepted {
 	e := &events.MessageAccepted{}
+
 	json.Unmarshal([]byte(
-		fmt.Sprintf(messageJSONFormat, distance),
+		fmt.Sprintf(distanceJSONFormat, distance),
 	), e)
 	return e
 }
 
-const messageJSONFormat string = `{
-	"sensorID":"sensorID",
+func newFillingLevel(actualFillingPercentage, highThreshold float64, containerFull, containerEmpty bool) *events.MessageAccepted {
+	e := &events.MessageAccepted{}
+	json.Unmarshal([]byte(
+		fmt.Sprintf(fillingLevelJSONFormat, actualFillingPercentage, highThreshold, containerFull, containerEmpty),
+	), e)
+
+	return e
+}
+
+const fillingLevelJSONFormat string = `{	
 	"pack":[
-		{"bn":"urn:oma:lwm2m:ext:3330","bt":1675801037,"n":"0","vs":"testId"},
+		{"bn":"testid/3435/","bt":1675801037,"n":"0","vs":"urn:oma:lwm2m:ext:3435"},	
+		{"n":"2","v":%f},
+		{"n":"4","v":%f},
+		{"n":"5","vb":%t},
+		{"n":"7","vb":%t}
+	],
+	"timestamp":"2023-02-07T20:17:17.312028Z"
+}`
+
+const distanceJSONFormat string = `{	
+	"pack":[
+		{"bn":"testid/3330/","bt":1675801037,"n":"0","vs":"urn:oma:lwm2m:ext:3330"},		
 		{"n":"5700","u":"m","v":%f}
 	],
 	"timestamp":"2023-02-07T20:17:17.312028Z"

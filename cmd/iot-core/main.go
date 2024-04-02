@@ -3,15 +3,17 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/diwise/iot-core/internal/pkg/application"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
-	"github.com/diwise/iot-core/internal/pkg/application/messageprocessor"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/internal/pkg/presentation/api"
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -110,17 +112,16 @@ func createDatabaseConnectionOrDie(ctx context.Context) database.Storage {
 }
 
 func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
-	msgproc := messageprocessor.NewMessageProcessor(dmClient)
-
 	functionsRegistry, err := functions.NewRegistry(ctx, fconfig, storage)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	app := application.New(msgproc, functionsRegistry)
+	app := application.New(dmClient, functionsRegistry)
 
-	needToDecideThis := "application/json"
-	msgctx.RegisterCommandHandler(messaging.MatchContentType(needToDecideThis), newCommandHandler(msgctx, app))
+	msgctx.RegisterCommandHandler(func(m messaging.Message) bool {
+		return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m")
+	}, newCommandHandler(msgctx, app))
 
 	routingKey := "message.accepted"
 	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(msgctx, app))
@@ -134,6 +135,7 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 
 		ctx, span := tracer.Start(ctx, "receive-command")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
+		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
 		evt := events.MessageReceived{}
 		err = json.Unmarshal(wrapper.Body(), &evt)
@@ -142,17 +144,23 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 			return err
 		}
 
-		logger = logger.With(slog.String("device_id", evt.Device))
+		logger = logger.With(slog.String("device_id", evt.DeviceID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
-		messageAccepted, err := app.MessageReceived(ctx, evt)
+		m, err := app.MessageReceived(ctx, evt)
 		if err != nil {
+			if errors.Is(err, application.ErrCouldNotFindDevice) {
+				logger.Debug("could not find device, message not accepted")
+				return nil
+			}
+
 			logger.Error("message not accepted", "err", err.Error())
 			return err
 		}
 
-		logger.Info("publishing message", "topic", messageAccepted.TopicName())
-		err = messenger.PublishOnTopic(ctx, messageAccepted)
+		logger.Debug("publishing message", slog.String("device_id", m.DeviceID()), slog.String("object_id", m.ObjectID()), slog.String("topic", m.TopicName()))
+
+		err = messenger.PublishOnTopic(ctx, m)
 		if err != nil {
 			logger.Error("failed to publish message", "err", err.Error())
 			return err
@@ -168,8 +176,7 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 
 		ctx, span := tracer.Start(ctx, "receive-message")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
-
-		logger.Debug("received message", "body", string(msg.Body()))
+		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
 		evt := events.MessageAccepted{}
 
@@ -185,7 +192,9 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 			return
 		}
 
-		logger = logger.With(slog.String("device_id", evt.Sensor))
+		logger.Debug(fmt.Sprintf("handling topic message for %s with type %s and content-type %s", evt.DeviceID(), evt.ObjectID(), evt.ContentType()))
+
+		logger = logger.With(slog.String("device_id", evt.DeviceID()), slog.String("object_id", evt.ObjectID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		err = app.MessageAccepted(ctx, evt, messenger)

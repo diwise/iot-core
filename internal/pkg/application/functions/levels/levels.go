@@ -2,6 +2,7 @@ package levels
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/senml"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
 const (
@@ -94,40 +97,148 @@ type level struct {
 }
 
 func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+	match := false
 
-	if !e.BaseNameMatches(lwm2m.Distance) {
-		return false, nil
+	log := logging.GetFromContext(ctx)
+
+	if events.Matches(*e, lwm2m.Distance) {
+		match = true
 	}
 
-	const SensorValue string = "5700"
-	r, ok := e.GetRecord(SensorValue)
-	ts, timeOk := e.GetTimeForRec(SensorValue)
+	if events.Matches(*e, lwm2m.FillingLevel) {
+		match = true
+	}
 
-	if ok && timeOk && r.Value != nil {
-		distance := *r.Value
-		previousLevel := l.Current_
+	if !match {
+		log.Debug(fmt.Sprintf("%s is not a message for level function", e.ObjectID()))
+		return false, events.ErrNoMatch
+	}
 
-		// Calculate the current level using the configured angle (if any) and round to two decimals
-		l.Current_ = math.Round((l.maxDistance-distance)*l.cosAlpha*100) / 100.0
+	if events.Matches(*e, lwm2m.Distance) {
+		log.Debug("level function matches distance")
+		return l.handleDistance(ctx, e, onchange)
+	}
 
-		if !hasChanged(previousLevel, l.Current_) {
-			return false, nil
-		}
-
-		if isNotZero(l.maxLevel) {
-			pct := math.Min((l.Current_*100.0)/l.maxLevel, 100.0)
-			l.Percent_ = &pct
-		}
-
-		if isNotZero(l.meanLevel) {
-			offset := l.Current_ - l.meanLevel
-			l.Offset_ = &offset
-		}
-
-		return true, onchange("level", l.Current_, ts)
+	if events.Matches(*e, lwm2m.FillingLevel) {
+		log.Debug("level function matches filling level")
+		return l.handleFillingLevel(ctx, e, onchange)
 	}
 
 	return false, nil
+}
+
+func (l *level) handleFillingLevel(_ context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+
+	const (
+		ActualFillingPercentage string = "2"
+		HighThreshold           string = "4"
+	)
+
+	percent, ok := e.Pack.GetRecord(senml.FindByName(ActualFillingPercentage))
+	highThreshold, highThresholdOk := e.Pack.GetValue(senml.FindByName(HighThreshold))
+
+	if !ok {
+		return false, fmt.Errorf("could not find record for actual filling percentage in FillingLevel pack")
+	}
+
+	if highThresholdOk {
+		if highThreshold > l.maxLevel {
+			l.maxLevel = highThreshold
+		}
+	}
+
+	if ok {
+		previousPercent := l.Percent_
+
+		p, valueOk := percent.GetValue()
+		if !valueOk {
+			return false, fmt.Errorf("could not get percent value in FillingLevel pack")
+		}
+
+		ts, timeOk := percent.GetTime()
+		if !timeOk {
+			ts = time.Now().UTC()
+		}
+
+		if previousPercent == nil {
+			l.Percent_ = &p
+			return true, onchange("percent", *l.Percent_, ts)
+		}
+
+		if !hasChanged(*previousPercent, p) {
+			return false, nil
+		}
+
+		l.Percent_ = &p
+
+		return true, onchange("percent", *l.Percent_, ts)
+	}
+
+	return false, nil
+}
+
+func (l *level) handleDistance(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+	const SensorValue string = "5700"
+
+	log := logging.GetFromContext(ctx)
+
+	sensorValue, ok := e.Pack.GetRecord(senml.FindByName(SensorValue))
+	if !ok {
+		return false, fmt.Errorf("could not find record for sensor value in distance pack")
+	}
+
+	distance, ok := sensorValue.GetValue()
+	if !ok {
+		return false, fmt.Errorf("could not find distance value in distance pack")
+	}
+
+	previousLevel := l.Current_
+	previousPercent := l.Percent_
+
+	var errs []error
+
+	// Calculate the current level using the configured angle (if any) and round to two decimals
+	l.Current_ = math.Round((l.maxDistance-distance)*l.cosAlpha*100) / 100.0
+
+	if !hasChanged(previousLevel, l.Current_) {
+		log.Debug(fmt.Sprintf("distance has not changed (%f meters)", previousLevel))
+		return false, nil
+	}
+
+	ts, ok := sensorValue.GetTime()
+	if !ok {
+		log.Debug("could not get time from sensor value in distance pack, will use Now().UTC()")
+		ts = time.Now().UTC()
+	}
+
+	errs = append(errs, onchange("level", l.Current_, ts))
+
+	if isNotZero(l.maxLevel) {
+		pct := math.Min((l.Current_*100.0)/l.maxLevel, 100.0)
+		l.Percent_ = &pct
+
+		if previousPercent == nil {
+			errs = append(errs, onchange("percent", *l.Percent_, ts))
+		}
+
+		if previousPercent != nil {
+			if hasChanged(*previousPercent, pct) {
+				errs = append(errs, onchange("percent", *l.Percent_, ts))
+			}
+		}
+	} else {
+		log.Info("cannot calculate percent since maxLevel is not set")
+	}
+
+	if isNotZero(l.meanLevel) {
+		offset := l.Current_ - l.meanLevel
+		l.Offset_ = &offset
+	}
+
+	log.Debug("level function handled incoming distance message")
+
+	return true, errors.Join(errs...)
+
 }
 
 func (l *level) Current() float64 {
@@ -150,8 +261,8 @@ func (l *level) Percent() float64 {
 	return 0.0
 }
 
-func hasChanged(previousLevel, newLevel float64) bool {
-	return isNotZero(newLevel - previousLevel)
+func hasChanged(prev, new float64) bool {
+	return isNotZero(new - prev)
 }
 
 func isNotZero(value float64) bool {

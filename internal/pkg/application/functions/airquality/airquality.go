@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/diwise/iot-core/pkg/lwm2m"
 	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/senml"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
@@ -59,13 +61,17 @@ const (
 func (aq *airquality) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	log := logging.GetFromContext(ctx)
 
-	temp, tempOk := e.GetFloat64(lwm2mTemperature)
-	pm1, pm1Ok := e.GetFloat64(lwm2mPM1)
-	pm10, pm10Ok := e.GetFloat64(lwm2mPM10)
-	pm25, pm25Ok := e.GetFloat64(lwm2mPM25)
-	no, noOk := e.GetFloat64(lwm2mNO)
-	no2, no2Ok := e.GetFloat64(lwm2mNO2)
-	co2, co2Ok := e.GetFloat64(lwm2mCO2)
+	if !events.Matches(*e, lwm2m.AirQuality) {
+		return false, events.ErrNoMatch
+	}
+
+	temp, tempOk := e.Pack.GetValue(senml.FindByName(lwm2mTemperature))
+	pm1, pm1Ok := e.Pack.GetValue(senml.FindByName(lwm2mPM1))
+	pm10, pm10Ok := e.Pack.GetValue(senml.FindByName(lwm2mPM10))
+	pm25, pm25Ok := e.Pack.GetValue(senml.FindByName(lwm2mPM25))
+	no, noOk := e.Pack.GetValue(senml.FindByName(lwm2mNO))
+	no2, no2Ok := e.Pack.GetValue(senml.FindByName(lwm2mNO2))
+	co2, co2Ok := e.Pack.GetValue(senml.FindByName(lwm2mCO2))
 
 	hasChanged := false
 	var errs []error
@@ -137,7 +143,7 @@ func (aq *airquality) Handle(ctx context.Context, e *events.MessageAccepted, onc
 }
 
 func getTime(e *events.MessageAccepted, name string) time.Time {
-	t, tOk := e.GetTimeForRec(name)
+	t, tOk := e.Pack.GetTime(senml.FindByName(name))
 	if tOk {
 		return t
 	}
