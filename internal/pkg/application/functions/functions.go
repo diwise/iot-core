@@ -87,7 +87,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		}
 
 		if ts.After(f.Timestamp) {
-			f.Timestamp = ts
+			f.Timestamp = ts.UTC()
 		}
 
 		return nil
