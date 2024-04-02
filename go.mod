@@ -3,7 +3,7 @@ module github.com/diwise/iot-core
 go 1.22.0
 
 require (
-	github.com/diwise/iot-device-mgmt v0.0.0-20240116090705-22302c74e598
+	github.com/diwise/iot-device-mgmt v0.0.0-20240402110751-a06313b737f0
 	github.com/diwise/messaging-golang v0.0.0-20240328100115-197aa8e3a58d
 	github.com/diwise/senml v0.0.0-20240320103927-03207b97394b
 	github.com/go-chi/chi/v5 v5.0.12
@@ -31,8 +31,8 @@ require (
 	golang.org/x/oauth2 v0.18.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240325203815-454cdb8f5daa // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240325203815-454cdb8f5daa // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240401170217-c3f982113cda // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
 )
 
 require (
