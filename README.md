@@ -45,8 +45,10 @@ Testing is best done using unit tests. For integration testing the preferred way
 ```
 ## CLI flags
 none
+
 ## Configuration files
 none
+
 # Links
 [iot-core](https://diwise.github.io/) on diwise.github.io
 
