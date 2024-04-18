@@ -93,27 +93,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		return nil
 	}
 
-	changed, err := f.handle(ctx, e, onchange)
-	if err != nil {
-		if errors.Is(err, events.ErrNoMatch) {
-			log.Debug(fmt.Sprintf("%s function should not handle this message type (%s)", f.Type, e.ObjectID()))
-			return nil
-		}
-		return err
-	}
-
-	log.Debug(fmt.Sprintf("function %s handled incoming message.accepted of type %s, change is %t", f.Type, e.ObjectID(), changed))
-
-	if lat, lon, ok := e.Pack.GetLatLon(); ok {
-		if f.Location == nil {
-			log.Debug("add location to function")
-			f.Location = &location{
-				Latitude:  lat,
-				Longitude: lon,
-			}
-			changed = true
-		}
-	}
+	changed := false
 
 	// TODO: We need to be able to have tenant info before the first packet arrives,
 	// 	     so this lazy init version wont work in the long run ...
@@ -134,6 +114,28 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 			changed = true
 		}
 	}
+
+	if lat, lon, ok := e.Pack.GetLatLon(); ok {
+		if f.Location == nil {
+			log.Debug("add location to function")
+			f.Location = &location{
+				Latitude:  lat,
+				Longitude: lon,
+			}
+			changed = true
+		}
+	}
+
+	changed, err := f.handle(ctx, e, onchange)
+	if err != nil {
+		if errors.Is(err, events.ErrNoMatch) {
+			log.Debug(fmt.Sprintf("%s function should not handle this message type (%s)", f.Type, e.ObjectID()))
+			return nil
+		}
+		return err
+	}
+
+	log.Debug(fmt.Sprintf("function %s handled incoming message.accepted of type %s, change is %t", f.Type, e.ObjectID(), changed))
 
 	if changed || f.OnUpdate {
 		fumsg := NewFunctionUpdatedMessage(f)
