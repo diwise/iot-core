@@ -15,7 +15,7 @@ import (
 const FunctionTypeName = "stopwatch"
 
 type Stopwatch interface {
-	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error)	
+	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error)
 }
 
 func New() *StopwatchImpl {
@@ -53,8 +53,8 @@ func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, 
 
 	r, stateOK := e.Pack.GetRecord(senml.FindByName(DigitalInputState))
 	ts, timeOk := r.GetTime()
-	
-	c, counterOK := e.Pack.GetValue(senml.FindByName(DigitalInputCounter))	
+
+	c, counterOK := e.Pack.GetValue(senml.FindByName(DigitalInputCounter))
 
 	if !stateOK || !timeOk || r.BoolValue == nil {
 		return false, fmt.Errorf("no state or time for stopwatch")
