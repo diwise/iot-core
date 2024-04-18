@@ -3,6 +3,7 @@ package stopwatch
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
@@ -14,38 +15,28 @@ import (
 const FunctionTypeName = "stopwatch"
 
 type Stopwatch interface {
-	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error)
-	State() bool
-	Count() int32
+	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error)	
 }
 
-func New() Stopwatch {
-	return &stopwatch{
+func New() *StopwatchImpl {
+	return &StopwatchImpl{
 		StartTime:      time.Time{},
 		CumulativeTime: 0,
 	}
 }
 
-type stopwatch struct {
+type StopwatchImpl struct {
 	StartTime time.Time      `json:"startTime"`
 	StopTime  *time.Time     `json:"stopTime,omitempty"`
 	Duration  *time.Duration `json:"duration,omitempty"`
 
-	State_ bool  `json:"state"`
-	Count_ int32 `json:"count"`
+	State bool  `json:"state"`
+	Count int32 `json:"count"`
 
 	CumulativeTime time.Duration `json:"cumulativeTime"`
 }
 
-func (sw *stopwatch) State() bool {
-	return sw.State_
-}
-
-func (sw *stopwatch) Count() int32 {
-	return sw.Count_
-}
-
-func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	var err error
 	var stateChanged bool = false
 
@@ -53,7 +44,7 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 		return false, events.ErrNoMatch
 	}
 
-	log := logging.GetFromContext(ctx)
+	log := logging.GetFromContext(ctx).With(slog.String("fnct", "stopwatch"))
 
 	const (
 		DigitalInputState   string = "5500"
@@ -61,15 +52,21 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 	)
 
 	r, stateOK := e.Pack.GetRecord(senml.FindByName(DigitalInputState))
-	c, counterOK := e.Pack.GetValue(senml.FindByName(DigitalInputCounter))
-	ts, timeOk := e.Pack.GetTime(senml.FindByName(DigitalInputState))
+	ts, timeOk := r.GetTime()
+	
+	c, counterOK := e.Pack.GetValue(senml.FindByName(DigitalInputCounter))	
 
 	if !stateOK || !timeOk || r.BoolValue == nil {
 		return false, fmt.Errorf("no state or time for stopwatch")
 	}
 
-	currentState := sw.State_
-	currentCount := sw.Count_
+	if ts.IsZero() {
+		log.Warn("timestamp was Zero")
+		ts = time.Now().UTC()
+	}
+
+	currentState := sw.State
+	currentCount := sw.Count
 
 	state := *r.BoolValue
 
@@ -77,10 +74,10 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 	if state {
 		// Off -> On = Start new stopwatch
 		if !currentState {
-			log.Debug("stopwatch: Off -> On, start new stopwatch")
+			log.Debug("Off -> On, start new stopwatch")
 
-			sw.StartTime = ts
-			sw.State_ = state
+			sw.StartTime = ts.UTC()
+			sw.State = true
 			sw.StopTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
 			sw.Duration = nil
 
@@ -99,7 +96,7 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 
 		// On -> On = Update duration
 		if currentState {
-			log.Debug("stopwatch: On -> On, update duration")
+			log.Debug("On -> On, update duration")
 
 			duration := ts.Sub(sw.StartTime)
 			sw.Duration = &duration
@@ -118,17 +115,17 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 	if !state {
 		// On -> Off = Stop stopwatch
 		if currentState {
-			log.Debug("stopwatch: On -> Off, stop stopwatch")
+			log.Debug("On -> Off, stop stopwatch")
 
 			sw.StopTime = &ts
-			sw.State_ = state
+			sw.State = false
 			duration := ts.Sub(sw.StartTime)
 			sw.Duration = &duration
 			sw.CumulativeTime = sw.CumulativeTime + duration
 
 			err = onchange("state", 1, ts)
 			if err != nil {
-				return true, err
+				return false, err
 			}
 
 			err = onchange("state", 0, ts)
@@ -160,13 +157,13 @@ func (sw *stopwatch) Handle(ctx context.Context, e *events.MessageAccepted, onch
 
 	if counterOK {
 		if int32(c) != currentCount {
-			sw.Count_ = int32(c)
+			sw.Count = int32(c)
 		}
 	} else {
-		sw.Count_++
+		sw.Count++
 	}
 
-	err = onchange("count", float64(sw.Count_), ts)
+	err = onchange("count", float64(sw.Count), ts)
 	if err != nil {
 		return false, err
 	}
