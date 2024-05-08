@@ -34,6 +34,24 @@ func TestLevelWithOffset(t *testing.T) {
 	is.Equal(lvl.Percent(), 43.25)
 }
 
+func TestLevelWithOffsetFillingLevel(t *testing.T) {
+	is := is.New(t)
+
+	lvl, err := New("maxd=4,offset=1", 0)
+	is.NoErr(err)
+	
+	// Offset = 1
+	// Level = 1
+	// HighThreshold = 4
+
+	lvl.Handle(context.Background(), newFillingLevel(0, 1, 4, false, false), func(string, float64, time.Time) error { return nil })
+
+	// Current = HighThreshold - (Level + Offset) 
+
+	is.Equal(lvl.Current(), 2.0)
+	is.Equal(lvl.Percent(), 50.0)
+}
+
 func TestLevelWithKnownMax(t *testing.T) {
 	is := is.New(t)
 
@@ -62,7 +80,7 @@ func TestFillingLevel(t *testing.T) {
 	lvl, err := New("maxd=4,maxl=3", 0)
 	is.NoErr(err)
 
-	lvl.Handle(context.Background(), newFillingLevel(53, 80, false, false), func(string, float64, time.Time) error { return nil })
+	lvl.Handle(context.Background(), newFillingLevel(53,0, 80, false, false), func(string, float64, time.Time) error { return nil })
 
 	is.Equal(lvl.Percent(), 53.0)
 }
@@ -87,10 +105,10 @@ func newDistance(distance float64) *events.MessageAccepted {
 	return e
 }
 
-func newFillingLevel(actualFillingPercentage, highThreshold float64, containerFull, containerEmpty bool) *events.MessageAccepted {
+func newFillingLevel(actualFillingPercentage, actualFillingLevel, highThreshold float64, containerFull, containerEmpty bool) *events.MessageAccepted {
 	e := &events.MessageAccepted{}
 	json.Unmarshal([]byte(
-		fmt.Sprintf(fillingLevelJSONFormat, actualFillingPercentage, highThreshold, containerFull, containerEmpty),
+		fmt.Sprintf(fillingLevelJSONFormat, actualFillingPercentage, actualFillingLevel, highThreshold, containerFull, containerEmpty),
 	), e)
 
 	return e
@@ -100,6 +118,7 @@ const fillingLevelJSONFormat string = `{
 	"pack":[
 		{"bn":"testid/3435/","bt":1675801037,"n":"0","vs":"urn:oma:lwm2m:ext:3435"},	
 		{"n":"2","v":%f},
+		{"n":"3","v":%f},
 		{"n":"4","v":%f},
 		{"n":"5","vb":%t},
 		{"n":"7","vb":%t}
