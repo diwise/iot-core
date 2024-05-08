@@ -22,6 +22,18 @@ func TestLevel(t *testing.T) {
 	is.Equal(lvl.Current(), 2.73)
 }
 
+func TestLevelWithOffset(t *testing.T) {
+	is := is.New(t)
+
+	lvl, err := New("maxd=4,offset=1,maxl=4", 0)
+	is.NoErr(err)
+
+	lvl.Handle(context.Background(), newDistance(1.27), func(string, float64, time.Time) error { return nil })
+
+	is.Equal(lvl.Current(), 1.73)
+	is.Equal(lvl.Percent(), 43.25)
+}
+
 func TestLevelWithKnownMax(t *testing.T) {
 	is := is.New(t)
 

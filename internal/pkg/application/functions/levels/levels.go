@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"strconv"
 	"strings"
@@ -65,6 +66,11 @@ func New(config string, current float64) (Level, error) {
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse level config \"%s\": %w", s, err)
 				}
+			} else if pair[0] == "offset" {
+				lvl.offsetLevel, err = strconv.ParseFloat(pair[1], 64)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse offset config \"%s\": %w", s, err)
+				}
 			} else {
 				return nil, fmt.Errorf("failed to parse level config \"%s\": %w", s, err)
 			}
@@ -90,6 +96,7 @@ type level struct {
 	maxDistance float64
 	maxLevel    float64
 	meanLevel   float64
+	offsetLevel float64
 
 	Current_ float64  `json:"current"`
 	Percent_ *float64 `json:"percent,omitempty"`
@@ -127,32 +134,45 @@ func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 	return false, nil
 }
 
-func (l *level) handleFillingLevel(_ context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (l *level) handleFillingLevel(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
 	const (
 		ActualFillingPercentage string = "2"
+		ActualFillingLevel      string = "3"
 		HighThreshold           string = "4"
 	)
 
-	percent, ok := e.Pack.GetRecord(senml.FindByName(ActualFillingPercentage))
+	percent, percentOk := e.Pack.GetRecord(senml.FindByName(ActualFillingPercentage))
+	level, levelOk := e.Pack.GetRecord(senml.FindByName(ActualFillingLevel))
 	highThreshold, highThresholdOk := e.Pack.GetValue(senml.FindByName(HighThreshold))
 
-	if !ok {
-		return false, fmt.Errorf("could not find record for actual filling percentage in FillingLevel pack")
+	if !percentOk && !levelOk {
+		return false, fmt.Errorf("could not find record for actual filling percentage or actual filling level in fillingLevel pack")
 	}
 
+	log := logging.GetFromContext(ctx)
+
 	if highThresholdOk {
+		log.Debug("HighThreshold is included in pack, will adjust maxLevel configuration")
 		if highThreshold > l.maxLevel {
 			l.maxLevel = highThreshold
 		}
 	}
 
-	if ok {
+	var errs []error
+	changed := false
+
+	offsetLevelIsSet := isNotZero(l.offsetLevel)
+	if offsetLevelIsSet {
+		log.Debug("offset is set, will not use percent value", slog.Float64("offset", l.offsetLevel))
+	}
+
+	if percentOk && !offsetLevelIsSet {
 		previousPercent := l.Percent_
 
 		p, valueOk := percent.GetValue()
 		if !valueOk {
-			return false, fmt.Errorf("could not get percent value in FillingLevel pack")
+			return false, fmt.Errorf("could not get percent value in fillingLevel pack")
 		}
 
 		ts, timeOk := percent.GetTime()
@@ -171,10 +191,60 @@ func (l *level) handleFillingLevel(_ context.Context, e *events.MessageAccepted,
 
 		l.Percent_ = &p
 
-		return true, onchange("percent", *l.Percent_, ts)
+		changed = true
+		errs = append(errs, onchange("percent", *l.Percent_, ts))
 	}
 
-	return false, nil
+	if levelOk {
+		previousLevel := l.Current_
+
+		v, valueOk := level.GetValue()
+		if !valueOk {
+			return false, fmt.Errorf("could not get level value in fillingLevel pack")
+		}
+
+		log.Debug("pack contains actual filling level", slog.Float64("actual_filling_level", v), slog.Float64("offset", l.offsetLevel))
+
+		v += l.offsetLevel
+
+		ts, timeOk := level.GetTime()
+		if !timeOk {
+			ts = time.Now().UTC()
+		}
+
+		if !hasChanged(previousLevel, v) {
+			return false, nil
+		}
+
+		log.Debug("level is changed", slog.Float64("old_value", l.Current_), slog.Float64("new_value", v))
+
+		l.Current_ = v
+
+		if isNotZero(l.maxLevel) {
+			previousPercent := l.Percent_
+			pct := math.Min((l.Current_*100.0)/l.maxLevel, 100.0)
+			l.Percent_ = &pct
+
+			if previousPercent == nil {
+				changed = true
+				errs = append(errs, onchange("percent", *l.Percent_, ts))
+			}
+
+			if previousPercent != nil {
+				if hasChanged(*previousPercent, pct) {
+					changed = true
+					errs = append(errs, onchange("percent", *l.Percent_, ts))
+				}
+			}
+		} else {
+			log.Info("cannot calculate percent since maxLevel is not set")
+		}
+
+		changed = true
+		errs = append(errs, onchange("level", l.Current_, ts))
+	}
+
+	return changed, errors.Join(errs...)
 }
 
 func (l *level) handleDistance(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
@@ -190,7 +260,9 @@ func (l *level) handleDistance(ctx context.Context, e *events.MessageAccepted, o
 	distance, ok := sensorValue.GetValue()
 	if !ok {
 		return false, fmt.Errorf("could not find distance value in distance pack")
-	}
+	}	
+
+	distance += l.offsetLevel
 
 	previousLevel := l.Current_
 	previousPercent := l.Percent_

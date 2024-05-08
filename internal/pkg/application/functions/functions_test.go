@@ -46,7 +46,7 @@ func TestCounter(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"counter","subtype":"overflow","onupdate":false,"timestamp":"2024-03-20T12:19:48+01:00","counter":{"count":1,"state":true}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"counter","subtype":"overflow","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","counter":{"count":1,"state":true}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -84,7 +84,7 @@ func TestLevel(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","onupdate":false,"timestamp":"2024-03-20T12:19:48+01:00","level":{"current":-2.1}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","level":{"current":-2.1}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -120,7 +120,7 @@ func TestLevelFromAnAngle(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","onupdate":false,"timestamp":"2024-03-20T12:19:48+01:00","level":{"current":-2.1}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","level":{"current":-2.1}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -153,8 +153,8 @@ func TestTimer(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectationFmt string = `{"id":"functionID","name":"name","type":"timer","subtype":"overflow","onupdate":false,"timestamp":"2024-03-20T12:19:48+01:00","timer":{"startTime":"%s","state":true}}`
-	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, packTime.Format(time.RFC3339)))
+	const expectationFmt string = `{"id":"functionID","name":"name","type":"timer","subtype":"overflow","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","timer":{"startTime":"%s","state":true}}`
+	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, packTime.UTC().Format(time.RFC3339)))
 }
 
 func TestWaterQuality(t *testing.T) {
@@ -186,7 +186,7 @@ func TestWaterQuality(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"waterquality","subtype":"beach","onupdate":false,"timestamp":"2023-06-05T13:26:57+02:00","waterquality":{"temperature":2.3,"timestamp":"2023-06-05T13:26:57+02:00"}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"waterquality","subtype":"beach","onupdate":false,"timestamp":"2023-06-05T11:26:57Z","waterquality":{"temperature":2.3,"timestamp":"2023-06-05T11:26:57Z"}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
