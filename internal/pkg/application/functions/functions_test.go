@@ -154,8 +154,7 @@ func TestTimer(t *testing.T) {
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
 	const expectationFmt string = `{"id":"functionID","name":"name","type":"timer","subtype":"overflow","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","timer":{"startTime":"%s","state":true}}`
-	startTime := packTime.UTC().Format(time.RFC3339)
-	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, startTime))
+	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, packTime.UTC().Format(time.RFC3339)))
 }
 
 func TestWaterQuality(t *testing.T) {
