@@ -272,6 +272,8 @@ func (l *level) handleDistance(ctx context.Context, e *events.MessageAccepted, o
 	// Calculate the current level using the configured angle (if any) and round to two decimals
 	l.Current_ = math.Round((l.maxDistance-distance)*l.cosAlpha*100) / 100.0
 
+	log.Debug("calculate level using distance", slog.Float64("max_distance", l.maxDistance), slog.Float64("max_level", l.maxLevel), slog.Float64("angle", l.cosAlpha), slog.Float64("distance", distance))
+
 	if !hasChanged(previousLevel, l.Current_) {
 		log.Debug(fmt.Sprintf("distance has not changed (%f meters)", previousLevel))
 		return false, nil
