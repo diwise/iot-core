@@ -42,6 +42,7 @@ type fnct struct {
 	Name_     string    `json:"name"`
 	Type      string    `json:"type"`
 	SubType   string    `json:"subtype"`
+	DeviceID  string    `json:"deviceID"`
 	Location  *location `json:"location,omitempty"`
 	Tenant    string    `json:"tenant,omitempty"`
 	Source    string    `json:"source,omitempty"`
@@ -74,8 +75,10 @@ func (f *fnct) Name() string {
 
 func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
 	log := logging.GetFromContext(ctx)
-	log = log.With(slog.String("function_id", f.ID()))
+	log = log.With(slog.String("function_id", f.ID()), slog.String("device_id", e.DeviceID()))
 	ctx = logging.NewContextWithLogger(ctx, log)
+
+	f.DeviceID = e.DeviceID()
 
 	onchange := func(prop string, value float64, ts time.Time) error {
 		log.Debug(fmt.Sprintf("property %s changed to %f with time %s", prop, value, ts.Format(time.RFC3339)))
