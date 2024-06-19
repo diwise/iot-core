@@ -139,6 +139,10 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	}
 
 	if changed || f.OnUpdate {
+		if !changed {
+			f.Timestamp = e.Timestamp.UTC()
+		}
+
 		fumsg := NewFunctionUpdatedMessage(f)
 
 		log.Debug("publishing message",
@@ -152,6 +156,8 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		if err != nil {
 			return err
 		}
+	} else {
+		log.Debug(fmt.Sprintf("no message published, change is %t, onUpdate %t", changed, f.OnUpdate))
 	}
 
 	log.Debug(fmt.Sprintf("function %s handled incoming message.accepted of type %s, change is %t, onUpdate is %t", f.Type, e.ObjectID(), changed, f.OnUpdate))
