@@ -2,6 +2,7 @@ package waterqualities
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"time"
 
@@ -36,6 +37,10 @@ func (wq *waterquality) Handle(ctx context.Context, e *events.MessageAccepted, o
 
 	r, tempOk := e.Pack.GetRecord(senml.FindByName(SensorValue))
 	ts, timeOk := e.Pack.GetTime(senml.FindByName(SensorValue))
+
+	if ts.After(time.Now().Add(5 * time.Second)) {
+		return false, fmt.Errorf("invalid timestamp %s in waterquality pack: %w", ts.Format(time.RFC3339), events.ErrBadTimestamp)
+	}
 
 	if tempOk && timeOk && r.Value != nil && ts.After(wq.Timestamp) {
 		temp := math.Round(*r.Value*10) / 10
