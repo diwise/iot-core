@@ -78,6 +78,11 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	log = log.With(slog.String("function_id", f.ID()), slog.String("device_id", e.DeviceID()))
 	ctx = logging.NewContextWithLogger(ctx, log)
 
+	if e.Timestamp.After(time.Now()) {
+		log.Error("ignoring messages that claim to have been accepted in the future", "timestamp", e.Timestamp.Format(time.RFC3339))
+		return nil
+	}
+
 	f.DeviceID = e.DeviceID()
 
 	onchange := func(prop string, value float64, ts time.Time) error {
