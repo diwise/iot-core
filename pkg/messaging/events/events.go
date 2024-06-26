@@ -115,6 +115,7 @@ func (m MessageAccepted) Error() error {
 	return nil
 }
 
+var ErrBadTimestamp = fmt.Errorf("bad timestamp")
 var ErrNoMatch = fmt.Errorf("event mismatch")
 
 func Matches(m MessageAccepted, objectURN string) bool {

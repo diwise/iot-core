@@ -216,12 +216,12 @@ func TestAddToHistory(t *testing.T) {
 
 	f, _ := reg.Find(ctx, MatchSensor(sensorId))
 
-	_ = f[0].Handle(ctx, newMessageAccepted(1.67, time.Now().Add(1*time.Hour)), msgctx)
-	_ = f[0].Handle(ctx, newMessageAccepted(2.67, time.Now().Add(2*time.Hour)), msgctx)
-	_ = f[0].Handle(ctx, newMessageAccepted(3.67, time.Now().Add(3*time.Hour)), msgctx)
-	_ = f[0].Handle(ctx, newMessageAccepted(4.67, time.Now().Add(4*time.Hour)), msgctx)
-	_ = f[0].Handle(ctx, newMessageAccepted(5.67, time.Now().Add(5*time.Hour)), msgctx)
-	_ = f[0].Handle(ctx, newMessageAccepted(6.67, time.Now().Add(6*time.Hour)), msgctx)
+	_ = f[0].Handle(ctx, newMessageAccepted(1.67, time.Now().Add(-6*time.Hour)), msgctx)
+	_ = f[0].Handle(ctx, newMessageAccepted(2.67, time.Now().Add(-5*time.Hour)), msgctx)
+	_ = f[0].Handle(ctx, newMessageAccepted(3.67, time.Now().Add(-4*time.Hour)), msgctx)
+	_ = f[0].Handle(ctx, newMessageAccepted(4.67, time.Now().Add(-3*time.Hour)), msgctx)
+	_ = f[0].Handle(ctx, newMessageAccepted(5.67, time.Now().Add(-2*time.Hour)), msgctx)
+	_ = f[0].Handle(ctx, newMessageAccepted(6.67, time.Now().Add(-1*time.Hour)), msgctx)
 
 	h, _ := f[0].History(ctx, "", 0)
 	is.Equal(6, len(h))
