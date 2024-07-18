@@ -25,29 +25,29 @@ func Transform(ctx context.Context, msgctx messaging.MsgContext, msg messaging.I
 		DeviceID  string    `json:"deviceID"`
 		Type      string    `json:"type"`
 		SubType   string    `json:"subType"`
+		Tenant    string    `json:"tenant"`
 		Timestamp time.Time `json:"timestamp"`
-		Tenant    string    `json:"tenant,omitempty"`
 
-		Counter struct {
+		Counter *struct {
 			Count int `json:"count"`
-		} `json:"counter"`
+		} `json:"counter,omitempty"`
 
-		Level struct {
+		Level *struct {
 			Current float64  `json:"current"`
 			Percent *float64 `json:"percent,omitempty"`
 			Offset  *float64 `json:"offset,omitempty"`
-		} `json:"level"`
+		} `json:"level,omitempty"`
 
-		Stopwatch struct {
+		Stopwatch *struct {
 			CumulativeTime time.Duration `json:"cumulativeTime"`
 			Count          int32         `json:"count"`
 			State          bool          `json:"state"`
-		} `json:"stopwatch"`
+		} `json:"stopwatch,omitempty"`
 
-		Timer struct {
+		Timer *struct {
 			TotalDuration time.Duration  `json:"totalDuration"`
 			Duration      *time.Duration `json:"duration,omitempty"`
-		} `json:"timer"`
+		} `json:"timer,omitempty"`
 	}{}
 
 	err := json.Unmarshal(msg.Body(), &f)
@@ -57,7 +57,6 @@ func Transform(ctx context.Context, msgctx messaging.MsgContext, msg messaging.I
 
 	pub := func(obj lwm2m.Lwm2mObject, tenant string) error {
 		log.Debug(fmt.Sprintf("pub transformed message, id: %s, urn: %s", obj.ID(), obj.ObjectURN()))
-
 		mt := events.NewMessageTransformed(lwm2m.ToPack(obj), tenant)
 		return msgctx.PublishOnTopic(ctx, mt)
 	}
@@ -68,11 +67,10 @@ func Transform(ctx context.Context, msgctx messaging.MsgContext, msg messaging.I
 		case "peoplecounter":
 			peopleCounter := lwm2m.NewPeopleCounter(f.DeviceID, f.Counter.Count, f.Timestamp)
 			err = pub(peopleCounter, f.Tenant)
-		case "door":
-			log.Debug("door counter")
 		}
 	case levels.FunctionTypeName:
 		if f.Level.Percent == nil {
+			log.Debug("could not transform fillingLevel, percent is missing")
 			return nil
 		}
 		fillingLevel := lwm2m.NewFillingLevel(f.DeviceID, *f.Level.Percent, f.Timestamp)
@@ -86,6 +84,7 @@ func Transform(ctx context.Context, msgctx messaging.MsgContext, msg messaging.I
 		err = pub(stopwatch, f.Tenant)
 	case timers.FunctionTypeName:
 		if f.Timer.Duration == nil {
+			log.Debug("could not transform timer, duration is missing")
 			return nil
 		}
 		timer := lwm2m.NewTimer(f.DeviceID, f.Timer.Duration.Seconds(), f.Timestamp)
