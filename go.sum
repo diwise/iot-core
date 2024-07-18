@@ -7,6 +7,10 @@ github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XL
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/diwise/iot-agent v0.0.0-20240521071826-edb1a23d265b h1:PZ4pqN+4FKT4sh7i0ARmHZMfMW/fhHSR1aB7ShRGUIk=
+github.com/diwise/iot-agent v0.0.0-20240521071826-edb1a23d265b/go.mod h1:vVgGcZeSeMMNNxbboEEkuycRY9HdVqmSxYX0PhknzgI=
+github.com/diwise/iot-agent v0.0.0-20240716073614-1b2953b8aa71 h1:Iy47skeDGhzQp56U963l87P1tu+oaMG75aVLVylRHfo=
+github.com/diwise/iot-agent v0.0.0-20240716073614-1b2953b8aa71/go.mod h1:vVgGcZeSeMMNNxbboEEkuycRY9HdVqmSxYX0PhknzgI=
 github.com/diwise/iot-device-mgmt v0.0.0-20240612104138-d2506042a13f h1:zsMeSW+IB7dV3IS8mkM+OeDvmeh80KuDLjbjq/MT/R4=
 github.com/diwise/iot-device-mgmt v0.0.0-20240612104138-d2506042a13f/go.mod h1:Oavqj3G2n4+PR00bTvEHH0l4XmCfGOhn5qPUhsMcQ6g=
 github.com/diwise/messaging-golang v0.0.0-20240506092815-fc973e9e4a4f h1:jiUvEk42p/C3q/4bAvVKvryYf9o9GnVBiAPGV7S1p70=

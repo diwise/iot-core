@@ -55,9 +55,9 @@ type fnct struct {
 	Timer        timers.Timer                `json:"timer,omitempty"`
 	WaterQuality waterqualities.WaterQuality `json:"waterquality,omitempty"`
 	Building     buildings.Building          `json:"building,omitempty"`
-	AirQuality   airquality.AirQuality       `json:"AirQuality,omitempty"`
-	Stopwatch    stopwatch.Stopwatch         `json:"Stopwatch,omitempty"`
-	DigitalInput digitalinput.DigitalInput   `json:"DigitalInput,omitempty"`
+	AirQuality   airquality.AirQuality       `json:"airQuality,omitempty"`
+	Stopwatch    stopwatch.Stopwatch         `json:"stopwatch,omitempty"`
+	DigitalInput digitalinput.DigitalInput   `json:"digitalInput,omitempty"`
 
 	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, error)
 
