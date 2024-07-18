@@ -55,6 +55,8 @@ func Transform(ctx context.Context, msgctx messaging.MsgContext, msg messaging.I
 		return err
 	}
 
+	log.Debug(fmt.Sprintf("transform function.updated of type %s and subType %s for deviceID %s", f.Type, f.SubType, f.DeviceID))
+
 	pub := func(obj lwm2m.Lwm2mObject, tenant string) error {
 		log.Debug(fmt.Sprintf("pub transformed message, id: %s, urn: %s", obj.ID(), obj.ObjectURN()))
 		mt := events.NewMessageTransformed(lwm2m.ToPack(obj), tenant)
