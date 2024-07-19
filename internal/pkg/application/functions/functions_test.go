@@ -153,7 +153,7 @@ func TestTimer(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectationFmt string = `{"id":"functionID","name":"name","type":"timer","subtype":"overflow","deviceID":"testId","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","timer":{"startTime":"%s","state":true}}`
+	const expectationFmt string = `{"id":"functionID","name":"name","type":"timer","subtype":"overflow","deviceID":"testId","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","timer":{"startTime":"%s","state":true,"totalDuration":0}}`
 	is.Equal(string(generatedMessagePayload), fmt.Sprintf(expectationFmt, packTime.UTC().Format(time.RFC3339)))
 }
 
