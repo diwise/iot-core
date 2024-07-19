@@ -123,8 +123,8 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, msg
 		return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m")
 	}, newCommandHandler(msgctx, app))
 
-	routingKey := "message.accepted"
-	msgctx.RegisterTopicMessageHandler(routingKey, newTopicMessageHandler(msgctx, app))
+	msgctx.RegisterTopicMessageHandler("message.accepted", newTopicMessageHandler(msgctx, app))
+	msgctx.RegisterTopicMessageHandler("function.updated", newFunctionUpdatedTopicMessageHandler(msgctx))
 
 	return app, api.New(ctx, functionsRegistry), nil
 }
@@ -200,6 +200,21 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 		err = app.MessageAccepted(ctx, evt, messenger)
 		if err != nil {
 			logger.Error("failed to handle message", "err", err.Error())
+		}
+	}
+}
+
+func newFunctionUpdatedTopicMessageHandler(messenger messaging.MsgContext) messaging.TopicMessageHandler {
+	return func(ctx context.Context, msg messaging.IncomingTopicMessage, logger *slog.Logger) {
+		var err error
+
+		ctx, span := tracer.Start(ctx, "receive-function.updated")
+		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
+		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
+
+		err = functions.Transform(ctx, messenger, msg)
+		if err != nil {
+			logger.Error("failed to transform message", "err", err.Error())
 		}
 	}
 }
