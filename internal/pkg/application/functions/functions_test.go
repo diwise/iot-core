@@ -3,6 +3,7 @@ package functions
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -14,6 +15,8 @@ import (
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/senml"
 	"github.com/matryer/is"
+
+	objects "github.com/diwise/iot-agent/pkg/lwm2m"
 )
 
 func TestCounter(t *testing.T) {
@@ -225,6 +228,85 @@ func TestAddToHistory(t *testing.T) {
 
 	h, _ := f[0].History(ctx, "", 0)
 	is.Equal(6, len(h))
+}
+
+func TestStopwatch(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+	msgctx := &messaging.MsgContextMock{
+		PublishOnTopicFunc: func(ctx context.Context, message messaging.TopicMessage) error {
+
+			fmt.Printf("%s\n", string(message.Body()))
+
+			return nil
+		},
+	}
+
+	now := time.Now()
+
+	reg, err := NewRegistry(ctx, bytes.NewBufferString(`xyz123;Förrådet BPN;stopwatch;overflow;abc123;true`), &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error { return nil },
+	})
+	is.NoErr(err)
+
+	newDigitalInput := func(vb bool, ts time.Time) *events.MessageAccepted {
+		di1 := objects.NewDigitalInput("abc123", vb, ts)
+		pack := objects.ToPack(di1)
+		ma := events.NewMessageAccepted(pack, events.Tenant("default"))
+		return ma
+	}
+
+	f, err := reg.Find(ctx, MatchSensor("abc123"))
+	is.NoErr(err)
+
+	err = f[0].Handle(ctx, newDigitalInput(false, now.Add(-4*time.Hour)), msgctx)
+	is.NoErr(err)
+	err = f[0].Handle(ctx, newDigitalInput(false, now.Add(-3*time.Hour)), msgctx)
+	is.NoErr(err)
+	err = f[0].Handle(ctx, newDigitalInput(true, now.Add(-2*time.Hour)), msgctx)
+	is.NoErr(err)
+	err = f[0].Handle(ctx, newDigitalInput(true, now.Add(-1*time.Hour)), msgctx)
+	is.NoErr(err)
+	err = f[0].Handle(ctx, newDigitalInput(false, now), msgctx)
+	is.NoErr(err)
+
+	getState := func(i int, msgctx *messaging.MsgContextMock) bool {
+		sw := struct {
+			ID        string    `json:"id"`
+			Timestamp time.Time `json:"timestamp"`
+			Stopwatch struct {
+				StartTime      time.Time     `json:"startTime"`
+				State          bool          `json:"state"`
+				CumulativeTime time.Duration `json:"cumulativeTime"`
+			} `json:"stopwatch"`
+		}{}
+		json.Unmarshal(msgctx.PublishOnTopicCalls()[i].Message.Body(), &sw)
+		return sw.Stopwatch.State
+	}
+
+	getCumulativeTime := func(i int, msgctx *messaging.MsgContextMock) float64 {
+		sw := struct {
+			ID        string    `json:"id"`
+			Timestamp time.Time `json:"timestamp"`
+			Stopwatch struct {
+				StartTime      time.Time     `json:"startTime"`
+				State          bool          `json:"state"`
+				CumulativeTime time.Duration `json:"cumulativeTime"`
+			} `json:"stopwatch"`
+		}{}
+		json.Unmarshal(msgctx.PublishOnTopicCalls()[i].Message.Body(), &sw)
+		return sw.Stopwatch.CumulativeTime.Seconds()
+	}
+
+	is.True(!getState(0, msgctx))
+	is.True(!getState(1, msgctx))
+	is.True(getState(2, msgctx))
+	is.True(getState(3, msgctx))
+	is.True(!getState(4, msgctx))
+	is.Equal(getCumulativeTime(4, msgctx), float64(2*60*60))
 }
 
 func testSetup(t *testing.T) (*is.I, context.Context, *messaging.MsgContextMock) {

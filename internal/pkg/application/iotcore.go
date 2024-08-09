@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
@@ -67,7 +68,7 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 	}
 
 	log := logging.GetFromContext(ctx)
-	log.Debug(fmt.Sprintf("received message of type %s for device %s", msg.ContentType(), msg.DeviceID()))
+	log.Debug(fmt.Sprintf("received message of type %s for device %s", msg.ContentType(), msg.DeviceID()), slog.String("body", string(msg.Body())))
 
 	device, err := a.client.FindDeviceFromInternalID(ctx, msg.DeviceID())
 	if err != nil {
