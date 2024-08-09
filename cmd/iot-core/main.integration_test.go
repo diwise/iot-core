@@ -22,7 +22,7 @@ func TestAPIfunctionsReturns200OK(t *testing.T) {
 	is, dmClient, msgCtx := testSetup(t)
 
 	fconf := bytes.NewBufferString("fid1;name;counter;overflow;internalID;false")
-	_, api, err := initialize(context.Background(), dmClient, msgCtx, fconf, &database.StorageMock{
+	_, api, err := initialize(context.Background(), dmClient, nil, msgCtx, fconf, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
@@ -47,7 +47,7 @@ func TestReceiveDigitalInputUpdateMessage(t *testing.T) {
 	sID := "internalID"
 
 	fconf := bytes.NewBufferString("fid1;name;counter;overflow;" + sID + ";false")
-	_, _, err := initialize(context.Background(), dmClient, msgCtx, fconf, &database.StorageMock{
+	_, _, err := initialize(context.Background(), dmClient, nil, msgCtx, fconf, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
