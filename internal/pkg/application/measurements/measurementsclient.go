@@ -75,7 +75,7 @@ func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientI
 }
 
 func (c measurementsClient) GetMaxValue(ctx context.Context, measurmentID string) (float64, error) {
-	aggrResult, err := c.GetAggrValue(ctx, measurmentID, "max")
+	aggrResult, err := c.getAggrValue(ctx, measurmentID, "max")
 	if err != nil {
 		return 0.0, err
 	}
@@ -87,8 +87,12 @@ func (c measurementsClient) GetMaxValue(ctx context.Context, measurmentID string
 	return *aggrResult.Maximum, nil
 }
 
-func (c measurementsClient) GetAggrValue(ctx context.Context, measurmentID string, aggrMethods ...string) (*AggrResult, error) {
-	jar, err := c.getAggrValues(ctx, measurmentID, aggrMethods...)
+func (c measurementsClient) getAggrValue(ctx context.Context, measurmentID string, aggrMethods ...string) (*AggrResult, error) {
+	params := url.Values{}
+	params.Add("id", measurmentID)
+	params.Add("aggrMethods", strings.Join(aggrMethods, ","))
+
+	jar, err := c.getApiResponse(ctx, params)
 	if err != nil {
 		return nil, err
 	}
@@ -102,16 +106,12 @@ func (c measurementsClient) GetAggrValue(ctx context.Context, measurmentID strin
 	return &aggrResult, nil
 }
 
-func (c measurementsClient) getAggrValues(ctx context.Context, measurmentID string, aggrMethods ...string) (*jsonApiResponse, error) {
+func (c measurementsClient) getApiResponse(ctx context.Context, params url.Values) (*jsonApiResponse, error) {
 	var err error
-	ctx, span := tracer.Start(ctx, "get-aggr-values")
+	ctx, span := tracer.Start(ctx, "get-measurement-values")
 	defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 
 	log := logging.GetFromContext(ctx)
-
-	params := url.Values{}
-	params.Add("id", measurmentID)
-	params.Add("aggrMethods", strings.Join(aggrMethods, ","))
 
 	url := fmt.Sprintf("%s/%s?%s", c.url, "api/v0/measurements", params.Encode())
 
