@@ -24,7 +24,7 @@ func NewMessageReceived(pack senml.Pack) MessageReceived {
 }
 
 func (m MessageReceived) DeviceID() string {
-	return getDeviceID(m.Pack)
+	return GetDeviceID(m.Pack)
 }
 
 func (m MessageReceived) Body() []byte {
@@ -33,11 +33,11 @@ func (m MessageReceived) Body() []byte {
 }
 
 func (m MessageReceived) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", getObjectID(m.Pack))
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", GetObjectID(m.Pack))
 }
 
 func (m MessageReceived) Error() error {
-	if getDeviceID(m.Pack) == "" {
+	if GetDeviceID(m.Pack) == "" {
 		return errors.New("device id is missing")
 	}
 
@@ -71,11 +71,11 @@ func NewMessageAccepted(pack senml.Pack, decorators ...EventDecoratorFunc) *Mess
 }
 
 func (m MessageAccepted) DeviceID() string {
-	return getDeviceID(m.Pack)
+	return GetDeviceID(m.Pack)
 }
 
 func (m MessageAccepted) ObjectID() string {
-	return getObjectID(m.Pack)
+	return GetObjectID(m.Pack)
 }
 
 func (m MessageAccepted) Tenant() string {
@@ -92,7 +92,7 @@ func (m MessageAccepted) Body() []byte {
 }
 
 func (m MessageAccepted) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", getObjectID(m.Pack))
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", GetObjectID(m.Pack))
 }
 
 func (m MessageAccepted) TopicName() string {
@@ -100,7 +100,7 @@ func (m MessageAccepted) TopicName() string {
 }
 
 func (m MessageAccepted) Error() error {
-	if getDeviceID(m.Pack) == "" {
+	if GetDeviceID(m.Pack) == "" {
 		return errors.New("device id is missing")
 	}
 
@@ -135,11 +135,11 @@ func NewMessageTransformed(pack senml.Pack, tenant string) *MessageTransformed {
 }
 
 func (m MessageTransformed) DeviceID() string {
-	return getDeviceID(m.Pack)
+	return GetDeviceID(m.Pack)
 }
 
 func (m MessageTransformed) ObjectID() string {
-	return getObjectID(m.Pack)
+	return GetObjectID(m.Pack)
 }
 
 func (m MessageTransformed) Tenant() string {
@@ -156,7 +156,7 @@ func (m MessageTransformed) Body() []byte {
 }
 
 func (m MessageTransformed) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", getObjectID(m.Pack))
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", GetObjectID(m.Pack))
 }
 
 func (m MessageTransformed) TopicName() string {
@@ -164,7 +164,7 @@ func (m MessageTransformed) TopicName() string {
 }
 
 func (m MessageTransformed) Error() error {
-	if getDeviceID(m.Pack) == "" {
+	if GetDeviceID(m.Pack) == "" {
 		return errors.New("device id is missing")
 	}
 
@@ -183,10 +183,10 @@ var ErrBadTimestamp = fmt.Errorf("bad timestamp")
 var ErrNoMatch = fmt.Errorf("event mismatch")
 
 func Matches(m MessageAccepted, objectURN string) bool {
-	return (getObjectURN(m.Pack) == objectURN)
+	return (GetObjectURN(m.Pack) == objectURN)
 }
 
-func getDeviceID(m senml.Pack) string {
+func GetDeviceID(m senml.Pack) string {
 	r, ok := m.GetRecord(senml.FindByName("0"))
 	if !ok {
 		return ""
@@ -194,7 +194,7 @@ func getDeviceID(m senml.Pack) string {
 	return strings.Split(r.Name, "/")[0]
 }
 
-func getObjectURN(m senml.Pack) string {
+func GetObjectURN(m senml.Pack) string {
 	r, ok := m.GetStringValue(senml.FindByName("0"))
 	if !ok {
 		return ""
@@ -202,8 +202,8 @@ func getObjectURN(m senml.Pack) string {
 	return r
 }
 
-func getObjectID(m senml.Pack) string {
-	urn := getObjectURN(m)
+func GetObjectID(m senml.Pack) string {
+	urn := GetObjectURN(m)
 	if urn == "" {
 		return ""
 	}

@@ -6,7 +6,9 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/diwise/iot-core/internal/pkg/application/decorators"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
+	"github.com/diwise/iot-core/internal/pkg/application/measurements"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -19,15 +21,17 @@ type App interface {
 }
 
 type app struct {
-	client       client.DeviceManagementClient
-	fnctRegistry functions.Registry
-	mu           sync.Mutex
+	client             client.DeviceManagementClient
+	measurementsClient measurements.MeasurementsClient
+	fnctRegistry       functions.Registry
+	mu                 sync.Mutex
 }
 
-func New(client client.DeviceManagementClient, functionRegistry functions.Registry) App {
+func New(client client.DeviceManagementClient, measurementsClient measurements.MeasurementsClient, functionRegistry functions.Registry) App {
 	return &app{
-		client:       client,
-		fnctRegistry: functionRegistry,
+		client:             client,
+		fnctRegistry:       functionRegistry,
+		measurementsClient: measurementsClient,
 	}
 }
 
@@ -73,7 +77,7 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 	device, err := a.client.FindDeviceFromInternalID(ctx, msg.DeviceID())
 	if err != nil {
 		log.Debug(fmt.Sprintf("could not find device with internalID %s", msg.DeviceID()), "err", err.Error())
-		return nil, ErrCouldNotFindDevice		
+		return nil, ErrCouldNotFindDevice
 	}
 
 	clone := msg.Pack.Clone()
@@ -83,9 +87,11 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 		events.Lon(device.Longitude()),
 		events.Environment(device.Environment()),
 		events.Source(device.Source()),
-		events.Tenant(device.Tenant()))
+		events.Tenant(device.Tenant()),
+		decorators.Device(ctx, decorators.GetMaxPowerSourceVoltage(ctx, a.measurementsClient, device.ID())),
+	)
 
-	log.Debug(fmt.Sprintf("message.accepted created for device %s with object type %s", ma.DeviceID(), ma.ObjectID()))
+	log.Debug(fmt.Sprintf("message.accepted created for device %s with object type %s", ma.DeviceID(), ma.ObjectID()), slog.String("body", string(ma.Body())))
 
 	return ma, nil
 }
