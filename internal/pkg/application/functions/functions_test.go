@@ -49,7 +49,7 @@ func TestCounter(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"counter","subtype":"overflow","deviceID":"testId","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","counter":{"count":1,"state":true}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"counter","subtype":"overflow","deviceID":"testId","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","counter":{"count":1,"state":true,"changes":{"20240320":1}}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 

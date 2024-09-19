@@ -24,16 +24,18 @@ type Counter interface {
 func New() Counter {
 
 	c := &counter{
-		Count_: 0,
-		State_: false,
+		Count_:  0,
+		State_:  false,
+		Changes: make(map[string]int),
 	}
 
 	return c
 }
 
 type counter struct {
-	Count_ int  `json:"count"`
-	State_ bool `json:"state"`
+	Count_  int            `json:"count"`
+	State_  bool           `json:"state"`
+	Changes map[string]int `json:"changes"`
 }
 
 func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
@@ -83,6 +85,11 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 	}
 
 	if stateTimeOk && previousState != c.State_ {
+		if c.State_ {
+			day := stateTs.Format("20060102")
+			c.Changes[day]++
+		}
+
 		stateValue := map[bool]float64{true: 1.0, false: 0.0}
 		errs = append(errs, onchange("state", stateValue[c.State_], stateTs))
 		changed = true

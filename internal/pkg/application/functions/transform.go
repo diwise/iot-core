@@ -31,7 +31,8 @@ func Transform(ctx context.Context, msgctx messaging.MsgContext, msg messaging.I
 		Timestamp time.Time `json:"timestamp"`
 
 		Counter *struct {
-			Count int `json:"count"`
+			Count   int            `json:"count"`
+			Changes map[string]int `json:"changes"`
 		} `json:"counter,omitempty"`
 
 		Level *struct {
@@ -85,6 +86,10 @@ func Transform(ctx context.Context, msgctx messaging.MsgContext, msg messaging.I
 		switch f.SubType {
 		case "peoplecounter":
 			peopleCounter := lwm2m.NewPeopleCounter(f.DeviceID, f.Counter.Count, f.Timestamp)
+			if n, ok := f.Counter.Changes[f.Timestamp.Format("20060101")]; ok {
+				peopleCounter.DailyNumberOfPersons = n
+			}
+
 			err = pub(peopleCounter, f.Tenant)
 		}
 	case levels.FunctionTypeName:
