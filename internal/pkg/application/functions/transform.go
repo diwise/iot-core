@@ -13,7 +13,6 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/functions/timers"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
-	"github.com/diwise/senml"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 
 	lwm2m "github.com/diwise/iot-agent/pkg/lwm2m"
@@ -62,21 +61,13 @@ func Transform(ctx context.Context, msgctx messaging.MsgContext, msg messaging.I
 
 	pub := func(obj lwm2m.Lwm2mObject, tenant string) error {
 		log.Debug(fmt.Sprintf("pub transformed message, id: %s, urn: %s", obj.ID(), obj.ObjectURN()))
-		mt := events.NewMessageTransformed(lwm2m.ToPack(obj), tenant)
 
+		d := []events.EventDecoratorFunc{events.Tenant(tenant)}
 		if f.Location != nil {
-			mt.Pack = append(mt.Pack, senml.Record{
-				Unit:  senml.UnitLat,
-				Value: &f.Location.Latitude,
-			})
+			d = append(d, events.Lat(f.Location.Latitude), events.Lon(f.Location.Longitude))
 		}
 
-		if f.Location != nil {
-			mt.Pack = append(mt.Pack, senml.Record{
-				Unit:  senml.UnitLon,
-				Value: &f.Location.Longitude,
-			})
-		}
+		mt := events.NewMessageTransformed(lwm2m.ToPack(obj), d...)
 
 		return msgctx.PublishOnTopic(ctx, mt)
 	}
@@ -86,10 +77,6 @@ func Transform(ctx context.Context, msgctx messaging.MsgContext, msg messaging.I
 		switch f.SubType {
 		case "peoplecounter":
 			peopleCounter := lwm2m.NewPeopleCounter(f.DeviceID, f.Counter.Count, f.Timestamp)
-			if n, ok := f.Counter.Changes[f.Timestamp.Format("20060101")]; ok {
-				peopleCounter.DailyNumberOfPersons = n
-			}
-
 			err = pub(peopleCounter, f.Tenant)
 		}
 	case levels.FunctionTypeName:

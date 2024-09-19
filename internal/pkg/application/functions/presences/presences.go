@@ -31,7 +31,7 @@ type presence struct {
 
 func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 
-	if !events.Matches(*e, lwm2m.DigitalInput) && !events.Matches(*e, lwm2m.Presence) {
+	if !events.Matches(e, lwm2m.DigitalInput) && !events.Matches(e, lwm2m.Presence) {
 		return false, events.ErrNoMatch
 	}
 
@@ -39,8 +39,8 @@ func (t *presence) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 		DigitalInputState string = "5500"
 	)
 
-	r, stateOk := e.Pack.GetRecord(senml.FindByName(DigitalInputState))
-	ts, timeOk := e.Pack.GetTime(senml.FindByName(DigitalInputState))
+	r, stateOk := e.Pack().GetRecord(senml.FindByName(DigitalInputState))
+	ts, timeOk := e.Pack().GetTime(senml.FindByName(DigitalInputState))
 
 	if stateOk && timeOk && r.BoolValue != nil {
 		state := *r.BoolValue

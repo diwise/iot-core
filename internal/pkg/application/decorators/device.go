@@ -37,19 +37,19 @@ func GetMaxPowerSourceVoltage(ctx context.Context, maxValueFinder measurements.M
 func Device(ctx context.Context, max ValueFinder) events.EventDecoratorFunc {
 	log := logging.GetFromContext(ctx)
 
-	return func(m *events.MessageAccepted) {
-		objID := events.GetObjectID(m.Pack)
+	return func(m events.Message) {
+		objID := m.ObjectID()
 		if objID != DeviceObjectID {
 			return
 		}
 
-		_, ok := m.Pack.GetValue(senml.FindByName(BatteryLevel))
+		_, ok := m.Pack().GetValue(senml.FindByName(BatteryLevel))
 		if ok {
 			log.Debug("battery level already set")
 			return
 		}
 
-		vvd, ok := m.Pack.GetValue(senml.FindByName(PowerSourceVoltage))
+		vvd, ok := m.Pack().GetValue(senml.FindByName(PowerSourceVoltage))
 		if !ok {
 			log.Warn("no power source voltage found")
 			return
@@ -65,7 +65,7 @@ func Device(ctx context.Context, max ValueFinder) events.EventDecoratorFunc {
 			percentage = 100
 		}
 
-		m.Pack = append(m.Pack, senml.Record{
+		m.Append(senml.Record{
 			Name:  BatteryLevel,
 			Value: &percentage,
 			Unit:  "%",

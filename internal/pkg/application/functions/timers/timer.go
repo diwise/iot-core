@@ -34,7 +34,7 @@ type timer struct {
 }
 
 func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-	if !events.Matches(*e, lwm2m.DigitalInput) {
+	if !events.Matches(e, lwm2m.DigitalInput) {
 		return false, events.ErrNoMatch
 	}
 
@@ -44,8 +44,8 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 	previousState := t.State_
 
-	r, stateOK := e.Pack.GetRecord(senml.FindByName(DigitalInputState))
-	ts, timeOk := e.Pack.GetTime(senml.FindByName(DigitalInputState))
+	r, stateOK := e.Pack().GetRecord(senml.FindByName(DigitalInputState))
+	ts, timeOk := e.Pack().GetTime(senml.FindByName(DigitalInputState))
 
 	if stateOK && timeOk && r.BoolValue != nil {
 		state := *r.BoolValue

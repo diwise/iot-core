@@ -24,22 +24,20 @@ type Counter interface {
 func New() Counter {
 
 	c := &counter{
-		Count_:  0,
-		State_:  false,
-		Changes: make(map[string]int),
+		Count_: 0,
+		State_: false,
 	}
 
 	return c
 }
 
 type counter struct {
-	Count_  int            `json:"count"`
-	State_  bool           `json:"state"`
-	Changes map[string]int `json:"changes"`
+	Count_ int  `json:"count"`
+	State_ bool `json:"state"`
 }
 
 func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-	if !events.Matches(*e, lwm2m.DigitalInput) {
+	if !events.Matches(e, lwm2m.DigitalInput) {
 		return false, events.ErrNoMatch
 	}
 
@@ -51,8 +49,8 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 	previousCount := c.Count_
 	previousState := c.State_
 
-	countRec, countOk := e.Pack.GetRecord(senml.FindByName(DigitalInputCounter))
-	stateRec, stateOk := e.Pack.GetRecord(senml.FindByName(DigitalInputState))
+	countRec, countOk := e.Pack().GetRecord(senml.FindByName(DigitalInputCounter))
+	stateRec, stateOk := e.Pack().GetRecord(senml.FindByName(DigitalInputState))
 
 	if countOk && countRec.Value != nil && stateRec.BoolValue != nil {
 		count := *countRec.Value
@@ -73,8 +71,8 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 		}
 	}
 
-	countTs, countTimeOk := e.Pack.GetTime(senml.FindByName(DigitalInputCounter))
-	stateTs, stateTimeOk := e.Pack.GetTime(senml.FindByName(DigitalInputState))
+	countTs, countTimeOk := e.Pack().GetTime(senml.FindByName(DigitalInputCounter))
+	stateTs, stateTimeOk := e.Pack().GetTime(senml.FindByName(DigitalInputState))
 
 	changed := false
 	errs := make([]error, 0)
@@ -85,11 +83,6 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 	}
 
 	if stateTimeOk && previousState != c.State_ {
-		if c.State_ {
-			day := stateTs.Format("20060102")
-			c.Changes[day]++
-		}
-
 		stateValue := map[bool]float64{true: 1.0, false: 0.0}
 		errs = append(errs, onchange("state", stateValue[c.State_], stateTs))
 		changed = true

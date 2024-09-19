@@ -31,18 +31,18 @@ type building struct {
 }
 
 func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-	if !events.Matches(*e, lwm2m.Power) && !events.Matches(*e, lwm2m.Energy) {
+	if !events.Matches(e, lwm2m.Power) && !events.Matches(e, lwm2m.Energy) {
 		return false, events.ErrNoMatch
 	}
 
 	const SensorValue string = "5700"
-	r, ok := e.Pack.GetRecord(senml.FindByName(SensorValue))
-	ts, timeOk := e.Pack.GetTime(senml.FindByName(SensorValue))
+	r, ok := e.Pack().GetRecord(senml.FindByName(SensorValue))
+	ts, timeOk := e.Pack().GetTime(senml.FindByName(SensorValue))
 
 	if ok && timeOk && r.Value != nil {
 		value := *r.Value
 
-		if events.Matches(*e, lwm2m.Power) {
+		if events.Matches(e, lwm2m.Power) {
 			previousValue := b.Power
 			value = value / 1000.0 // convert from Watt to kW
 			b.Power = value
@@ -51,7 +51,7 @@ func (b *building) Handle(ctx context.Context, e *events.MessageAccepted, onchan
 				err := onchange("power", value, ts)
 				return true, err
 			}
-		} else if events.Matches(*e, lwm2m.Energy) {
+		} else if events.Matches(e, lwm2m.Energy) {
 			previousValue := b.Energy
 			value = value / 3600000.0 // convert from Joule to kWh
 			b.Energy = value

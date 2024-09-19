@@ -80,6 +80,9 @@ func New(config string, current float64) (Level, error) {
 	lvl.Current_ = current
 	if isNotZero(lvl.maxLevel) {
 		pct := math.Min((lvl.Current_*100.0)/lvl.maxLevel, 100.0)
+		if pct < 0 {
+			pct = 0
+		}
 		lvl.Percent_ = &pct
 	}
 
@@ -108,11 +111,11 @@ func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 	log := logging.GetFromContext(ctx)
 
-	if events.Matches(*e, lwm2m.Distance) {
+	if events.Matches(e, lwm2m.Distance) {
 		match = true
 	}
 
-	if events.Matches(*e, lwm2m.FillingLevel) {
+	if events.Matches(e, lwm2m.FillingLevel) {
 		match = true
 	}
 
@@ -121,12 +124,12 @@ func (l *level) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 		return false, events.ErrNoMatch
 	}
 
-	if events.Matches(*e, lwm2m.Distance) {
+	if events.Matches(e, lwm2m.Distance) {
 		log.Debug("level function matches distance")
 		return l.handleDistance(ctx, e, onchange)
 	}
 
-	if events.Matches(*e, lwm2m.FillingLevel) {
+	if events.Matches(e, lwm2m.FillingLevel) {
 		log.Debug("level function matches filling level")
 		return l.handleFillingLevel(ctx, e, onchange)
 	}
@@ -142,9 +145,9 @@ func (l *level) handleFillingLevel(ctx context.Context, e *events.MessageAccepte
 		HighThreshold           string = "4"
 	)
 
-	percent, percentOk := e.Pack.GetRecord(senml.FindByName(ActualFillingPercentage))
-	level, levelOk := e.Pack.GetRecord(senml.FindByName(ActualFillingLevel))
-	highThreshold, highThresholdOk := e.Pack.GetValue(senml.FindByName(HighThreshold))
+	percent, percentOk := e.Pack().GetRecord(senml.FindByName(ActualFillingPercentage))
+	level, levelOk := e.Pack().GetRecord(senml.FindByName(ActualFillingLevel))
+	highThreshold, highThresholdOk := e.Pack().GetValue(senml.FindByName(HighThreshold))
 
 	if !percentOk && !levelOk {
 		return false, fmt.Errorf("could not find record for actual filling percentage or actual filling level in fillingLevel pack")
@@ -252,7 +255,7 @@ func (l *level) handleDistance(ctx context.Context, e *events.MessageAccepted, o
 
 	log := logging.GetFromContext(ctx)
 
-	sensorValue, ok := e.Pack.GetRecord(senml.FindByName(SensorValue))
+	sensorValue, ok := e.Pack().GetRecord(senml.FindByName(SensorValue))
 	if !ok {
 		return false, fmt.Errorf("could not find record for sensor value in distance pack")
 	}
