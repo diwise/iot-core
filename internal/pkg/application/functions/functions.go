@@ -105,7 +105,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 	// TODO: We need to be able to have tenant info before the first packet arrives,
 	// 	     so this lazy init version wont work in the long run ...
-	if tenant, ok := e.Pack.GetStringValue(senml.FindByName("tenant")); ok {
+	if tenant, ok := e.Pack().GetStringValue(senml.FindByName("tenant")); ok {
 		// Temporary fix to force an update the first time a function is called
 		if f.Tenant == "" {
 			log.Debug("add tenant to function")
@@ -114,7 +114,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		}
 	}
 
-	if source, ok := e.Pack.GetStringValue(senml.FindByName("source")); ok {
+	if source, ok := e.Pack().GetStringValue(senml.FindByName("source")); ok {
 		// Temporary fix to force an update the first time a function is called
 		if f.Source == "" {
 			log.Debug("add source to function")
@@ -123,7 +123,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		}
 	}
 
-	if lat, lon, ok := e.Pack.GetLatLon(); ok {
+	if lat, lon, ok := e.Pack().GetLatLon(); ok {
 		if f.Location == nil {
 			log.Debug("add location to function")
 			f.Location = &location{

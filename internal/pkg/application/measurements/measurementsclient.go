@@ -28,13 +28,26 @@ type measurementsClient struct {
 
 type MeasurementsClient interface {
 	MaxValueFinder
+	CountBoolValueFinder
 }
 
 type MaxValueFinder interface {
 	GetMaxValue(ctx context.Context, measurmentID string) (float64, error)
 }
 
+type CountBoolValueFinder interface {
+	GetCountTrueValues(ctx context.Context, measurmentID string, timeAt, endTimeAt time.Time) (float64, error)
+}
+
+type meta struct {
+	TotalRecords uint64  `json:"totalRecords"`
+	Offset       *uint64 `json:"offset,omitempty"`
+	Limit        *uint64 `json:"limit,omitempty"`
+	Count        *uint64 `json:"count,omitempty"`
+}
+
 type jsonApiResponse struct {
+	Meta *meta           `json:"meta,omitempty"`
 	Data json.RawMessage `json:"data"`
 }
 
@@ -85,6 +98,25 @@ func (c measurementsClient) GetMaxValue(ctx context.Context, measurmentID string
 	}
 
 	return *aggrResult.Maximum, nil
+}
+
+func (c measurementsClient) GetCountTrueValues(ctx context.Context, measurmentID string, timeAt, endTimeAt time.Time) (float64, error) {
+	params := url.Values{}
+	params.Add("id", measurmentID)
+	params.Add("vb", "true")
+	params.Add("limit", "1")
+	params.Add("timeAt", timeAt.UTC().Format(time.RFC3339))
+	params.Add("endTimeAt", endTimeAt.UTC().Format(time.RFC3339))
+	params.Add("timeRel", "between")
+
+	jar, err := c.getApiResponse(ctx, params)
+	if err != nil {
+		return 0.0, err
+	}
+	if jar.Meta == nil {
+		return 0.0, fmt.Errorf("no meta data found")
+	}
+	return float64(jar.Meta.TotalRecords), nil
 }
 
 func (c measurementsClient) getAggrValue(ctx context.Context, measurmentID string, aggrMethods ...string) (*AggrResult, error) {

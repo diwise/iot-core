@@ -37,7 +37,7 @@ type counter struct {
 }
 
 func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
-	if !events.Matches(*e, lwm2m.DigitalInput) {
+	if !events.Matches(e, lwm2m.DigitalInput) {
 		return false, events.ErrNoMatch
 	}
 
@@ -49,8 +49,8 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 	previousCount := c.Count_
 	previousState := c.State_
 
-	countRec, countOk := e.Pack.GetRecord(senml.FindByName(DigitalInputCounter))
-	stateRec, stateOk := e.Pack.GetRecord(senml.FindByName(DigitalInputState))
+	countRec, countOk := e.Pack().GetRecord(senml.FindByName(DigitalInputCounter))
+	stateRec, stateOk := e.Pack().GetRecord(senml.FindByName(DigitalInputState))
 
 	if countOk && countRec.Value != nil && stateRec.BoolValue != nil {
 		count := *countRec.Value
@@ -71,8 +71,8 @@ func (c *counter) Handle(ctx context.Context, e *events.MessageAccepted, onchang
 		}
 	}
 
-	countTs, countTimeOk := e.Pack.GetTime(senml.FindByName(DigitalInputCounter))
-	stateTs, stateTimeOk := e.Pack.GetTime(senml.FindByName(DigitalInputState))
+	countTs, countTimeOk := e.Pack().GetTime(senml.FindByName(DigitalInputCounter))
+	stateTs, stateTimeOk := e.Pack().GetTime(senml.FindByName(DigitalInputState))
 
 	changed := false
 	errs := make([]error, 0)
