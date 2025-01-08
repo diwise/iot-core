@@ -15,6 +15,7 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
+//go:generate moq -rm -out iotcore_mock.go . App
 type App interface {
 	MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error
 	MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)

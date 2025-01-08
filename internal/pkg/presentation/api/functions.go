@@ -1,5 +1,5 @@
 package api
-
+/*
 import (
 	"context"
 	"encoding/json"
@@ -123,3 +123,4 @@ type HistoryResponse struct {
 	EndTime   time.Time            `json:"endTime"`
 	Values    []functions.LogValue `json:"values"`
 }
+*/

@@ -21,6 +21,7 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
+//go:generate moq -rm -out registry_mock.go . Registry
 type Registry interface {
 	Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error)
 	Get(ctx context.Context, functionID string) (Function, error)

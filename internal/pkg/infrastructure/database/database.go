@@ -40,6 +40,17 @@ func (c Config) ConnStr() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", c.user, c.password, c.host, c.port, c.dbname, c.sslmode)
 }
 
+func NewConfig(host, user, password, port, dbname, sslmode string) Config {
+	return Config{
+		host:     host,
+		user:     user,
+		password: password,
+		port:     port,
+		dbname:   dbname,
+		sslmode:  sslmode,
+	}
+}	
+
 func LoadConfiguration(ctx context.Context) Config {
 	return Config{
 		host:     env.GetVariableOrDefault(ctx, "POSTGRES_HOST", ""),

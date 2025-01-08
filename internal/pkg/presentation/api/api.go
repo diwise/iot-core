@@ -2,6 +2,45 @@ package api
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+
+	"github.com/diwise/iot-core/internal/pkg/presentation/api/auth"
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
+)
+
+func RegisterHandlers(ctx context.Context, serviceName string, rootMux *http.ServeMux, policies io.Reader) error {
+	log := logging.GetFromContext(ctx)
+
+	authenticator, err := auth.NewAuthenticator(ctx, policies)
+	if err != nil {
+		return fmt.Errorf("failed to create api authenticator: %w", err)
+	}
+
+	const apiPrefix string = "/api/v0"
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /functions", NewQueryFunctionsHandler(log))
+
+	routeGroup := http.StripPrefix(apiPrefix, mux)
+	rootMux.Handle("GET "+apiPrefix+"/", authenticator(routeGroup))
+
+	return nil
+}
+
+func NewQueryFunctionsHandler(log *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+/*
+
+
+import (
+	"context"
 	"net/http"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
@@ -43,3 +82,4 @@ type api struct {
 func (a *api) Router() *chi.Mux {
 	return a.router
 }
+*/
