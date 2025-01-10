@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/diwise/iot-core/internal/pkg/application/decorators"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
@@ -21,6 +22,8 @@ var ErrCouldNotFindDevice = fmt.Errorf("could not find device")
 type App interface {
 	MessageAccepted(ctx context.Context, evt events.MessageAccepted) error
 	MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
+
+	Register(ctx context.Context, s functions.Setting) error
 	Query(ctx context.Context, params map[string]any) ([]functions.Function, error)
 }
 
@@ -40,8 +43,44 @@ func New(client client.DeviceManagementClient, measurementsClient measurements.M
 	}
 }
 
+func (a *app) Register(ctx context.Context, s functions.Setting) error {
+	log := logging.GetFromContext(ctx)
+
+	_, err := a.devMgmtClient.FindDeviceFromInternalID(ctx, s.DeviceID)
+	if err != nil {
+		log.Debug(fmt.Sprintf("could not find device with internalID %s", s.DeviceID), "err", err.Error())
+		return fmt.Errorf("could not find device with internalID %s", s.DeviceID)
+	}
+
+	err = a.registry.Add(ctx, s)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (a *app) Query(ctx context.Context, params map[string]any) ([]functions.Function, error) {
-	return a.registry.Find(ctx, functions.MatchAll())
+	matchers := make([]functions.RegistryMatcherFunc, 0)
+
+	if len(params) == 0 {
+		matchers = append(matchers, functions.MatchAll())
+	}
+
+	for k, v := range params {
+		switch strings.ToLower(k) {
+		case "deviceid":
+			matchers = append(matchers, functions.MatchSensor(v.(string)))
+		case "id":
+			matchers = append(matchers, functions.MatchID(v.(string)))
+		}
+	}
+
+	if len(matchers) == 0 {
+		return []functions.Function{}, nil
+	}
+
+	return a.registry.Find(ctx, matchers...)
 }
 
 func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
@@ -114,7 +153,7 @@ func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted) e
 
 		if len(changes) > 0 {
 			for _, change := range changes {
-				err := a.registry.Add(ctx, f.ID(), change.Name, change.Value, change.Timestamp)
+				err := a.registry.AddValue(ctx, f.ID(), change.Name, change.Value, change.Timestamp)
 				if err != nil {
 					errs = append(errs, err)
 				}

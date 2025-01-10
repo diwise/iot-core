@@ -27,7 +27,9 @@ type Registry interface {
 	Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error)
 	Get(ctx context.Context, id string) (Function, error)
 	Update(ctx context.Context, id string, fn Function) error
-	Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
+	Add(ctx context.Context, s Setting) error
+
+	AddValue(ctx context.Context, id, label string, value float64, timestamp time.Time) error
 }
 
 //go:generate moq -rm -out registry_mock.go . RegistryStorer
@@ -75,8 +77,38 @@ func NewRegistry(ctx context.Context, input io.Reader, rs RegistryStorer) (Regis
 	return r, nil
 }
 
-func (r *registry) Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
-	return r.storer.Add(ctx, id, label, value, timestamp)
+func (r *registry) Add(ctx context.Context, s Setting) error {
+	fn := NewFunction(s)
+	if fn == nil {
+		return errors.New("no such function")
+	}
+
+	return r.register(ctx, fn)
+}
+
+func (r *registry) register(ctx context.Context, fn Function) error {
+
+	r.funcs[fn.DeviceID()] = fn
+
+	if r.funcs[fn.DeviceID()] != nil {
+		state, err := r.storer.LoadState(ctx, fn.ID())
+		if err != nil {
+			return err
+		}
+
+		if state == nil {
+			return nil
+		}
+
+		//TODO: support multiple functions for each device
+
+		err = json.Unmarshal(state, r.funcs[fn.DeviceID()])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *registry) Update(ctx context.Context, id string, fn Function) error {
@@ -222,45 +254,46 @@ func newDigitalInput(s Setting) Function {
 }
 
 func (r *registry) init(ctx context.Context) error {
-
 	settings, err := r.storer.GetSettings(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, s := range settings {
-
-		switch s.Type {
-		case counters.FunctionTypeName:
-			r.funcs[s.DeviceID] = newCounter(s)
-		case levels.FunctionTypeName:
-			r.funcs[s.DeviceID] = newLevel(s)
-		case presences.FunctionTypeName:
-			r.funcs[s.DeviceID] = newPresence(s)
-		case timers.FunctionTypeName:
-			r.funcs[s.DeviceID] = newTimer(s)
-		case waterqualities.FunctionTypeName:
-			r.funcs[s.DeviceID] = newWaterQuality(s)
-		case buildings.FunctionTypeName:
-			r.funcs[s.DeviceID] = newBuilding(s)
-		case airquality.FunctionTypeName:
-			r.funcs[s.DeviceID] = newAirQuality(s)
-		case stopwatch.FunctionTypeName:
-			r.funcs[s.DeviceID] = newStopwatch(s)
-		case digitalinput.FunctionTypeName:
-			r.funcs[s.DeviceID] = newDigitalInput(s)
+		fn := NewFunction(s)
+		if fn == nil {
+			continue
 		}
 
-		if r.funcs[s.DeviceID] != nil {
-			state, err := r.storer.LoadState(ctx, s.ID)
-			if err != nil {
-				continue
-			}
-			err = json.Unmarshal(state, r.funcs[s.DeviceID])
-			if err != nil {
-				continue
-			}
+		err = r.register(ctx, fn)
+		if err != nil {
+			continue
 		}
+	}
+
+	return nil
+}
+
+func NewFunction(s Setting) Function {
+	switch s.Type {
+	case counters.FunctionTypeName:
+		return newCounter(s)
+	case levels.FunctionTypeName:
+		return newLevel(s)
+	case presences.FunctionTypeName:
+		return newPresence(s)
+	case timers.FunctionTypeName:
+		return newTimer(s)
+	case waterqualities.FunctionTypeName:
+		return newWaterQuality(s)
+	case buildings.FunctionTypeName:
+		return newBuilding(s)
+	case airquality.FunctionTypeName:
+		return newAirQuality(s)
+	case stopwatch.FunctionTypeName:
+		return newStopwatch(s)
+	case digitalinput.FunctionTypeName:
+		return newDigitalInput(s)
 	}
 
 	return nil
@@ -292,6 +325,10 @@ func (r *registry) Get(ctx context.Context, functionID string) (Function, error)
 	return nil, errors.New("no such function")
 }
 
+func (r *registry) AddValue(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+	return r.storer.Add(ctx, id, label, value, timestamp)
+}
+
 type RegistryMatcherFunc func(r *registry) []Function
 
 func MatchAll() RegistryMatcherFunc {
@@ -312,5 +349,17 @@ func MatchSensor(sensorId string) RegistryMatcherFunc {
 		}
 
 		return []Function{f}
+	}
+}
+
+func MatchID(id string) RegistryMatcherFunc {
+	return func(r *registry) []Function {
+		for _, v := range r.funcs {
+			if v.ID() == id {
+				return []Function{v}
+			}
+		}
+
+		return []Function{}
 	}
 }

@@ -29,6 +29,9 @@ var _ App = &AppMock{}
 //			QueryFunc: func(ctx context.Context, params map[string]any) ([]functions.Function, error) {
 //				panic("mock out the Query method")
 //			},
+//			RegisterFunc: func(ctx context.Context, s functions.Setting) error {
+//				panic("mock out the Register method")
+//			},
 //		}
 //
 //		// use mockedApp in code that requires App
@@ -44,6 +47,9 @@ type AppMock struct {
 
 	// QueryFunc mocks the Query method.
 	QueryFunc func(ctx context.Context, params map[string]any) ([]functions.Function, error)
+
+	// RegisterFunc mocks the Register method.
+	RegisterFunc func(ctx context.Context, s functions.Setting) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -68,10 +74,18 @@ type AppMock struct {
 			// Params is the params argument value.
 			Params map[string]any
 		}
+		// Register holds details about calls to the Register method.
+		Register []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// S is the s argument value.
+			S functions.Setting
+		}
 	}
 	lockMessageAccepted sync.RWMutex
 	lockMessageReceived sync.RWMutex
 	lockQuery           sync.RWMutex
+	lockRegister        sync.RWMutex
 }
 
 // MessageAccepted calls MessageAcceptedFunc.
@@ -179,5 +193,41 @@ func (mock *AppMock) QueryCalls() []struct {
 	mock.lockQuery.RLock()
 	calls = mock.calls.Query
 	mock.lockQuery.RUnlock()
+	return calls
+}
+
+// Register calls RegisterFunc.
+func (mock *AppMock) Register(ctx context.Context, s functions.Setting) error {
+	if mock.RegisterFunc == nil {
+		panic("AppMock.RegisterFunc: method is nil but App.Register was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		S   functions.Setting
+	}{
+		Ctx: ctx,
+		S:   s,
+	}
+	mock.lockRegister.Lock()
+	mock.calls.Register = append(mock.calls.Register, callInfo)
+	mock.lockRegister.Unlock()
+	return mock.RegisterFunc(ctx, s)
+}
+
+// RegisterCalls gets all the calls that were made to Register.
+// Check the length with:
+//
+//	len(mockedApp.RegisterCalls())
+func (mock *AppMock) RegisterCalls() []struct {
+	Ctx context.Context
+	S   functions.Setting
+} {
+	var calls []struct {
+		Ctx context.Context
+		S   functions.Setting
+	}
+	mock.lockRegister.RLock()
+	calls = mock.calls.Register
+	mock.lockRegister.RUnlock()
 	return calls
 }

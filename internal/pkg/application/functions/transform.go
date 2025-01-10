@@ -1,7 +1,6 @@
 package functions
 
 import (
-	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/stopwatch"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/timers"
@@ -19,10 +18,6 @@ func Transform(f Function) []senml.Pack {
 	}
 
 	switch fn.Type_ {
-	case counters.FunctionTypeName:
-		if counter, err := toCounter(f); err == nil {
-			packs = append(packs, counter)
-		}
 	case levels.FunctionTypeName:
 		if fillingLevel, err := toFillingLevel(f); err == nil {
 			packs = append(packs, fillingLevel)
@@ -38,17 +33,6 @@ func Transform(f Function) []senml.Pack {
 	}
 
 	return packs
-}
-
-func toCounter(f Function) (senml.Pack, error) {
-	fn := f.(*fnct)
-
-	n := fn.Counter.Count()
-
-	counter := lwm2m.NewDigitalInput(fn.DeviceID_, fn.Counter.State(), fn.Timestamp)
-	counter.DigitalInputCounter = &n
-
-	return lwm2m.ToPack(counter), nil
 }
 
 func toStopwatch(f Function) (senml.Pack, error) {

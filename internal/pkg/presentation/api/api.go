@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/diwise/iot-core/internal/pkg/application"
+	"github.com/diwise/iot-core/internal/pkg/application/functions"
 	"github.com/diwise/iot-core/internal/pkg/presentation/api/auth"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
@@ -25,9 +26,11 @@ func RegisterHandlers(ctx context.Context, serviceName string, rootMux *http.Ser
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /functions", NewQueryFunctionsHandler(app, log))
+	mux.HandleFunc("POST /functions", NewCreateFunctionHandler(app, log))
 
 	routeGroup := http.StripPrefix(apiPrefix, mux)
 	rootMux.Handle("GET "+apiPrefix+"/", authenticator(routeGroup))
+	rootMux.Handle("POST "+apiPrefix+"/", authenticator(routeGroup))
 
 	return nil
 }
@@ -38,15 +41,17 @@ type response struct {
 
 func write(w http.ResponseWriter, statusCode int, data any) {
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(response{Data: data})
+	if data != nil {
+		json.NewEncoder(w).Encode(response{Data: data})
+	}
 }
 
 func NewQueryFunctionsHandler(app application.App, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
-
 		ctx := r.Context()
-		f, err := app.Query(ctx, nil)
+
+		f, err := app.Query(ctx, toParams(r))
 		if err != nil {
 			log.Error("failed to query functions", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -57,50 +62,47 @@ func NewQueryFunctionsHandler(app application.App, log *slog.Logger) http.Handle
 	}
 }
 
-/*
+func NewCreateFunctionHandler(app application.App, log *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		ctx := r.Context()
 
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Error("failed to read request body", "error", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
-import (
-	"context"
-	"net/http"
+		setting := functions.Setting{}
+		err = json.Unmarshal(body, &setting)
+		if err != nil {
+			log.Error("failed to unmarshal request body", "error", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
-	"github.com/diwise/iot-core/internal/pkg/application/functions"
-	"github.com/go-chi/chi/v5"
-	"github.com/rs/cors"
-)
+		err = app.Register(ctx, setting)
+		if err != nil {
+			log.Error("failed to register function", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-type API interface {
-	Router() *chi.Mux
+		write(w, http.StatusOK, nil)
+	}
 }
 
-func New(ctx context.Context, registry functions.Registry) API {
-	api_ := &api{
-		router: chi.NewRouter(),
+func toParams(r *http.Request) map[string]any {
+	params := make(map[string]any)
+
+	for k, v := range r.URL.Query() {
+		if len(v) == 1 {
+			params[k] = v[0]
+		} else {
+			params[k] = v
+		}
 	}
 
-	api_.router.Use(cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowCredentials: true,
-		Debug:            false,
-	}).Handler)
-
-	// TODO: Introduce an authenticator to manage tenant access
-	api_.router.Get("/api/functions", NewQueryFunctionsHandler(ctx, registry))
-	api_.router.Get("/api/functions/{id}/history", NewQueryFunctionHistoryHandler(ctx, registry))
-
-	api_.router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
-		w.WriteHeader(http.StatusOK)
-	})
-
-	return api_
+	return params
 }
-
-type api struct {
-	router *chi.Mux
-}
-
-func (a *api) Router() *chi.Mux {
-	return a.router
-}
-*/
