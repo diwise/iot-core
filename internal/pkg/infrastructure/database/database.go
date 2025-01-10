@@ -2,10 +2,14 @@ package database
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/diwise/iot-core/internal/pkg/application/functions"
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -13,18 +17,11 @@ import (
 
 type Storage interface {
 	Initialize(context.Context) error
-	Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
-	AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error
-	History(ctx context.Context, id, label string, lastN int) ([]LogValue, error)
+	functions.RegistryStorer
 }
 
 type impl struct {
 	db *pgxpool.Pool
-}
-
-type LogValue struct {
-	Value     float64   `json:"v"`
-	Timestamp time.Time `json:"ts"`
 }
 
 type Config struct {
@@ -49,7 +46,7 @@ func NewConfig(host, user, password, port, dbname, sslmode string) Config {
 		dbname:   dbname,
 		sslmode:  sslmode,
 	}
-}	
+}
 
 func LoadConfiguration(ctx context.Context) Config {
 	return Config{
@@ -79,28 +76,26 @@ func Connect(ctx context.Context, cfg Config) (Storage, error) {
 }
 
 func (i *impl) Initialize(ctx context.Context) error {
-	return i.createTables(ctx)
-}
-
-func (i *impl) createTables(ctx context.Context) error {
 	ddl := `
 		CREATE TABLE IF NOT EXISTS fnct (
-			id 		  TEXT PRIMARY KEY NOT NULL,
-			type 	  TEXT NOT NULL,
-			sub_type  TEXT NOT NULL,
-			tenant 	  TEXT NOT NULL,
-			source 	  TEXT NULL,
-			latitude  NUMERIC(7, 5),
-			longitude NUMERIC(7, 5)
+			id 		TEXT PRIMARY KEY NOT NULL,
+			data	JSONB NULL
 	  	);
 
 		CREATE TABLE IF NOT EXISTS fnct_history (
 			row_id 	bigserial,
-			time 	TIMESTAMPTZ NOT NULL,
+			time 	TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			fnct_id TEXT NOT NULL,
 			label 	TEXT NOT NULL,
 			value 	DOUBLE PRECISION NOT NULL,
 			FOREIGN KEY (fnct_id) REFERENCES fnct (id)
+	  	);
+
+		CREATE TABLE IF NOT EXISTS fnct_state (
+			id 		  	TEXT PRIMARY KEY NOT NULL,
+			time 		TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,						
+			state     	JSONB NULL,
+			FOREIGN KEY (id) REFERENCES fnct (id)
 	  	);
 
 		CREATE INDEX IF NOT EXISTS fnct_history_fnct_id_label_idx ON fnct_history (fnct_id, label);`
@@ -142,13 +137,88 @@ func (i *impl) createTables(ctx context.Context) error {
 	return nil
 }
 
-func (i *impl) AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
-	_, err := i.db.Exec(ctx, `
-		INSERT INTO fnct(id,type,sub_type,tenant,source,latitude,longitude) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO NOTHING;
-	`, id, fnType, subType, tenant, source, lat, lon)
+/*
+	RegistryStorer
+
+	LoadState(ctx context.Context, id string) ([]byte, error)
+	SaveState(ctx context.Context, id string, a any) error
+	AddSetting(ctx context.Context, id string, s setting) error
+	GetSettings(ctx context.Context) ([]setting, error)
+
+*/
+
+func (i *impl) LoadState(ctx context.Context, id string) ([]byte, error) {
+
+	var state json.RawMessage
+
+	err := i.db.QueryRow(ctx, "SELECT state FROM fnct_state WHERE id = $1", id).Scan(&state)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return state, err
+}
+
+func (i *impl) SaveState(ctx context.Context, id string, a any) error {
+
+	b, _ := json.Marshal(a)
+
+	args := pgx.NamedArgs{
+		"id":    id,
+		"state": json.RawMessage(b),
+	}
+
+	_, err := i.db.Exec(ctx, "INSERT INTO fnct_state (id, state) VALUES (@id, @state) ON CONFLICT (id) DO UPDATE SET state = @state;", args)
 
 	return err
 }
+
+func (i *impl) AddSetting(ctx context.Context, id string, s functions.Setting) error {
+	b, err := json.Marshal(s)
+
+	args := pgx.NamedArgs{
+		"id":   id,
+		"data": json.RawMessage(b),
+	}
+
+	_, err = i.db.Exec(ctx, "INSERT INTO fnct (id, data) VALUES (@id, @data) ON CONFLICT (id) DO UPDATE SET data = @data;", args)
+
+	return err
+}
+
+func (i *impl) GetSettings(ctx context.Context) ([]functions.Setting, error) {
+	rows, err := i.db.Query(ctx, "SELECT data FROM fnct")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	settings := make([]functions.Setting, 0)
+
+	for rows.Next() {
+		var data json.RawMessage
+		err := rows.Scan(&data)
+		if err != nil {
+			return nil, err
+		}
+
+		s := functions.Setting{}
+		err = json.Unmarshal(data, &s)
+		if err != nil {
+			return nil, err
+		}
+
+		settings = append(settings, s)
+	}
+
+	return settings, nil
+}
+
+/* values */
 
 func (i *impl) Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
 	_, err := i.db.Exec(ctx, `
@@ -158,7 +228,7 @@ func (i *impl) Add(ctx context.Context, id, label string, value float64, timesta
 	return err
 }
 
-func (i *impl) History(ctx context.Context, id, label string, lastN int) ([]LogValue, error) {
+func (i *impl) History(ctx context.Context, id, label string, lastN int) ([]functions.Value, error) {
 	rows, err := i.db.Query(ctx,
 		`SELECT time, value FROM (
 			SELECT time, value, row_id
@@ -173,7 +243,7 @@ func (i *impl) History(ctx context.Context, id, label string, lastN int) ([]LogV
 	}
 	defer rows.Close()
 
-	logValues := make([]LogValue, 0)
+	logValues := make([]functions.Value, 0)
 
 	for rows.Next() {
 		var t time.Time
@@ -182,7 +252,7 @@ func (i *impl) History(ctx context.Context, id, label string, lastN int) ([]LogV
 		if err != nil {
 			return nil, err
 		}
-		logValues = append(logValues, LogValue{Timestamp: t, Value: v})
+		logValues = append(logValues, functions.Value{Name: label, Timestamp: t, Value: v})
 	}
 
 	return logValues, nil

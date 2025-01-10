@@ -17,7 +17,6 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/functions/stopwatch"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/timers"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/waterqualities"
-	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/senml"
@@ -27,9 +26,12 @@ import (
 type Function interface {
 	ID() string
 	Name() string
+	Type() string
+	SubType() string
+	DeviceID() string
+	Tenant() string
 
-	Handle(context.Context, *events.MessageAccepted, messaging.MsgContext) error
-	History(context.Context, string, int) ([]LogValue, error)
+	Handle(context.Context, *events.MessageAccepted) (bool, []Value, error)
 }
 
 type location struct {
@@ -37,14 +39,20 @@ type location struct {
 	Longitude float64 `json:"longitude"`
 }
 
+type Value struct {
+	Name      string    `json:"n"`
+	Value     float64   `json:"v"`
+	Timestamp time.Time `json:"ts"`
+}
+
 type fnct struct {
 	ID_       string    `json:"id"`
 	Name_     string    `json:"name"`
-	Type      string    `json:"type"`
-	SubType   string    `json:"subtype"`
-	DeviceID  string    `json:"deviceID"`
+	Type_     string    `json:"type"`
+	SubType_  string    `json:"subtype"`
+	DeviceID_ string    `json:"deviceID"`
 	Location  *location `json:"location,omitempty"`
-	Tenant    string    `json:"tenant,omitempty"`
+	Tenant_   string    `json:"tenant,omitempty"`
 	Source    string    `json:"source,omitempty"`
 	OnUpdate  bool      `json:"onupdate"`
 	Timestamp time.Time `json:"timestamp,omitempty"`
@@ -60,9 +68,6 @@ type fnct struct {
 	DigitalInput digitalinput.DigitalInput   `json:"digitalInput,omitempty"`
 
 	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, error)
-
-	defaultHistoryLabel string
-	storage             database.Storage
 }
 
 func (f *fnct) ID() string {
@@ -73,26 +78,42 @@ func (f *fnct) Name() string {
 	return f.Name_
 }
 
-func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
+func (f *fnct) Type() string {
+	return f.Type_
+}
+
+func (f *fnct) SubType() string {
+	return f.SubType_
+}
+
+func (f *fnct) DeviceID() string {
+	return f.DeviceID_
+}
+
+func (f *fnct) Tenant() string {
+	return f.Tenant_
+}
+
+func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted) (bool, []Value, error) {
 	log := logging.GetFromContext(ctx)
 	log = log.With(slog.String("function_id", f.ID()), slog.String("device_id", e.DeviceID()))
 	ctx = logging.NewContextWithLogger(ctx, log)
 
+	changed := false
+	changes := make([]Value, 0)
+
 	if e.Timestamp.After(time.Now()) {
 		log.Error("ignoring messages that claim to have been accepted in the future", "timestamp", e.Timestamp.Format(time.RFC3339))
-		return nil
+		return false, nil, nil
 	}
 
-	f.DeviceID = e.DeviceID()
+	f.DeviceID_ = e.DeviceID()
 
 	onchange := func(prop string, value float64, ts time.Time) error {
 		log.Debug(fmt.Sprintf("property %s changed to %f with time %s", prop, value, ts.Format(time.RFC3339)))
 
-		err := f.storage.Add(ctx, f.ID(), prop, value, ts)
-		if err != nil {
-			log.Error("failed to add values to database", "err", err.Error())
-			return err
-		}
+		changed = true
+		changes = append(changes, Value{Name: prop, Value: value, Timestamp: ts})
 
 		if ts.After(f.Timestamp) {
 			f.Timestamp = ts.UTC()
@@ -101,15 +122,21 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		return nil
 	}
 
-	changed := false
+	changed, err := f.handle(ctx, e, onchange)
+	if err != nil {
+		if errors.Is(err, events.ErrNoMatch) {
+			return false, nil, nil
+		}
+		return false, nil, err
+	}
 
 	// TODO: We need to be able to have tenant info before the first packet arrives,
 	// 	     so this lazy init version wont work in the long run ...
 	if tenant, ok := e.Pack().GetStringValue(senml.FindByName("tenant")); ok {
 		// Temporary fix to force an update the first time a function is called
-		if f.Tenant == "" {
+		if f.Tenant_ == "" {
 			log.Debug("add tenant to function")
-			f.Tenant = tenant
+			f.Tenant_ = tenant
 			changed = true
 		}
 	}
@@ -134,80 +161,18 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 		}
 	}
 
-	changed, err := f.handle(ctx, e, onchange)
-	if err != nil {
-		if errors.Is(err, events.ErrNoMatch) {
-			log.Debug(fmt.Sprintf("%s function should not handle this message type (%s)", f.Type, e.ObjectID()))
-			return nil
-		}
-		return err
-	}
-
-	if changed || f.OnUpdate {
-		if !changed {
-			f.Timestamp = e.Timestamp.UTC()
-		}
-
-		fumsg := NewFunctionUpdatedMessage(f)
-
-		log.Debug("publishing message",
-			slog.String("body", string(fumsg.Body())),
-			slog.String("topic", fumsg.TopicName()),
-			slog.String("content-type", fumsg.ContentType()),
-			slog.Bool("changed", changed),
-			slog.Bool("onupdate", f.OnUpdate))
-
-		err := msgctx.PublishOnTopic(ctx, fumsg)
-		if err != nil {
-			return err
-		}
-	} else {
-		log.Debug(fmt.Sprintf("no message published, change is %t, onUpdate %t", changed, f.OnUpdate))
-	}
-
-	log.Debug(fmt.Sprintf("function %s handled incoming message.accepted of type %s, change is %t, onUpdate is %t", f.Type, e.ObjectID(), changed, f.OnUpdate))
-
-	return nil
+	return changed || f.OnUpdate, changes, nil
 }
 
-func (f *fnct) History(ctx context.Context, label string, lastN int) ([]LogValue, error) {
-	if label == "" {
-		label = f.defaultHistoryLabel
-	}
-
-	lv, err := f.storage.History(ctx, f.ID(), label, lastN)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(lv) == 0 {
-		return []LogValue{}, nil
-	}
-
-	loggedValues := make([]LogValue, len(lv))
-	for i, v := range lv {
-		loggedValues[i] = LogValue{Timestamp: v.Timestamp, Value: v.Value}
-	}
-
-	return loggedValues, nil
-}
-
-func NewFunctionUpdatedMessage(f *fnct) messaging.TopicMessage {
+func NewFunctionUpdatedMessage(f Function) messaging.TopicMessage {
 	subType := ""
-	if len(f.SubType) > 0 {
-		subType = fmt.Sprintf(".%s", f.SubType)
+
+	if len(f.SubType()) > 0 {
+		subType = fmt.Sprintf(".%s", f.SubType())
 	}
 
-	if f.Timestamp.IsZero() {
-		f.Timestamp = time.Now().UTC()
-	}
+	contentType := strings.ToLower(fmt.Sprintf("application/vnd.diwise.%s%s+json", f.Type(), subType))
+	m, _ := messaging.NewTopicMessageJSON("function.updated", contentType, f)
 
-	contentType := strings.ToLower(fmt.Sprintf("application/vnd.diwise.%s%s+json", f.Type, subType))
-	m, _ := messaging.NewTopicMessageJSON("function.updated", contentType, *f)
 	return m
-}
-
-type LogValue struct {
-	Value     float64   `json:"v"`
-	Timestamp time.Time `json:"ts"`
 }

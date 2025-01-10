@@ -2,9 +2,9 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
-	"sync"
 
 	"github.com/diwise/iot-core/internal/pkg/application/decorators"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
@@ -15,57 +15,34 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
+var ErrCouldNotFindDevice = fmt.Errorf("could not find device")
+
 //go:generate moq -rm -out iotcore_mock.go . App
 type App interface {
-	MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error
+	MessageAccepted(ctx context.Context, evt events.MessageAccepted) error
 	MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
+	Query(ctx context.Context, params map[string]any) ([]functions.Function, error)
 }
 
 type app struct {
-	client             client.DeviceManagementClient
+	devMgmtClient      client.DeviceManagementClient
 	measurementsClient measurements.MeasurementsClient
-	fnctRegistry       functions.Registry
-	mu                 sync.Mutex
+	registry           functions.Registry
+	msgCtx             messaging.MsgContext
 }
 
-func New(client client.DeviceManagementClient, measurementsClient measurements.MeasurementsClient, functionRegistry functions.Registry) App {
+func New(client client.DeviceManagementClient, measurementsClient measurements.MeasurementsClient, functionRegistry functions.Registry, msgCtx messaging.MsgContext) App {
 	return &app{
-		client:             client,
-		fnctRegistry:       functionRegistry,
+		devMgmtClient:      client,
+		registry:           functionRegistry,
 		measurementsClient: measurementsClient,
+		msgCtx:             msgCtx,
 	}
 }
 
-func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
-	if evt.Error() != nil {
-		return evt.Error()
-	}
-
-	logger := logging.GetFromContext(ctx)
-
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	matchingFunctions, _ := a.fnctRegistry.Find(ctx, functions.MatchSensor(evt.DeviceID()))
-	matchingCount := len(matchingFunctions)
-
-	if matchingCount == 0 {
-		logger.Debug("no matching functions found")
-		return nil
-	}
-
-	logger.Debug("found matching functions", "count", matchingCount)
-
-	for _, f := range matchingFunctions {
-		if err := f.Handle(ctx, &evt, msgctx); err != nil {
-			return err
-		}
-	}
-
-	return nil
+func (a *app) Query(ctx context.Context, params map[string]any) ([]functions.Function, error) {
+	return a.registry.Find(ctx, functions.MatchAll())
 }
-
-var ErrCouldNotFindDevice = fmt.Errorf("could not find device")
 
 func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
 	if msg.Error() != nil {
@@ -75,7 +52,7 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 	log := logging.GetFromContext(ctx)
 	log.Debug(fmt.Sprintf("received message of type %s for device %s", msg.ContentType(), msg.DeviceID()), slog.String("body", string(msg.Body())))
 
-	device, err := a.client.FindDeviceFromInternalID(ctx, msg.DeviceID())
+	device, err := a.devMgmtClient.FindDeviceFromInternalID(ctx, msg.DeviceID())
 	if err != nil {
 		log.Debug(fmt.Sprintf("could not find device with internalID %s", msg.DeviceID()), "err", err.Error())
 		return nil, ErrCouldNotFindDevice
@@ -103,4 +80,64 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 	log.Debug(fmt.Sprintf("message.accepted created for device %s with object type %s", ma.DeviceID(), ma.ObjectID()), slog.String("body", string(ma.Body())))
 
 	return ma, nil
+}
+
+func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted) error {
+	if evt.Error() != nil {
+		return evt.Error()
+	}
+
+	logger := logging.GetFromContext(ctx)
+
+	matchingFunctions, _ := a.registry.Find(ctx, functions.MatchSensor(evt.DeviceID()))
+	matchingCount := len(matchingFunctions)
+
+	if matchingCount == 0 {
+		logger.Debug("no matching functions found")
+		return nil
+	}
+
+	var errs []error
+
+	for _, f := range matchingFunctions {
+		changed, changes, err := f.Handle(ctx, &evt)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		if !changed {
+			continue
+		}
+
+		a.registry.Update(ctx, f.ID(), f)
+
+		if len(changes) > 0 {
+			for _, change := range changes {
+				err := a.registry.Add(ctx, f.ID(), change.Name, change.Value, change.Timestamp)
+				if err != nil {
+					errs = append(errs, err)
+				}
+			}
+		}
+
+		err = a.msgCtx.PublishOnTopic(ctx, functions.NewFunctionUpdatedMessage(f))
+		if err != nil {
+			logger.Error("failed to publish function updated message", "err", err.Error())
+			errs = append(errs, err)
+			continue
+		}
+
+		for _, pack := range functions.Transform(f) {
+			mt := events.NewMessageTransformed(pack, events.Tenant(f.Tenant()))
+			err = a.msgCtx.PublishOnTopic(ctx, mt)
+			if err != nil {
+				logger.Error("failed to publish transformed message", "err", err.Error())
+				errs = append(errs, err)
+				continue
+			}
+		}
+	}
+
+	return errors.Join(errs...)
 }

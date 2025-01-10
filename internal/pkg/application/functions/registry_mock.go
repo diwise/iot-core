@@ -6,126 +6,301 @@ package functions
 import (
 	"context"
 	"sync"
+	"time"
 )
 
-// Ensure, that RegistryMock does implement Registry.
+// Ensure, that RegistryStorerMock does implement RegistryStorer.
 // If this is not the case, regenerate this file with moq.
-var _ Registry = &RegistryMock{}
+var _ RegistryStorer = &RegistryStorerMock{}
 
-// RegistryMock is a mock implementation of Registry.
+// RegistryStorerMock is a mock implementation of RegistryStorer.
 //
-//	func TestSomethingThatUsesRegistry(t *testing.T) {
+//	func TestSomethingThatUsesRegistryStorer(t *testing.T) {
 //
-//		// make and configure a mocked Registry
-//		mockedRegistry := &RegistryMock{
-//			FindFunc: func(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error) {
-//				panic("mock out the Find method")
+//		// make and configure a mocked RegistryStorer
+//		mockedRegistryStorer := &RegistryStorerMock{
+//			AddFunc: func(ctx context.Context, id string, label string, value float64, timestamp time.Time) error {
+//				panic("mock out the Add method")
 //			},
-//			GetFunc: func(ctx context.Context, functionID string) (Function, error) {
-//				panic("mock out the Get method")
+//			AddSettingFunc: func(ctx context.Context, id string, s Setting) error {
+//				panic("mock out the AddSetting method")
+//			},
+//			GetSettingsFunc: func(ctx context.Context) ([]Setting, error) {
+//				panic("mock out the GetSettings method")
+//			},
+//			LoadStateFunc: func(ctx context.Context, id string) ([]byte, error) {
+//				panic("mock out the LoadState method")
+//			},
+//			SaveStateFunc: func(ctx context.Context, id string, a any) error {
+//				panic("mock out the SaveState method")
 //			},
 //		}
 //
-//		// use mockedRegistry in code that requires Registry
+//		// use mockedRegistryStorer in code that requires RegistryStorer
 //		// and then make assertions.
 //
 //	}
-type RegistryMock struct {
-	// FindFunc mocks the Find method.
-	FindFunc func(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error)
+type RegistryStorerMock struct {
+	// AddFunc mocks the Add method.
+	AddFunc func(ctx context.Context, id string, label string, value float64, timestamp time.Time) error
 
-	// GetFunc mocks the Get method.
-	GetFunc func(ctx context.Context, functionID string) (Function, error)
+	// AddSettingFunc mocks the AddSetting method.
+	AddSettingFunc func(ctx context.Context, id string, s Setting) error
+
+	// GetSettingsFunc mocks the GetSettings method.
+	GetSettingsFunc func(ctx context.Context) ([]Setting, error)
+
+	// LoadStateFunc mocks the LoadState method.
+	LoadStateFunc func(ctx context.Context, id string) ([]byte, error)
+
+	// SaveStateFunc mocks the SaveState method.
+	SaveStateFunc func(ctx context.Context, id string, a any) error
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// Find holds details about calls to the Find method.
-		Find []struct {
+		// Add holds details about calls to the Add method.
+		Add []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// Matchers is the matchers argument value.
-			Matchers []RegistryMatcherFunc
+			// ID is the id argument value.
+			ID string
+			// Label is the label argument value.
+			Label string
+			// Value is the value argument value.
+			Value float64
+			// Timestamp is the timestamp argument value.
+			Timestamp time.Time
 		}
-		// Get holds details about calls to the Get method.
-		Get []struct {
+		// AddSetting holds details about calls to the AddSetting method.
+		AddSetting []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// FunctionID is the functionID argument value.
-			FunctionID string
+			// ID is the id argument value.
+			ID string
+			// S is the s argument value.
+			S Setting
+		}
+		// GetSettings holds details about calls to the GetSettings method.
+		GetSettings []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
+		// LoadState holds details about calls to the LoadState method.
+		LoadState []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ID is the id argument value.
+			ID string
+		}
+		// SaveState holds details about calls to the SaveState method.
+		SaveState []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ID is the id argument value.
+			ID string
+			// A is the a argument value.
+			A any
 		}
 	}
-	lockFind sync.RWMutex
-	lockGet  sync.RWMutex
+	lockAdd         sync.RWMutex
+	lockAddSetting  sync.RWMutex
+	lockGetSettings sync.RWMutex
+	lockLoadState   sync.RWMutex
+	lockSaveState   sync.RWMutex
 }
 
-// Find calls FindFunc.
-func (mock *RegistryMock) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error) {
-	if mock.FindFunc == nil {
-		panic("RegistryMock.FindFunc: method is nil but Registry.Find was just called")
+// Add calls AddFunc.
+func (mock *RegistryStorerMock) Add(ctx context.Context, id string, label string, value float64, timestamp time.Time) error {
+	if mock.AddFunc == nil {
+		panic("RegistryStorerMock.AddFunc: method is nil but RegistryStorer.Add was just called")
 	}
 	callInfo := struct {
-		Ctx      context.Context
-		Matchers []RegistryMatcherFunc
+		Ctx       context.Context
+		ID        string
+		Label     string
+		Value     float64
+		Timestamp time.Time
 	}{
-		Ctx:      ctx,
-		Matchers: matchers,
+		Ctx:       ctx,
+		ID:        id,
+		Label:     label,
+		Value:     value,
+		Timestamp: timestamp,
 	}
-	mock.lockFind.Lock()
-	mock.calls.Find = append(mock.calls.Find, callInfo)
-	mock.lockFind.Unlock()
-	return mock.FindFunc(ctx, matchers...)
+	mock.lockAdd.Lock()
+	mock.calls.Add = append(mock.calls.Add, callInfo)
+	mock.lockAdd.Unlock()
+	return mock.AddFunc(ctx, id, label, value, timestamp)
 }
 
-// FindCalls gets all the calls that were made to Find.
+// AddCalls gets all the calls that were made to Add.
 // Check the length with:
 //
-//	len(mockedRegistry.FindCalls())
-func (mock *RegistryMock) FindCalls() []struct {
-	Ctx      context.Context
-	Matchers []RegistryMatcherFunc
+//	len(mockedRegistryStorer.AddCalls())
+func (mock *RegistryStorerMock) AddCalls() []struct {
+	Ctx       context.Context
+	ID        string
+	Label     string
+	Value     float64
+	Timestamp time.Time
 } {
 	var calls []struct {
-		Ctx      context.Context
-		Matchers []RegistryMatcherFunc
+		Ctx       context.Context
+		ID        string
+		Label     string
+		Value     float64
+		Timestamp time.Time
 	}
-	mock.lockFind.RLock()
-	calls = mock.calls.Find
-	mock.lockFind.RUnlock()
+	mock.lockAdd.RLock()
+	calls = mock.calls.Add
+	mock.lockAdd.RUnlock()
 	return calls
 }
 
-// Get calls GetFunc.
-func (mock *RegistryMock) Get(ctx context.Context, functionID string) (Function, error) {
-	if mock.GetFunc == nil {
-		panic("RegistryMock.GetFunc: method is nil but Registry.Get was just called")
+// AddSetting calls AddSettingFunc.
+func (mock *RegistryStorerMock) AddSetting(ctx context.Context, id string, s Setting) error {
+	if mock.AddSettingFunc == nil {
+		panic("RegistryStorerMock.AddSettingFunc: method is nil but RegistryStorer.AddSetting was just called")
 	}
 	callInfo := struct {
-		Ctx        context.Context
-		FunctionID string
+		Ctx context.Context
+		ID  string
+		S   Setting
 	}{
-		Ctx:        ctx,
-		FunctionID: functionID,
+		Ctx: ctx,
+		ID:  id,
+		S:   s,
 	}
-	mock.lockGet.Lock()
-	mock.calls.Get = append(mock.calls.Get, callInfo)
-	mock.lockGet.Unlock()
-	return mock.GetFunc(ctx, functionID)
+	mock.lockAddSetting.Lock()
+	mock.calls.AddSetting = append(mock.calls.AddSetting, callInfo)
+	mock.lockAddSetting.Unlock()
+	return mock.AddSettingFunc(ctx, id, s)
 }
 
-// GetCalls gets all the calls that were made to Get.
+// AddSettingCalls gets all the calls that were made to AddSetting.
 // Check the length with:
 //
-//	len(mockedRegistry.GetCalls())
-func (mock *RegistryMock) GetCalls() []struct {
-	Ctx        context.Context
-	FunctionID string
+//	len(mockedRegistryStorer.AddSettingCalls())
+func (mock *RegistryStorerMock) AddSettingCalls() []struct {
+	Ctx context.Context
+	ID  string
+	S   Setting
 } {
 	var calls []struct {
-		Ctx        context.Context
-		FunctionID string
+		Ctx context.Context
+		ID  string
+		S   Setting
 	}
-	mock.lockGet.RLock()
-	calls = mock.calls.Get
-	mock.lockGet.RUnlock()
+	mock.lockAddSetting.RLock()
+	calls = mock.calls.AddSetting
+	mock.lockAddSetting.RUnlock()
+	return calls
+}
+
+// GetSettings calls GetSettingsFunc.
+func (mock *RegistryStorerMock) GetSettings(ctx context.Context) ([]Setting, error) {
+	if mock.GetSettingsFunc == nil {
+		panic("RegistryStorerMock.GetSettingsFunc: method is nil but RegistryStorer.GetSettings was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockGetSettings.Lock()
+	mock.calls.GetSettings = append(mock.calls.GetSettings, callInfo)
+	mock.lockGetSettings.Unlock()
+	return mock.GetSettingsFunc(ctx)
+}
+
+// GetSettingsCalls gets all the calls that were made to GetSettings.
+// Check the length with:
+//
+//	len(mockedRegistryStorer.GetSettingsCalls())
+func (mock *RegistryStorerMock) GetSettingsCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockGetSettings.RLock()
+	calls = mock.calls.GetSettings
+	mock.lockGetSettings.RUnlock()
+	return calls
+}
+
+// LoadState calls LoadStateFunc.
+func (mock *RegistryStorerMock) LoadState(ctx context.Context, id string) ([]byte, error) {
+	if mock.LoadStateFunc == nil {
+		panic("RegistryStorerMock.LoadStateFunc: method is nil but RegistryStorer.LoadState was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		ID  string
+	}{
+		Ctx: ctx,
+		ID:  id,
+	}
+	mock.lockLoadState.Lock()
+	mock.calls.LoadState = append(mock.calls.LoadState, callInfo)
+	mock.lockLoadState.Unlock()
+	return mock.LoadStateFunc(ctx, id)
+}
+
+// LoadStateCalls gets all the calls that were made to LoadState.
+// Check the length with:
+//
+//	len(mockedRegistryStorer.LoadStateCalls())
+func (mock *RegistryStorerMock) LoadStateCalls() []struct {
+	Ctx context.Context
+	ID  string
+} {
+	var calls []struct {
+		Ctx context.Context
+		ID  string
+	}
+	mock.lockLoadState.RLock()
+	calls = mock.calls.LoadState
+	mock.lockLoadState.RUnlock()
+	return calls
+}
+
+// SaveState calls SaveStateFunc.
+func (mock *RegistryStorerMock) SaveState(ctx context.Context, id string, a any) error {
+	if mock.SaveStateFunc == nil {
+		panic("RegistryStorerMock.SaveStateFunc: method is nil but RegistryStorer.SaveState was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		ID  string
+		A   any
+	}{
+		Ctx: ctx,
+		ID:  id,
+		A:   a,
+	}
+	mock.lockSaveState.Lock()
+	mock.calls.SaveState = append(mock.calls.SaveState, callInfo)
+	mock.lockSaveState.Unlock()
+	return mock.SaveStateFunc(ctx, id, a)
+}
+
+// SaveStateCalls gets all the calls that were made to SaveState.
+// Check the length with:
+//
+//	len(mockedRegistryStorer.SaveStateCalls())
+func (mock *RegistryStorerMock) SaveStateCalls() []struct {
+	Ctx context.Context
+	ID  string
+	A   any
+} {
+	var calls []struct {
+		Ctx context.Context
+		ID  string
+		A   any
+	}
+	mock.lockSaveState.RLock()
+	calls = mock.calls.SaveState
+	mock.lockSaveState.RUnlock()
 	return calls
 }

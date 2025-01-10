@@ -17,27 +17,32 @@ const FunctionTypeName = "stopwatch"
 
 type Stopwatch interface {
 	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error)
+
+	State() bool
+	Count() int32
+	Duration() *time.Duration
+	CumulativeTime() time.Duration
 }
 
-func New() *StopwatchImpl {
-	return &StopwatchImpl{
+func New() Stopwatch {
+	return &stopwatchImpl{
 		StartTime:      time.Time{},
-		CumulativeTime: 0,
+		CumulativeTime_: 0,
 	}
 }
 
-type StopwatchImpl struct {
+type stopwatchImpl struct {
 	StartTime time.Time      `json:"startTime"`
 	StopTime  *time.Time     `json:"stopTime,omitempty"`
-	Duration  *time.Duration `json:"duration,omitempty"`
+	Duration_  *time.Duration `json:"duration,omitempty"`
 
-	State bool  `json:"state"`
-	Count int32 `json:"count"`
+	State_ bool  `json:"state"`
+	Count_ int32 `json:"count"`
 
-	CumulativeTime time.Duration `json:"cumulativeTime"`
+	CumulativeTime_ time.Duration `json:"cumulativeTime"`
 }
 
-func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
+func (sw *stopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	var err error
 	var stateChanged bool = false
 
@@ -69,8 +74,8 @@ func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, 
 	storedState, _ := json.Marshal(sw)
 	log.Debug("handling stopwatch", slog.String("loaded_state", string(storedState)), slog.String("incoming_body", string(e.Body())))
 
-	currentState := sw.State
-	currentCount := sw.Count
+	currentState := sw.State_
+	currentCount := sw.Count_
 
 	state := *r.BoolValue
 
@@ -81,9 +86,9 @@ func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, 
 			log.Debug("Off -> On, start new stopwatch")
 
 			sw.StartTime = ts.UTC()
-			sw.State = true
+			sw.State_ = true
 			sw.StopTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
-			sw.Duration = nil
+			sw.Duration_ = nil
 
 			err = onchange("state", 0, ts)
 			if err != nil {
@@ -103,7 +108,7 @@ func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, 
 			log.Debug("On -> On, update duration")
 
 			duration := ts.Sub(sw.StartTime)
-			sw.Duration = &duration
+			sw.Duration_ = &duration
 
 			dt := duration.Seconds()
 			err := onchange("duration", dt, ts)
@@ -122,10 +127,10 @@ func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, 
 			log.Debug("On -> Off, stop stopwatch")
 
 			sw.StopTime = &ts
-			sw.State = false
+			sw.State_ = false
 			duration := ts.Sub(sw.StartTime)
-			sw.Duration = &duration
-			sw.CumulativeTime = sw.CumulativeTime + duration
+			sw.Duration_ = &duration
+			sw.CumulativeTime_ = sw.CumulativeTime_ + duration
 
 			err = onchange("state", 1, ts)
 			if err != nil {
@@ -143,7 +148,7 @@ func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, 
 				return false, err
 			}
 
-			ct := sw.CumulativeTime.Seconds()
+			ct := sw.CumulativeTime_.Seconds()
 			err = onchange("cumulativeTime", ct, ts)
 			if err != nil {
 				return false, err
@@ -161,13 +166,13 @@ func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, 
 
 	if counterOK {
 		if int32(c) != currentCount {
-			sw.Count = int32(c)
+			sw.Count_ = int32(c)
 		}
 	} else {
-		sw.Count++
+		sw.Count_++
 	}
 
-	err = onchange("count", float64(sw.Count), ts)
+	err = onchange("count", float64(sw.Count_), ts)
 	if err != nil {
 		return false, err
 	}
@@ -176,4 +181,20 @@ func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, 
 	log.Debug("handling stopwatch", slog.String("new_state", string(exitState)))
 
 	return stateChanged, nil
+}
+
+func (sw *stopwatchImpl) CumulativeTime() time.Duration {
+	return sw.CumulativeTime_
+}
+
+func (sw *stopwatchImpl) Count() int32  {
+	return sw.Count_
+}
+
+func (sw *stopwatchImpl) State() bool {
+	return sw.State_
+}
+
+func (sw *stopwatchImpl) Duration() *time.Duration {
+	return sw.Duration_
 }

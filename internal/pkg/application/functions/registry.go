@@ -3,10 +3,12 @@ package functions
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions/airquality"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/buildings"
@@ -17,127 +19,254 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/functions/stopwatch"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/timers"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/waterqualities"
-	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
-	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
+	"github.com/google/uuid"
 )
 
 //go:generate moq -rm -out registry_mock.go . Registry
 type Registry interface {
 	Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error)
-	Get(ctx context.Context, functionID string) (Function, error)
+	Get(ctx context.Context, id string) (Function, error)
+	Update(ctx context.Context, id string, fn Function) error
+	Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
 }
 
-func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage) (Registry, error) {
+//go:generate moq -rm -out registry_mock.go . RegistryStorer
+type RegistryStorer interface {
+	Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
 
-	r := &reg{
-		f: make(map[string]Function),
+	LoadState(ctx context.Context, id string) ([]byte, error)
+	SaveState(ctx context.Context, id string, a any) error
+
+	AddSetting(ctx context.Context, id string, s Setting) error
+	GetSettings(ctx context.Context) ([]Setting, error)
+}
+
+type Setting struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	SubType  string `json:"subtype"`
+	DeviceID string `json:"deviceID"`
+	OnUpdate bool   `json:"onupdate"`
+	Args     string `json:"args"`
+}
+
+type registry struct {
+	funcs  map[string]Function
+	storer RegistryStorer
+}
+
+func NewRegistry(ctx context.Context, input io.Reader, rs RegistryStorer) (Registry, error) {
+	r := &registry{
+		funcs:  make(map[string]Function),
+		storer: rs,
 	}
 
-	var err error
+	err := r.seed(ctx, input)
+	if err != nil {
+		return nil, err
+	}
 
-	numErrors := 0
-	numFunctions := 0
+	err = r.init(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	logger := logging.GetFromContext(ctx)
+	return r, nil
+}
 
+func (r *registry) Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+	return r.storer.Add(ctx, id, label, value, timestamp)
+}
+
+func (r *registry) Update(ctx context.Context, id string, fn Function) error {
+	r.funcs[fn.DeviceID()] = fn
+	return r.storer.SaveState(ctx, id, fn)
+}
+
+func (r *registry) seed(ctx context.Context, input io.Reader) error {
+	n := 0
 	scanner := bufio.NewScanner(input)
 	for scanner.Scan() {
+
+		if n == 0 {
+			n++
+			continue
+		}
+
 		line := scanner.Text()
 
 		tokens := strings.Split(line, ";")
 		tokenCount := len(tokens)
 
 		if tokenCount >= 4 {
-			f := &fnct{
-				ID_:      tokens[0],
-				Name_:    tokens[1],
+			deviceID := strings.ToLower(tokens[4])
+
+			fn := Setting{
+				ID:       tokens[0],
+				Name:     tokens[1],
 				Type:     tokens[2],
 				SubType:  tokens[3],
-				OnUpdate: tokens[5] == "true",
-				storage:  storage,
+				DeviceID: deviceID,
 			}
 
-			if f.Type == counters.FunctionTypeName {
-				f.Counter = counters.New()
-				f.handle = f.Counter.Handle
-				f.defaultHistoryLabel = "count"
-			} else if f.Type == levels.FunctionTypeName {
-				levelConfig := ""
-				if tokenCount > 5 {
-					levelConfig = tokens[5]
-				}
-				f.defaultHistoryLabel = "level"
-				l := lastLogValue(ctx, storage, f)
-
-				logger.Debug("new level created", "function_id", f.ID_, "value", l.Value)
-
-				f.Level, err = levels.New(levelConfig, l.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				f.handle = f.Level.Handle
-			} else if f.Type == presences.FunctionTypeName {
-				f.defaultHistoryLabel = "presence"
-				l := lastLogValue(ctx, storage, f)
-
-				logger.Debug("new presence created", "function_id", f.ID_, "value", l.Value)
-
-				f.Presence = presences.New(l.Value)
-				f.handle = f.Presence.Handle
-			} else if f.Type == timers.FunctionTypeName {
-				f.Timer = timers.New()
-				f.handle = f.Timer.Handle
-				f.defaultHistoryLabel = "time"
-			} else if f.Type == waterqualities.FunctionTypeName {
-				f.WaterQuality = waterqualities.New()
-				f.handle = f.WaterQuality.Handle
-				f.defaultHistoryLabel = "temperature"
-			} else if f.Type == buildings.FunctionTypeName {
-				f.Building = buildings.New()
-				f.handle = f.Building.Handle
-				f.defaultHistoryLabel = "power"
-			} else if f.Type == airquality.FunctionTypeName {
-				f.AirQuality = airquality.New()
-				f.handle = f.AirQuality.Handle
-				f.defaultHistoryLabel = "temperature"
-			} else if f.Type == stopwatch.FunctionTypeName {
-				f.Stopwatch = stopwatch.New()
-				f.handle = f.Stopwatch.Handle
-				f.defaultHistoryLabel = "duration"
-			} else if f.Type == digitalinput.FunctionTypeName {
-				f.defaultHistoryLabel = "digitalinput"
-				l := lastLogValue(ctx, storage, f)
-
-				logger.Debug("new digital input created", "function_id", f.ID_, "value", l.Value)
-
-				f.DigitalInput = digitalinput.New(l.Value)
-				f.handle = f.DigitalInput.Handle
-			} else {
-				numErrors++
-				if numErrors > 1 {
-					return nil, fmt.Errorf("unable to parse function config line: \"%s\"", line)
-				}
-				continue
+			if tokenCount == 7 {
+				fn.Args = tokens[5]
+				fn.OnUpdate = tokens[6] == "true"
 			}
 
-			storage.AddFnct(ctx, f.ID_, f.Type, f.SubType, f.Tenant, f.Source, 0, 0)
+			if tokenCount == 6 {
+				fn.OnUpdate = tokens[5] == "true"
+			}
 
-			r.f[strings.ToLower(tokens[4])] = f
-			numFunctions++
+			r.storer.AddSetting(ctx, fn.ID, fn)
 		}
 	}
 
-	logger.Info("loaded functions from config file", "count", numFunctions)
-
-	return r, nil
+	return nil
 }
 
-type reg struct {
-	f map[string]Function
+func newFnct(s Setting) *fnct {
+	if s.ID == "" {
+		s.ID = uuid.NewString()
+	}
+
+	return &fnct{
+		ID_:       s.ID,
+		Name_:     s.Name,
+		Type_:     s.Type,
+		SubType_:  s.SubType,
+		DeviceID_: s.DeviceID,
+		OnUpdate:  s.OnUpdate,
+	}
 }
 
-func (r *reg) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error) {
+func newCounter(s Setting) Function {
+	f := newFnct(s)
+	f.Counter = counters.New()
+	f.handle = f.Counter.Handle
+	//f.defaultHistoryLabel = "count"
+	return f
+}
+
+func newLevel(s Setting) Function {
+	var err error
+
+	f := newFnct(s)
+
+	//f.defaultHistoryLabel = "level"
+
+	f.Level, err = levels.New(s.Args, 0)
+	if err != nil {
+		return nil
+	}
+
+	f.handle = f.Level.Handle
+	return f
+}
+
+func newPresence(s Setting) Function {
+	f := newFnct(s)
+	//f.defaultHistoryLabel = "presence"
+	f.Presence = presences.New(0)
+	f.handle = f.Presence.Handle
+	return f
+}
+
+func newTimer(s Setting) Function {
+	f := newFnct(s)
+	f.Timer = timers.New()
+	f.handle = f.Timer.Handle
+	//f.defaultHistoryLabel = "time"
+	return f
+}
+
+func newWaterQuality(s Setting) Function {
+	f := newFnct(s)
+	f.WaterQuality = waterqualities.New()
+	f.handle = f.WaterQuality.Handle
+	//f.defaultHistoryLabel = "temperature"
+	return f
+}
+
+func newBuilding(s Setting) Function {
+	f := newFnct(s)
+	f.Building = buildings.New()
+	f.handle = f.Building.Handle
+	//f.defaultHistoryLabel = "power"
+	return f
+}
+
+func newAirQuality(s Setting) Function {
+	f := newFnct(s)
+	f.AirQuality = airquality.New()
+	f.handle = f.AirQuality.Handle
+	//f.defaultHistoryLabel = "temperature"
+	return f
+}
+
+func newStopwatch(s Setting) Function {
+	f := newFnct(s)
+	f.Stopwatch = stopwatch.New()
+	f.handle = f.Stopwatch.Handle
+	//f.defaultHistoryLabel = "duration"
+	return f
+}
+
+func newDigitalInput(s Setting) Function {
+	f := newFnct(s)
+	//f.defaultHistoryLabel = "digitalinput"
+	f.DigitalInput = digitalinput.New(0)
+	f.handle = f.DigitalInput.Handle
+	return f
+}
+
+func (r *registry) init(ctx context.Context) error {
+
+	settings, err := r.storer.GetSettings(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range settings {
+
+		switch s.Type {
+		case counters.FunctionTypeName:
+			r.funcs[s.DeviceID] = newCounter(s)
+		case levels.FunctionTypeName:
+			r.funcs[s.DeviceID] = newLevel(s)
+		case presences.FunctionTypeName:
+			r.funcs[s.DeviceID] = newPresence(s)
+		case timers.FunctionTypeName:
+			r.funcs[s.DeviceID] = newTimer(s)
+		case waterqualities.FunctionTypeName:
+			r.funcs[s.DeviceID] = newWaterQuality(s)
+		case buildings.FunctionTypeName:
+			r.funcs[s.DeviceID] = newBuilding(s)
+		case airquality.FunctionTypeName:
+			r.funcs[s.DeviceID] = newAirQuality(s)
+		case stopwatch.FunctionTypeName:
+			r.funcs[s.DeviceID] = newStopwatch(s)
+		case digitalinput.FunctionTypeName:
+			r.funcs[s.DeviceID] = newDigitalInput(s)
+		}
+
+		if r.funcs[s.DeviceID] != nil {
+			state, err := r.storer.LoadState(ctx, s.ID)
+			if err != nil {
+				continue
+			}
+			err = json.Unmarshal(state, r.funcs[s.DeviceID])
+			if err != nil {
+				continue
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *registry) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error) {
 
 	if len(matchers) == 0 {
 		return nil, fmt.Errorf("at least one matcher must be supplied to Find")
@@ -153,8 +282,8 @@ func (r *reg) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Func
 	return result, nil
 }
 
-func (r *reg) Get(ctx context.Context, functionID string) (Function, error) {
-	for _, f := range r.f {
+func (r *registry) Get(ctx context.Context, functionID string) (Function, error) {
+	for _, f := range r.funcs {
 		if f.ID() == functionID {
 			return f, nil
 		}
@@ -163,12 +292,12 @@ func (r *reg) Get(ctx context.Context, functionID string) (Function, error) {
 	return nil, errors.New("no such function")
 }
 
-type RegistryMatcherFunc func(r *reg) []Function
+type RegistryMatcherFunc func(r *registry) []Function
 
 func MatchAll() RegistryMatcherFunc {
-	return func(r *reg) []Function {
-		result := make([]Function, 0, len(r.f))
-		for _, f := range r.f {
+	return func(r *registry) []Function {
+		result := make([]Function, 0, len(r.funcs))
+		for _, f := range r.funcs {
 			result = append(result, f)
 		}
 		return result
@@ -176,23 +305,12 @@ func MatchAll() RegistryMatcherFunc {
 }
 
 func MatchSensor(sensorId string) RegistryMatcherFunc {
-	return func(r *reg) []Function {
-		f, ok := r.f[strings.ToLower(sensorId)]
+	return func(r *registry) []Function {
+		f, ok := r.funcs[strings.ToLower(sensorId)]
 		if !ok {
 			return []Function{}
 		}
 
 		return []Function{f}
 	}
-}
-
-func lastLogValue(ctx context.Context, s database.Storage, f *fnct) database.LogValue {
-	lv, err := s.History(ctx, f.ID_, f.defaultHistoryLabel, 1)
-	if err != nil {
-		return database.LogValue{}
-	}
-	if len(lv) == 0 {
-		return database.LogValue{}
-	}
-	return lv[0]
 }

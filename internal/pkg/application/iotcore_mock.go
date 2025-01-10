@@ -5,8 +5,8 @@ package application
 
 import (
 	"context"
+	"github.com/diwise/iot-core/internal/pkg/application/functions"
 	"github.com/diwise/iot-core/pkg/messaging/events"
-	"github.com/diwise/messaging-golang/pkg/messaging"
 	"sync"
 )
 
@@ -20,11 +20,14 @@ var _ App = &AppMock{}
 //
 //		// make and configure a mocked App
 //		mockedApp := &AppMock{
-//			MessageAcceptedFunc: func(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
+//			MessageAcceptedFunc: func(ctx context.Context, evt events.MessageAccepted) error {
 //				panic("mock out the MessageAccepted method")
 //			},
 //			MessageReceivedFunc: func(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error) {
 //				panic("mock out the MessageReceived method")
+//			},
+//			QueryFunc: func(ctx context.Context, params map[string]any) ([]functions.Function, error) {
+//				panic("mock out the Query method")
 //			},
 //		}
 //
@@ -34,10 +37,13 @@ var _ App = &AppMock{}
 //	}
 type AppMock struct {
 	// MessageAcceptedFunc mocks the MessageAccepted method.
-	MessageAcceptedFunc func(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error
+	MessageAcceptedFunc func(ctx context.Context, evt events.MessageAccepted) error
 
 	// MessageReceivedFunc mocks the MessageReceived method.
 	MessageReceivedFunc func(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
+
+	// QueryFunc mocks the Query method.
+	QueryFunc func(ctx context.Context, params map[string]any) ([]functions.Function, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -47,8 +53,6 @@ type AppMock struct {
 			Ctx context.Context
 			// Evt is the evt argument value.
 			Evt events.MessageAccepted
-			// Msgctx is the msgctx argument value.
-			Msgctx messaging.MsgContext
 		}
 		// MessageReceived holds details about calls to the MessageReceived method.
 		MessageReceived []struct {
@@ -57,29 +61,35 @@ type AppMock struct {
 			// Msg is the msg argument value.
 			Msg events.MessageReceived
 		}
+		// Query holds details about calls to the Query method.
+		Query []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Params is the params argument value.
+			Params map[string]any
+		}
 	}
 	lockMessageAccepted sync.RWMutex
 	lockMessageReceived sync.RWMutex
+	lockQuery           sync.RWMutex
 }
 
 // MessageAccepted calls MessageAcceptedFunc.
-func (mock *AppMock) MessageAccepted(ctx context.Context, evt events.MessageAccepted, msgctx messaging.MsgContext) error {
+func (mock *AppMock) MessageAccepted(ctx context.Context, evt events.MessageAccepted) error {
 	if mock.MessageAcceptedFunc == nil {
 		panic("AppMock.MessageAcceptedFunc: method is nil but App.MessageAccepted was just called")
 	}
 	callInfo := struct {
-		Ctx    context.Context
-		Evt    events.MessageAccepted
-		Msgctx messaging.MsgContext
+		Ctx context.Context
+		Evt events.MessageAccepted
 	}{
-		Ctx:    ctx,
-		Evt:    evt,
-		Msgctx: msgctx,
+		Ctx: ctx,
+		Evt: evt,
 	}
 	mock.lockMessageAccepted.Lock()
 	mock.calls.MessageAccepted = append(mock.calls.MessageAccepted, callInfo)
 	mock.lockMessageAccepted.Unlock()
-	return mock.MessageAcceptedFunc(ctx, evt, msgctx)
+	return mock.MessageAcceptedFunc(ctx, evt)
 }
 
 // MessageAcceptedCalls gets all the calls that were made to MessageAccepted.
@@ -87,14 +97,12 @@ func (mock *AppMock) MessageAccepted(ctx context.Context, evt events.MessageAcce
 //
 //	len(mockedApp.MessageAcceptedCalls())
 func (mock *AppMock) MessageAcceptedCalls() []struct {
-	Ctx    context.Context
-	Evt    events.MessageAccepted
-	Msgctx messaging.MsgContext
+	Ctx context.Context
+	Evt events.MessageAccepted
 } {
 	var calls []struct {
-		Ctx    context.Context
-		Evt    events.MessageAccepted
-		Msgctx messaging.MsgContext
+		Ctx context.Context
+		Evt events.MessageAccepted
 	}
 	mock.lockMessageAccepted.RLock()
 	calls = mock.calls.MessageAccepted
@@ -135,5 +143,41 @@ func (mock *AppMock) MessageReceivedCalls() []struct {
 	mock.lockMessageReceived.RLock()
 	calls = mock.calls.MessageReceived
 	mock.lockMessageReceived.RUnlock()
+	return calls
+}
+
+// Query calls QueryFunc.
+func (mock *AppMock) Query(ctx context.Context, params map[string]any) ([]functions.Function, error) {
+	if mock.QueryFunc == nil {
+		panic("AppMock.QueryFunc: method is nil but App.Query was just called")
+	}
+	callInfo := struct {
+		Ctx    context.Context
+		Params map[string]any
+	}{
+		Ctx:    ctx,
+		Params: params,
+	}
+	mock.lockQuery.Lock()
+	mock.calls.Query = append(mock.calls.Query, callInfo)
+	mock.lockQuery.Unlock()
+	return mock.QueryFunc(ctx, params)
+}
+
+// QueryCalls gets all the calls that were made to Query.
+// Check the length with:
+//
+//	len(mockedApp.QueryCalls())
+func (mock *AppMock) QueryCalls() []struct {
+	Ctx    context.Context
+	Params map[string]any
+} {
+	var calls []struct {
+		Ctx    context.Context
+		Params map[string]any
+	}
+	mock.lockQuery.RLock()
+	calls = mock.calls.Query
+	mock.lockQuery.RUnlock()
 	return calls
 }

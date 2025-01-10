@@ -30,7 +30,7 @@ type Level interface {
 func New(config string, current float64) (Level, error) {
 
 	lvl := &level{
-		cosAlpha: 1.0,
+		CosAlpha: 1.0,
 	}
 
 	config = strings.ReplaceAll(config, " ", "")
@@ -50,24 +50,24 @@ func New(config string, current float64) (Level, error) {
 					return nil, fmt.Errorf("level angle %f not within allowed [0, 90) range", angle)
 				}
 				// precalculate the cosine of the mount angle (after conversion to radians)
-				lvl.cosAlpha = math.Cos(angle * math.Pi / 180.0)
+				lvl.CosAlpha = math.Cos(angle * math.Pi / 180.0)
 			} else if pair[0] == "maxd" {
-				lvl.maxDistance, err = strconv.ParseFloat(pair[1], 64)
+				lvl.MaxDistance, err = strconv.ParseFloat(pair[1], 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse level config \"%s\": %w", s, err)
 				}
 			} else if pair[0] == "maxl" {
-				lvl.maxLevel, err = strconv.ParseFloat(pair[1], 64)
+				lvl.MaxLevel, err = strconv.ParseFloat(pair[1], 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse level config \"%s\": %w", s, err)
 				}
 			} else if pair[0] == "mean" {
-				lvl.meanLevel, err = strconv.ParseFloat(pair[1], 64)
+				lvl.MeanLevel, err = strconv.ParseFloat(pair[1], 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse level config \"%s\": %w", s, err)
 				}
 			} else if pair[0] == "offset" {
-				lvl.offsetLevel, err = strconv.ParseFloat(pair[1], 64)
+				lvl.OffsetLevel, err = strconv.ParseFloat(pair[1], 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse offset config \"%s\": %w", s, err)
 				}
@@ -78,16 +78,16 @@ func New(config string, current float64) (Level, error) {
 	}
 
 	lvl.Current_ = current
-	if isNotZero(lvl.maxLevel) {
-		pct := math.Min((lvl.Current_*100.0)/lvl.maxLevel, 100.0)
+	if isNotZero(lvl.MaxLevel) {
+		pct := math.Min((lvl.Current_*100.0)/lvl.MaxLevel, 100.0)
 		if pct < 0 {
 			pct = 0
 		}
 		lvl.Percent_ = &pct
 	}
 
-	if isNotZero(lvl.meanLevel) {
-		offset := lvl.Current_ - lvl.meanLevel
+	if isNotZero(lvl.MeanLevel) {
+		offset := lvl.Current_ - lvl.MeanLevel
 		lvl.Offset_ = &offset
 	}
 
@@ -95,11 +95,11 @@ func New(config string, current float64) (Level, error) {
 }
 
 type level struct {
-	cosAlpha    float64
-	maxDistance float64
-	maxLevel    float64
-	meanLevel   float64
-	offsetLevel float64
+	CosAlpha    float64 `json:"cosAlpha"`
+	MaxDistance float64 `json:"maxDistance"`
+	MaxLevel    float64 `json:"maxLevel"`
+	MeanLevel   float64 `json:"meanLevel"`
+	OffsetLevel float64 `json:"offsetLevel"`
 
 	Current_ float64  `json:"current"`
 	Percent_ *float64 `json:"percent,omitempty"`
@@ -157,17 +157,17 @@ func (l *level) handleFillingLevel(ctx context.Context, e *events.MessageAccepte
 
 	if highThresholdOk {
 		log.Debug("HighThreshold is included in pack, will adjust maxLevel configuration")
-		if highThreshold > l.maxLevel {
-			l.maxLevel = highThreshold
+		if highThreshold > l.MaxLevel {
+			l.MaxLevel = highThreshold
 		}
 	}
 
 	var errs []error
 	changed := false
 
-	offsetLevelIsSet := isNotZero(l.offsetLevel)
+	offsetLevelIsSet := isNotZero(l.OffsetLevel)
 	if offsetLevelIsSet {
-		log.Debug("offset is set, will not use percent value", slog.Float64("offset", l.offsetLevel))
+		log.Debug("offset is set, will not use percent value", slog.Float64("offset", l.OffsetLevel))
 	}
 
 	if percentOk && !offsetLevelIsSet {
@@ -206,9 +206,9 @@ func (l *level) handleFillingLevel(ctx context.Context, e *events.MessageAccepte
 			return false, fmt.Errorf("could not get level value in fillingLevel pack")
 		}
 
-		log.Debug("pack contains actual filling level", slog.Float64("actual_filling_level", v), slog.Float64("offset", l.offsetLevel))
+		log.Debug("pack contains actual filling level", slog.Float64("actual_filling_level", v), slog.Float64("offset", l.OffsetLevel))
 
-		v += l.offsetLevel
+		v += l.OffsetLevel
 
 		ts, timeOk := level.GetTime()
 		if !timeOk {
@@ -223,9 +223,9 @@ func (l *level) handleFillingLevel(ctx context.Context, e *events.MessageAccepte
 
 		l.Current_ = v
 
-		if isNotZero(l.maxLevel) {
+		if isNotZero(l.MaxLevel) {
 			previousPercent := l.Percent_
-			pct := math.Min((l.Current_*100.0)/l.maxLevel, 100.0)
+			pct := math.Min((l.Current_*100.0)/l.MaxLevel, 100.0)
 			l.Percent_ = &pct
 
 			if previousPercent == nil {
@@ -263,9 +263,9 @@ func (l *level) handleDistance(ctx context.Context, e *events.MessageAccepted, o
 	distance, ok := sensorValue.GetValue()
 	if !ok {
 		return false, fmt.Errorf("could not find distance value in distance pack")
-	}	
+	}
 
-	distance += l.offsetLevel
+	distance += l.OffsetLevel
 
 	previousLevel := l.Current_
 	previousPercent := l.Percent_
@@ -273,9 +273,9 @@ func (l *level) handleDistance(ctx context.Context, e *events.MessageAccepted, o
 	var errs []error
 
 	// Calculate the current level using the configured angle (if any) and round to two decimals
-	l.Current_ = math.Round((l.maxDistance-distance)*l.cosAlpha*100) / 100.0
+	l.Current_ = math.Round((l.MaxDistance-distance)*l.CosAlpha*100) / 100.0
 
-	log.Debug("calculate level using distance", slog.Float64("max_distance", l.maxDistance), slog.Float64("max_level", l.maxLevel), slog.Float64("angle", l.cosAlpha), slog.Float64("distance", distance))
+	log.Debug("calculate level using distance", slog.Float64("max_distance", l.MaxDistance), slog.Float64("max_level", l.MaxLevel), slog.Float64("angle", l.CosAlpha), slog.Float64("distance", distance))
 
 	if !hasChanged(previousLevel, l.Current_) {
 		log.Debug(fmt.Sprintf("distance has not changed (%f meters)", previousLevel))
@@ -290,8 +290,8 @@ func (l *level) handleDistance(ctx context.Context, e *events.MessageAccepted, o
 
 	errs = append(errs, onchange("level", l.Current_, ts))
 
-	if isNotZero(l.maxLevel) {
-		pct := math.Min((l.Current_*100.0)/l.maxLevel, 100.0)
+	if isNotZero(l.MaxLevel) {
+		pct := math.Min((l.Current_*100.0)/l.MaxLevel, 100.0)
 		l.Percent_ = &pct
 
 		if previousPercent == nil {
@@ -307,8 +307,8 @@ func (l *level) handleDistance(ctx context.Context, e *events.MessageAccepted, o
 		log.Info("cannot calculate percent since maxLevel is not set")
 	}
 
-	if isNotZero(l.meanLevel) {
-		offset := l.Current_ - l.meanLevel
+	if isNotZero(l.MeanLevel) {
+		offset := l.Current_ - l.MeanLevel
 		l.Offset_ = &offset
 	}
 

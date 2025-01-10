@@ -51,10 +51,7 @@ func defaultFlags() FlagMap {
 }
 
 const (
-	ThingUpdatedTopic    string = "thing.updated"
-	FunctionUpdatedTopic string = "function.updated"
-	MessageAcceptedTopic string = "message.accepted"
-	serviceName          string = "iot-core"
+	serviceName string = "iot-core"
 )
 
 var tracer = otel.Tracer(serviceName)
@@ -68,11 +65,13 @@ func main() {
 
 	configFile, err := os.Open(flags[configFilePath])
 	exitIf(err, logger, "unable to open functions configuration file")
+	defer configFile.Close()
 
 	policies, err := os.Open(flags[policiesFile])
 	exitIf(err, logger, "unable to open opa policy file")
+	defer policies.Close()
 
-	storage, err := database.Connect(ctx, database.NewConfig(flags[dbHost], flags[dbUser], flags[dbPassword], flags[dbPort], flags[dbName], flags[dbSslMode]))
+	storage, err := newStorage(ctx, flags)
 	exitIf(err, logger, "failed to connect to database")
 
 	registry, err := functions.NewRegistry(ctx, configFile, storage)
@@ -104,8 +103,19 @@ func main() {
 	exitIf(err, logger, "failed to start service runner")
 }
 
-func newMeasurementsClient(ctx context.Context, flags FlagMap) (measurements.MeasurementsClient, error) {
+func newStorage(ctx context.Context, flags FlagMap) (database.Storage, error) {
+	storage, err := database.Connect(ctx, database.NewConfig(flags[dbHost], flags[dbUser], flags[dbPassword], flags[dbPort], flags[dbName], flags[dbSslMode]))
+	if err != nil {
+		return nil, err
+	}
+	err = storage.Initialize(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage, err
+}
 
+func newMeasurementsClient(ctx context.Context, flags FlagMap) (measurements.MeasurementsClient, error) {
 	if flags[devMode] == "true" {
 		return &measurements.MeasurementsClientMock{}, nil
 	}
@@ -115,7 +125,6 @@ func newMeasurementsClient(ctx context.Context, flags FlagMap) (measurements.Mea
 }
 
 func newDevMgmtClient(ctx context.Context, flags FlagMap) (client.DeviceManagementClient, error) {
-
 	if flags[devMode] == "true" {
 		return &clientMock.DeviceManagementClientMock{}, nil
 	}
@@ -130,7 +139,7 @@ func initialize(ctx context.Context, flags FlagMap, cfg *AppConfig, policies io.
 		"timescale": func(context.Context) (string, error) { return "ok", nil },
 	}
 
-	app := application.New(cfg.devMgmtClient, cfg.measurementsClient, cfg.registry)
+	app := application.New(cfg.devMgmtClient, cfg.measurementsClient, cfg.registry, cfg.messenger)
 
 	_, runner := servicerunner.New(ctx, *cfg,
 		webserver("control", listen(flags[listenAddress]), port(flags[controlPort]),
@@ -140,7 +149,7 @@ func initialize(ctx context.Context, flags FlagMap, cfg *AppConfig, policies io.
 		}),
 		webserver("public", listen(flags[listenAddress]), port(flags[servicePort]),
 			muxinit(func(ctx context.Context, identifier string, port string, svcCfg *AppConfig, handler *http.ServeMux) error {
-				api.RegisterHandlers(ctx, serviceName, handler, policies)
+				api.RegisterHandlers(ctx, serviceName, handler, app, policies)
 				return nil
 			}),
 		),
@@ -151,7 +160,7 @@ func initialize(ctx context.Context, flags FlagMap, cfg *AppConfig, policies io.
 				return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m")
 			}, newCommandHandler(svcCfg.messenger, app))
 
-			svcCfg.messenger.RegisterTopicMessageHandler("message.accepted", newTopicMessageHandler(svcCfg.messenger, app))
+			svcCfg.messenger.RegisterTopicMessageHandler("message.accepted", newTopicMessageHandler(app))
 
 			return nil
 		}),
@@ -245,7 +254,7 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 	}
 }
 
-func newTopicMessageHandler(messenger messaging.MsgContext, app application.App) messaging.TopicMessageHandler {
+func newTopicMessageHandler(app application.App) messaging.TopicMessageHandler {
 	return func(ctx context.Context, msg messaging.IncomingTopicMessage, logger *slog.Logger) {
 		var err error
 
@@ -272,52 +281,9 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 		logger = logger.With(slog.String("device_id", evt.DeviceID()), slog.String("object_id", evt.ObjectID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
-		err = app.MessageAccepted(ctx, evt, messenger)
+		err = app.MessageAccepted(ctx, evt)
 		if err != nil {
 			logger.Error("failed to handle message", "err", err.Error())
 		}
 	}
 }
-
-/*
-	func initialize(ctx context.Context, dmClient client.DeviceManagementClient, mClient measurements.MeasurementsClient, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
-		functionsRegistry, err := functions.NewRegistry(ctx, fconfig, storage)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		app := application.New(dmClient, mClient, functionsRegistry)
-
-		msgctx.RegisterCommandHandler(func(m messaging.Message) bool {
-			return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m")
-		}, newCommandHandler(msgctx, app))
-
-		msgctx.RegisterTopicMessageHandler("message.accepted", newTopicMessageHandler(msgctx, app))
-		msgctx.RegisterTopicMessageHandler("function.updated", newFunctionUpdatedTopicMessageHandler(msgctx))
-
-		return app, api.New(ctx, functionsRegistry), nil
-	}
-*/
-
-/*
-func newFunctionUpdatedTopicMessageHandler(messenger messaging.MsgContext) messaging.TopicMessageHandler {
-	return func(ctx context.Context, msg messaging.IncomingTopicMessage, logger *slog.Logger) {
-		var err error
-
-		ctx, span := tracer.Start(ctx, "receive-function.updated")
-		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
-		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
-
-		err = functions.Transform(ctx, messenger, msg)
-		if err != nil {
-			logger.Error("failed to transform message", "err", err.Error())
-		}
-	}
-}
-
-func fatal(ctx context.Context, msg string, err error) {
-	logger := logging.GetFromContext(ctx)
-	logger.Error(msg, "err", err.Error())
-	os.Exit(1)
-}
-*/

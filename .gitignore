@@ -16,3 +16,7 @@
 
 .vscode/
 .vscode/launch.json
+
+*.test.csv
+*.test.json
+*.test.xml

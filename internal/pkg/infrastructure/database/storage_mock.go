@@ -5,6 +5,7 @@ package database
 
 import (
 	"context"
+	"github.com/diwise/iot-core/internal/pkg/application/functions"
 	"sync"
 	"time"
 )
@@ -22,14 +23,20 @@ var _ Storage = &StorageMock{}
 //			AddFunc: func(ctx context.Context, id string, label string, value float64, timestamp time.Time) error {
 //				panic("mock out the Add method")
 //			},
-//			AddFnFunc: func(ctx context.Context, id string, fnType string, subType string, tenant string, source string, lat float64, lon float64) error {
-//				panic("mock out the AddFn method")
+//			AddSettingFunc: func(ctx context.Context, id string, s functions.Setting) error {
+//				panic("mock out the AddSetting method")
 //			},
-//			HistoryFunc: func(ctx context.Context, id string, label string, lastN int) ([]LogValue, error) {
-//				panic("mock out the History method")
+//			GetSettingsFunc: func(ctx context.Context) ([]functions.Setting, error) {
+//				panic("mock out the GetSettings method")
 //			},
 //			InitializeFunc: func(contextMoqParam context.Context) error {
 //				panic("mock out the Initialize method")
+//			},
+//			LoadStateFunc: func(ctx context.Context, id string) ([]byte, error) {
+//				panic("mock out the LoadState method")
+//			},
+//			SaveStateFunc: func(ctx context.Context, id string, a any) error {
+//				panic("mock out the SaveState method")
 //			},
 //		}
 //
@@ -41,14 +48,20 @@ type StorageMock struct {
 	// AddFunc mocks the Add method.
 	AddFunc func(ctx context.Context, id string, label string, value float64, timestamp time.Time) error
 
-	// AddFnFunc mocks the AddFn method.
-	AddFnFunc func(ctx context.Context, id string, fnType string, subType string, tenant string, source string, lat float64, lon float64) error
+	// AddSettingFunc mocks the AddSetting method.
+	AddSettingFunc func(ctx context.Context, id string, s functions.Setting) error
 
-	// HistoryFunc mocks the History method.
-	HistoryFunc func(ctx context.Context, id string, label string, lastN int) ([]LogValue, error)
+	// GetSettingsFunc mocks the GetSettings method.
+	GetSettingsFunc func(ctx context.Context) ([]functions.Setting, error)
 
 	// InitializeFunc mocks the Initialize method.
 	InitializeFunc func(contextMoqParam context.Context) error
+
+	// LoadStateFunc mocks the LoadState method.
+	LoadStateFunc func(ctx context.Context, id string) ([]byte, error)
+
+	// SaveStateFunc mocks the SaveState method.
+	SaveStateFunc func(ctx context.Context, id string, a any) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -65,46 +78,48 @@ type StorageMock struct {
 			// Timestamp is the timestamp argument value.
 			Timestamp time.Time
 		}
-		// AddFn holds details about calls to the AddFn method.
-		AddFn []struct {
+		// AddSetting holds details about calls to the AddSetting method.
+		AddSetting []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 			// ID is the id argument value.
 			ID string
-			// FnType is the fnType argument value.
-			FnType string
-			// SubType is the subType argument value.
-			SubType string
-			// Tenant is the tenant argument value.
-			Tenant string
-			// Source is the source argument value.
-			Source string
-			// Lat is the lat argument value.
-			Lat float64
-			// Lon is the lon argument value.
-			Lon float64
+			// S is the s argument value.
+			S functions.Setting
 		}
-		// History holds details about calls to the History method.
-		History []struct {
+		// GetSettings holds details about calls to the GetSettings method.
+		GetSettings []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// ID is the id argument value.
-			ID string
-			// Label is the label argument value.
-			Label string
-			// LastN is the lastN argument value.
-			LastN int
 		}
 		// Initialize holds details about calls to the Initialize method.
 		Initialize []struct {
 			// ContextMoqParam is the contextMoqParam argument value.
 			ContextMoqParam context.Context
 		}
+		// LoadState holds details about calls to the LoadState method.
+		LoadState []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ID is the id argument value.
+			ID string
+		}
+		// SaveState holds details about calls to the SaveState method.
+		SaveState []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ID is the id argument value.
+			ID string
+			// A is the a argument value.
+			A any
+		}
 	}
-	lockAdd        sync.RWMutex
-	lockAddFn      sync.RWMutex
-	lockHistory    sync.RWMutex
-	lockInitialize sync.RWMutex
+	lockAdd         sync.RWMutex
+	lockAddSetting  sync.RWMutex
+	lockGetSettings sync.RWMutex
+	lockInitialize  sync.RWMutex
+	lockLoadState   sync.RWMutex
+	lockSaveState   sync.RWMutex
 }
 
 // Add calls AddFunc.
@@ -155,107 +170,75 @@ func (mock *StorageMock) AddCalls() []struct {
 	return calls
 }
 
-// AddFnct calls AddFnFunc.
-func (mock *StorageMock) AddFnct(ctx context.Context, id string, fnType string, subType string, tenant string, source string, lat float64, lon float64) error {
-	if mock.AddFnFunc == nil {
-		panic("StorageMock.AddFnFunc: method is nil but Storage.AddFn was just called")
+// AddSetting calls AddSettingFunc.
+func (mock *StorageMock) AddSetting(ctx context.Context, id string, s functions.Setting) error {
+	if mock.AddSettingFunc == nil {
+		panic("StorageMock.AddSettingFunc: method is nil but Storage.AddSetting was just called")
 	}
 	callInfo := struct {
-		Ctx     context.Context
-		ID      string
-		FnType  string
-		SubType string
-		Tenant  string
-		Source  string
-		Lat     float64
-		Lon     float64
+		Ctx context.Context
+		ID  string
+		S   functions.Setting
 	}{
-		Ctx:     ctx,
-		ID:      id,
-		FnType:  fnType,
-		SubType: subType,
-		Tenant:  tenant,
-		Source:  source,
-		Lat:     lat,
-		Lon:     lon,
+		Ctx: ctx,
+		ID:  id,
+		S:   s,
 	}
-	mock.lockAddFn.Lock()
-	mock.calls.AddFn = append(mock.calls.AddFn, callInfo)
-	mock.lockAddFn.Unlock()
-	return mock.AddFnFunc(ctx, id, fnType, subType, tenant, source, lat, lon)
+	mock.lockAddSetting.Lock()
+	mock.calls.AddSetting = append(mock.calls.AddSetting, callInfo)
+	mock.lockAddSetting.Unlock()
+	return mock.AddSettingFunc(ctx, id, s)
 }
 
-// AddFnCalls gets all the calls that were made to AddFn.
+// AddSettingCalls gets all the calls that were made to AddSetting.
 // Check the length with:
 //
-//	len(mockedStorage.AddFnCalls())
-func (mock *StorageMock) AddFnCalls() []struct {
-	Ctx     context.Context
-	ID      string
-	FnType  string
-	SubType string
-	Tenant  string
-	Source  string
-	Lat     float64
-	Lon     float64
+//	len(mockedStorage.AddSettingCalls())
+func (mock *StorageMock) AddSettingCalls() []struct {
+	Ctx context.Context
+	ID  string
+	S   functions.Setting
 } {
 	var calls []struct {
-		Ctx     context.Context
-		ID      string
-		FnType  string
-		SubType string
-		Tenant  string
-		Source  string
-		Lat     float64
-		Lon     float64
+		Ctx context.Context
+		ID  string
+		S   functions.Setting
 	}
-	mock.lockAddFn.RLock()
-	calls = mock.calls.AddFn
-	mock.lockAddFn.RUnlock()
+	mock.lockAddSetting.RLock()
+	calls = mock.calls.AddSetting
+	mock.lockAddSetting.RUnlock()
 	return calls
 }
 
-// History calls HistoryFunc.
-func (mock *StorageMock) History(ctx context.Context, id string, label string, lastN int) ([]LogValue, error) {
-	if mock.HistoryFunc == nil {
-		panic("StorageMock.HistoryFunc: method is nil but Storage.History was just called")
+// GetSettings calls GetSettingsFunc.
+func (mock *StorageMock) GetSettings(ctx context.Context) ([]functions.Setting, error) {
+	if mock.GetSettingsFunc == nil {
+		panic("StorageMock.GetSettingsFunc: method is nil but Storage.GetSettings was just called")
 	}
 	callInfo := struct {
-		Ctx   context.Context
-		ID    string
-		Label string
-		LastN int
+		Ctx context.Context
 	}{
-		Ctx:   ctx,
-		ID:    id,
-		Label: label,
-		LastN: lastN,
+		Ctx: ctx,
 	}
-	mock.lockHistory.Lock()
-	mock.calls.History = append(mock.calls.History, callInfo)
-	mock.lockHistory.Unlock()
-	return mock.HistoryFunc(ctx, id, label, lastN)
+	mock.lockGetSettings.Lock()
+	mock.calls.GetSettings = append(mock.calls.GetSettings, callInfo)
+	mock.lockGetSettings.Unlock()
+	return mock.GetSettingsFunc(ctx)
 }
 
-// HistoryCalls gets all the calls that were made to History.
+// GetSettingsCalls gets all the calls that were made to GetSettings.
 // Check the length with:
 //
-//	len(mockedStorage.HistoryCalls())
-func (mock *StorageMock) HistoryCalls() []struct {
-	Ctx   context.Context
-	ID    string
-	Label string
-	LastN int
+//	len(mockedStorage.GetSettingsCalls())
+func (mock *StorageMock) GetSettingsCalls() []struct {
+	Ctx context.Context
 } {
 	var calls []struct {
-		Ctx   context.Context
-		ID    string
-		Label string
-		LastN int
+		Ctx context.Context
 	}
-	mock.lockHistory.RLock()
-	calls = mock.calls.History
-	mock.lockHistory.RUnlock()
+	mock.lockGetSettings.RLock()
+	calls = mock.calls.GetSettings
+	mock.lockGetSettings.RUnlock()
 	return calls
 }
 
@@ -288,5 +271,81 @@ func (mock *StorageMock) InitializeCalls() []struct {
 	mock.lockInitialize.RLock()
 	calls = mock.calls.Initialize
 	mock.lockInitialize.RUnlock()
+	return calls
+}
+
+// LoadState calls LoadStateFunc.
+func (mock *StorageMock) LoadState(ctx context.Context, id string) ([]byte, error) {
+	if mock.LoadStateFunc == nil {
+		panic("StorageMock.LoadStateFunc: method is nil but Storage.LoadState was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		ID  string
+	}{
+		Ctx: ctx,
+		ID:  id,
+	}
+	mock.lockLoadState.Lock()
+	mock.calls.LoadState = append(mock.calls.LoadState, callInfo)
+	mock.lockLoadState.Unlock()
+	return mock.LoadStateFunc(ctx, id)
+}
+
+// LoadStateCalls gets all the calls that were made to LoadState.
+// Check the length with:
+//
+//	len(mockedStorage.LoadStateCalls())
+func (mock *StorageMock) LoadStateCalls() []struct {
+	Ctx context.Context
+	ID  string
+} {
+	var calls []struct {
+		Ctx context.Context
+		ID  string
+	}
+	mock.lockLoadState.RLock()
+	calls = mock.calls.LoadState
+	mock.lockLoadState.RUnlock()
+	return calls
+}
+
+// SaveState calls SaveStateFunc.
+func (mock *StorageMock) SaveState(ctx context.Context, id string, a any) error {
+	if mock.SaveStateFunc == nil {
+		panic("StorageMock.SaveStateFunc: method is nil but Storage.SaveState was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		ID  string
+		A   any
+	}{
+		Ctx: ctx,
+		ID:  id,
+		A:   a,
+	}
+	mock.lockSaveState.Lock()
+	mock.calls.SaveState = append(mock.calls.SaveState, callInfo)
+	mock.lockSaveState.Unlock()
+	return mock.SaveStateFunc(ctx, id, a)
+}
+
+// SaveStateCalls gets all the calls that were made to SaveState.
+// Check the length with:
+//
+//	len(mockedStorage.SaveStateCalls())
+func (mock *StorageMock) SaveStateCalls() []struct {
+	Ctx context.Context
+	ID  string
+	A   any
+} {
+	var calls []struct {
+		Ctx context.Context
+		ID  string
+		A   any
+	}
+	mock.lockSaveState.RLock()
+	calls = mock.calls.SaveState
+	mock.lockSaveState.RUnlock()
 	return calls
 }

@@ -1,110 +1,86 @@
 package functions
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"log/slog"
-	"time"
-
 	"github.com/diwise/iot-core/internal/pkg/application/functions/counters"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/levels"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/stopwatch"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/timers"
-	"github.com/diwise/iot-core/pkg/messaging/events"
-	"github.com/diwise/messaging-golang/pkg/messaging"
-	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
+	"github.com/diwise/senml"
 
-	lwm2m "github.com/diwise/iot-agent/pkg/lwm2m"
+	"github.com/diwise/iot-agent/pkg/lwm2m"
 )
 
-func Transform(ctx context.Context, msgctx messaging.MsgContext, msg messaging.IncomingTopicMessage) error {
-	log := logging.GetFromContext(ctx)
+func Transform(f Function) []senml.Pack {
+	packs := make([]senml.Pack, 0)
 
-	f := struct {
-		DeviceID  string    `json:"deviceID"`
-		Type      string    `json:"type"`
-		SubType   string    `json:"subType"`
-		Location  *location `json:"location,omitempty"`
-		Tenant    string    `json:"tenant"`
-		Timestamp time.Time `json:"timestamp"`
-
-		Counter *struct {
-			Count   int            `json:"count"`
-			Changes map[string]int `json:"changes"`
-		} `json:"counter,omitempty"`
-
-		Level *struct {
-			Current float64  `json:"current"`
-			Percent *float64 `json:"percent,omitempty"`
-			Offset  *float64 `json:"offset,omitempty"`
-		} `json:"level,omitempty"`
-
-		Stopwatch *struct {
-			CumulativeTime time.Duration `json:"cumulativeTime"`
-			Count          int32         `json:"count"`
-			State          bool          `json:"state"`
-		} `json:"stopwatch,omitempty"`
-
-		Timer *struct {
-			TotalDuration time.Duration  `json:"totalDuration"`
-			Duration      *time.Duration `json:"duration,omitempty"`
-		} `json:"timer,omitempty"`
-	}{}
-
-	err := json.Unmarshal(msg.Body(), &f)
-	if err != nil {
-		return err
+	fn, ok := f.(*fnct)
+	if !ok {
+		return packs
 	}
 
-	log.Debug(fmt.Sprintf("transform function.updated of type %s and subType %s for deviceID %s", f.Type, f.SubType, f.DeviceID))
-
-	pub := func(obj lwm2m.Lwm2mObject, tenant string) error {
-		log.Debug(fmt.Sprintf("pub transformed message, id: %s, urn: %s", obj.ID(), obj.ObjectURN()))
-
-		d := []events.EventDecoratorFunc{events.Tenant(tenant)}
-		if f.Location != nil {
-			d = append(d, events.Lat(f.Location.Latitude), events.Lon(f.Location.Longitude))
-		}
-
-		mt := events.NewMessageTransformed(lwm2m.ToPack(obj), d...)
-
-		return msgctx.PublishOnTopic(ctx, mt)
-	}
-
-	switch f.Type {
+	switch fn.Type_ {
 	case counters.FunctionTypeName:
-		switch f.SubType {
-		case "peoplecounter":
-			peopleCounter := lwm2m.NewPeopleCounter(f.DeviceID, f.Counter.Count, f.Timestamp)
-			err = pub(peopleCounter, f.Tenant)
+		if counter, err := toCounter(f); err == nil {
+			packs = append(packs, counter)
 		}
 	case levels.FunctionTypeName:
-		if f.Level.Percent == nil {
-			log.Debug("could not transform fillingLevel, percent is missing")
-			return nil
+		if fillingLevel, err := toFillingLevel(f); err == nil {
+			packs = append(packs, fillingLevel)
 		}
-		fillingLevel := lwm2m.NewFillingLevel(f.DeviceID, *f.Level.Percent, f.Timestamp)
-		l := int64(f.Level.Current)
-		fillingLevel.ActualFillingLevel = &l
-		err = pub(fillingLevel, f.Tenant)
 	case stopwatch.FunctionTypeName:
-		stopwatch := lwm2m.NewStopwatch(f.DeviceID, f.Stopwatch.CumulativeTime.Seconds(), f.Timestamp)
-		stopwatch.OnOff = &f.Stopwatch.State
-		stopwatch.DigitalInputCounter = f.Stopwatch.Count
-		err = pub(stopwatch, f.Tenant)
-	case timers.FunctionTypeName:
-		if f.Timer.Duration == nil {
-			log.Debug("could not transform timer, duration is missing")
-			return nil
+		if stopwatch, err := toStopwatch(f); err == nil {
+			packs = append(packs, stopwatch)
 		}
-		timer := lwm2m.NewTimer(f.DeviceID, f.Timer.Duration.Seconds(), f.Timestamp)
-		cumulativeTime := f.Timer.TotalDuration.Seconds()
-		timer.CumulativeTime = &cumulativeTime
-		err = pub(timer, f.Tenant)
-	default:
-		log.Debug("no function transformer found for function.updated message", slog.String("content_type", msg.ContentType()))
+	case timers.FunctionTypeName:
+		if timer, err := toTimer(f); err == nil {
+			packs = append(packs, timer)
+		}
 	}
 
-	return err
+	return packs
+}
+
+func toCounter(f Function) (senml.Pack, error) {
+	fn := f.(*fnct)
+
+	n := fn.Counter.Count()
+
+	counter := lwm2m.NewDigitalInput(fn.DeviceID_, fn.Counter.State(), fn.Timestamp)
+	counter.DigitalInputCounter = &n
+
+	return lwm2m.ToPack(counter), nil
+}
+
+func toStopwatch(f Function) (senml.Pack, error) {
+	fn := f.(*fnct)
+
+	state := fn.Stopwatch.State()
+
+	sw := lwm2m.NewStopwatch(fn.DeviceID_, fn.Stopwatch.CumulativeTime().Seconds(), fn.Timestamp)
+	sw.OnOff = &state
+	sw.DigitalInputCounter = fn.Stopwatch.Count()
+
+	return lwm2m.ToPack(sw), nil
+}
+
+func toFillingLevel(f Function) (senml.Pack, error) {
+	fn := f.(*fnct)
+
+	level := int64(fn.Level.Current())
+	percent := fn.Level.Percent()
+
+	fillingLevel := lwm2m.NewFillingLevel(fn.DeviceID_, percent, fn.Timestamp)
+	fillingLevel.ActualFillingLevel = &level
+
+	return lwm2m.ToPack(fillingLevel), nil
+}
+
+func toTimer(f Function) (senml.Pack, error) {
+	fn := f.(*fnct)
+
+	timer := lwm2m.NewTimer(fn.DeviceID_, fn.Timer.Duration().Seconds(), fn.Timestamp)
+	cumulativeTime := fn.Timer.TotalDuration().Seconds()
+	timer.CumulativeTime = &cumulativeTime
+
+	return lwm2m.ToPack(timer), nil
 }

@@ -16,25 +16,25 @@ func TestStopwatch(t *testing.T) {
 
 	sw := New()
 	sw.Handle(context.Background(), newState(true, "2023-02-07T21:00:00.000000Z"), func(string, float64, time.Time) error { return nil })
-	is.True(sw.State)
-	is.True(sw.Count == 1)
+	is.True(sw.State())
+	is.True(sw.Count() == 1)
 
 	sw.Handle(context.Background(), newState(true, "2023-02-07T21:00:30.000000Z"), func(string, float64, time.Time) error { return nil })
-	is.True(sw.State)
-	is.True(sw.Count == 2)
-	is.Equal(*sw.Duration, 30*time.Second)
+	is.True(sw.State())
+	is.True(sw.Count() == 2)
+	is.Equal(*sw.Duration(), 30*time.Second)
 
 	sw.Handle(context.Background(), newState(false, "2023-02-07T21:01:00.000000Z"), func(string, float64, time.Time) error { return nil })
-	is.True(sw.State == false)
-	is.True(sw.Count == 3)
+	is.True(sw.State() == false)
+	is.True(sw.Count() == 3)
 
 	sw.Handle(context.Background(), newState(true, "2023-02-07T21:02:00.000000Z"), func(string, float64, time.Time) error { return nil })
-	is.True(sw.State)
-	is.True(sw.Count == 4)
+	is.True(sw.State())
+	is.True(sw.Count() == 4)
 
 	sw.Handle(context.Background(), newState(false, "2023-02-07T21:03:00.000000Z"), func(string, float64, time.Time) error { return nil })
-	is.True(sw.State == false)
-	is.True(sw.Count == 5)
+	is.True(sw.State() == false)
+	is.True(sw.Count() == 5)
 }
 
 func newState(on bool, timestamp string) *events.MessageAccepted {

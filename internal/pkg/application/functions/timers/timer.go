@@ -15,6 +15,8 @@ type Timer interface {
 	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error)
 
 	State() bool
+	TotalDuration() time.Duration
+	Duration() *time.Duration
 }
 
 func New() Timer {
@@ -26,12 +28,14 @@ func New() Timer {
 type timer struct {
 	StartTime time.Time      `json:"startTime"`
 	EndTime   *time.Time     `json:"endTime,omitempty"`
-	Duration  *time.Duration `json:"duration,omitempty"`
+	Duration_  *time.Duration `json:"duration,omitempty"`
 	State_    bool           `json:"state"`
 
-	TotalDuration time.Duration `json:"totalDuration"`
+	TotalDuration_ time.Duration `json:"totalDuration"`
 	valueUpdater  *time.Ticker
 }
+
+
 
 func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
 	if !events.Matches(e, lwm2m.DigitalInput) {
@@ -58,7 +62,7 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 				t.State_ = state
 
 				t.EndTime = nil // setting end time and duration to nil values to ensure we don't send out the wrong ones later
-				t.Duration = nil
+				t.Duration_ = nil
 
 				err = onchange("state", 0, ts)
 				if err != nil {
@@ -70,7 +74,7 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 					return true, err
 				}
 
-				err = onchange("time", t.TotalDuration.Minutes(), ts)
+				err = onchange("time", t.TotalDuration_.Minutes(), ts)
 				if err != nil {
 					return true, err
 				}
@@ -81,7 +85,7 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 						for range t.valueUpdater.C {
 							if t.State_ {
 								now := time.Now().UTC()
-								duration := t.TotalDuration + now.Sub(t.StartTime)
+								duration := t.TotalDuration_ + now.Sub(t.StartTime)
 								err = onchange("time", duration.Minutes(), now)
 								if err != nil {
 									t.valueUpdater.Stop()
@@ -107,10 +111,10 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 				t.State_ = state
 
 				duration := t.EndTime.Sub(t.StartTime)
-				t.Duration = &duration
-				t.TotalDuration = t.TotalDuration + duration
+				t.Duration_ = &duration
+				t.TotalDuration_ = t.TotalDuration_ + duration
 
-				err = onchange("time", t.TotalDuration.Minutes(), ts)
+				err = onchange("time", t.TotalDuration_.Minutes(), ts)
 				if err != nil {
 					return true, err
 				}
@@ -123,4 +127,12 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 func (t *timer) State() bool {
 	return t.State_
+}
+
+func (t *timer) TotalDuration() time.Duration {
+	return t.TotalDuration_
+}
+
+func (t *timer) Duration() *time.Duration {
+	return t.Duration_
 }

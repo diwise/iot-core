@@ -39,14 +39,14 @@ func TestLevelWithOffsetFillingLevel(t *testing.T) {
 
 	lvl, err := New("maxd=4,offset=1", 0)
 	is.NoErr(err)
-	
+
 	// Offset = 1
 	// Level = 1
 	// HighThreshold = 4
 
 	lvl.Handle(context.Background(), newFillingLevel(0, 1, 4, false, false), func(string, float64, time.Time) error { return nil })
 
-	// Current = HighThreshold - (Level + Offset) 
+	// Current = HighThreshold - (Level + Offset)
 
 	is.Equal(lvl.Current(), 2.0)
 	is.Equal(lvl.Percent(), 50.0)
@@ -80,7 +80,7 @@ func TestFillingLevel(t *testing.T) {
 	lvl, err := New("maxd=4,maxl=3", 0)
 	is.NoErr(err)
 
-	lvl.Handle(context.Background(), newFillingLevel(53,0, 80, false, false), func(string, float64, time.Time) error { return nil })
+	lvl.Handle(context.Background(), newFillingLevel(53, 0, 80, false, false), func(string, float64, time.Time) error { return nil })
 
 	is.Equal(lvl.Percent(), 53.0)
 }

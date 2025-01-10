@@ -61,7 +61,7 @@ func DigitalInput(ctx context.Context, count ValueFinder) events.EventDecoratorF
 		}
 
 		log.Debug("setting digital input counter", "value", digitalInputCounter)
-		
+
 		m.Append(senml.Record{
 			Name:  DigitalInputCounter,
 			Value: &digitalInputCounter,
