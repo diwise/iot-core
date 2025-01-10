@@ -137,16 +137,6 @@ func (i *impl) Initialize(ctx context.Context) error {
 	return nil
 }
 
-/*
-	RegistryStorer
-
-	LoadState(ctx context.Context, id string) ([]byte, error)
-	SaveState(ctx context.Context, id string, a any) error
-	AddSetting(ctx context.Context, id string, s setting) error
-	GetSettings(ctx context.Context) ([]setting, error)
-
-*/
-
 func (i *impl) LoadState(ctx context.Context, id string) ([]byte, error) {
 
 	var state json.RawMessage
@@ -179,6 +169,9 @@ func (i *impl) SaveState(ctx context.Context, id string, a any) error {
 
 func (i *impl) AddSetting(ctx context.Context, id string, s functions.Setting) error {
 	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
 
 	args := pgx.NamedArgs{
 		"id":   id,
