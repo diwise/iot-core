@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application/measurements"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/cache"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/senml"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
@@ -19,8 +21,24 @@ const (
 	DeviceObjectID     string = "3"
 )
 
+var c *cache.Cache
+
+func init() {
+	c = cache.NewCache()
+	c.Cleanup(1 * time.Hour)
+}
+
 func GetMaxPowerSourceVoltage(ctx context.Context, maxValueFinder measurements.MaxValueFinder, deviceID string) ValueFinder {
+	log := logging.GetFromContext(ctx)
+
 	powerSourceVoltageMeasurementID := fmt.Sprintf("%s/%s/%s", deviceID, DeviceObjectID, PowerSourceVoltage)
+
+	if value, ok := c.Get(powerSourceVoltageMeasurementID); ok {
+		log.Debug(fmt.Sprintf("max power source voltage found in cache for %s", powerSourceVoltageMeasurementID))
+		return func() float64 {
+			return value.(float64)
+		}
+	}
 
 	m, err := maxValueFinder.GetMaxValue(ctx, powerSourceVoltageMeasurementID)
 	if err != nil {
@@ -28,6 +46,9 @@ func GetMaxPowerSourceVoltage(ctx context.Context, maxValueFinder measurements.M
 			return 0.0
 		}
 	}
+
+	c.Set(powerSourceVoltageMeasurementID, m, 7*24*time.Hour)
+	log.Debug(fmt.Sprintf("set max power source voltage for %s to %f", powerSourceVoltageMeasurementID, m))
 
 	return func() float64 {
 		return m

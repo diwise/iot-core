@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/cache"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -23,7 +24,7 @@ type measurementsClient struct {
 	url               string
 	clientCredentials *clientcredentials.Config
 	httpClient        http.Client
-	cache             *Cache
+	c             *cache.Cache
 }
 
 type MeasurementsClient interface {
@@ -74,7 +75,7 @@ func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientI
 		return nil, fmt.Errorf("an invalid token was returned from %s", oauthTokenURL)
 	}
 
-	c := NewCache()
+	c := cache.NewCache()
 	c.Cleanup(5 * time.Minute)
 
 	return &measurementsClient{
@@ -83,7 +84,7 @@ func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientI
 		httpClient: http.Client{
 			Transport: otelhttp.NewTransport(http.DefaultTransport),
 		},
-		cache: c,
+		c: c,
 	}, nil
 }
 
@@ -147,7 +148,7 @@ func (c measurementsClient) getApiResponse(ctx context.Context, params url.Value
 
 	url := fmt.Sprintf("%s/%s?%s", c.url, "api/v0/measurements", params.Encode())
 
-	cachedItem, found := c.cache.Get(url)
+	cachedItem, found := c.c.Get(url)
 	if found {
 		jar, ok := cachedItem.(jsonApiResponse)
 		if ok {
@@ -210,7 +211,7 @@ func (c measurementsClient) getApiResponse(ctx context.Context, params url.Value
 		return nil, err
 	}
 
-	c.cache.Set(url, jar, 1*time.Minute)
+	c.c.Set(url, jar, 1*time.Minute)
 
 	return &jar, nil
 }
