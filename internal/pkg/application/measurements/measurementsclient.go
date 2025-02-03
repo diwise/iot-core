@@ -24,7 +24,7 @@ type measurementsClient struct {
 	url               string
 	clientCredentials *clientcredentials.Config
 	httpClient        http.Client
-	c             *cache.Cache
+	c                 *cache.Cache
 }
 
 type MeasurementsClient interface {
@@ -57,6 +57,7 @@ type AggrResult struct {
 	Total   *float64 `json:"sum,omitempty"`
 	Minimum *float64 `json:"min,omitempty"`
 	Maximum *float64 `json:"max,omitempty"`
+	Count   *uint64  `json:"count,omitempty"`
 }
 
 func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oauthClientSecret string) (MeasurementsClient, error) {
@@ -104,20 +105,26 @@ func (c measurementsClient) GetMaxValue(ctx context.Context, measurmentID string
 func (c measurementsClient) GetCountTrueValues(ctx context.Context, measurmentID string, timeAt, endTimeAt time.Time) (float64, error) {
 	params := url.Values{}
 	params.Add("id", measurmentID)
-	params.Add("vb", "true")
-	params.Add("limit", "1")
-	params.Add("timeAt", timeAt.UTC().Format(time.RFC3339))
-	params.Add("endTimeAt", endTimeAt.UTC().Format(time.RFC3339))
-	params.Add("timeRel", "between")
+	params.Add("aggrMethods", "count")
+	params.Add("timeAt", timeAt.Format(time.RFC3339))
+	params.Add("endTimeAt", endTimeAt.Format(time.RFC3339))
 
 	jar, err := c.getApiResponse(ctx, params)
 	if err != nil {
 		return 0.0, err
 	}
-	if jar.Meta == nil {
-		return 0.0, fmt.Errorf("no meta data found")
+
+	var aggrResult AggrResult
+	err = json.Unmarshal(jar.Data, &aggrResult)
+	if err != nil {
+		return 0.0, err
 	}
-	return float64(jar.Meta.TotalRecords), nil
+
+	if aggrResult.Count == nil {
+		return 0.0, nil
+	}
+
+	return float64(*aggrResult.Count), nil
 }
 
 func (c measurementsClient) getAggrValue(ctx context.Context, measurmentID string, aggrMethods ...string) (*AggrResult, error) {
