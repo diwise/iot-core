@@ -80,16 +80,24 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 		return nil, ErrCouldNotFindDevice
 	}
 
-	clone := msg.Pack.Clone()
+	clone := msg.Pack().Clone()
 
-	ma := events.NewMessageAccepted(clone,
+	decs := make([]events.EventDecoratorFunc, 0)
+	decs = append(decs,
 		events.Lat(device.Latitude()),
 		events.Lon(device.Longitude()),
 		events.Environment(device.Environment()),
 		events.Source(device.Source()),
-		events.Tenant(device.Tenant()),
-		decorators.Device(ctx, decorators.GetMaxPowerSourceVoltage(ctx, a.measurementsClient, device.ID())),
-	)
+		events.Tenant(device.Tenant()))
+
+	switch msg.ObjectID() {
+	case "3":
+		decs = append(decs, decorators.Device(ctx, decorators.GetMaxPowerSourceVoltage(ctx, a.measurementsClient, device.ID())))
+	case "3200":
+		decs = append(decs, decorators.DigitalInput(ctx, decorators.GetNumberOfTrueValues(ctx, a.measurementsClient, device.ID())))
+	}
+
+	ma := events.NewMessageAccepted(clone, decs...)
 
 	log.Debug(fmt.Sprintf("message.accepted created for device %s with object type %s", ma.DeviceID(), ma.ObjectID()), slog.String("body", string(ma.Body())))
 

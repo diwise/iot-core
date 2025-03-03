@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/cache"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -23,18 +24,31 @@ type measurementsClient struct {
 	url               string
 	clientCredentials *clientcredentials.Config
 	httpClient        http.Client
-	cache             *Cache
+	c                 *cache.Cache
 }
 
 type MeasurementsClient interface {
 	MaxValueFinder
+	CountBoolValueFinder
 }
 
 type MaxValueFinder interface {
 	GetMaxValue(ctx context.Context, measurmentID string) (float64, error)
 }
 
+type CountBoolValueFinder interface {
+	GetCountTrueValues(ctx context.Context, measurmentID string, timeAt, endTimeAt time.Time) (float64, error)
+}
+
+type meta struct {
+	TotalRecords uint64  `json:"totalRecords"`
+	Offset       *uint64 `json:"offset,omitempty"`
+	Limit        *uint64 `json:"limit,omitempty"`
+	Count        *uint64 `json:"count,omitempty"`
+}
+
 type jsonApiResponse struct {
+	Meta *meta           `json:"meta,omitempty"`
 	Data json.RawMessage `json:"data"`
 }
 
@@ -43,6 +57,7 @@ type AggrResult struct {
 	Total   *float64 `json:"sum,omitempty"`
 	Minimum *float64 `json:"min,omitempty"`
 	Maximum *float64 `json:"max,omitempty"`
+	Count   *uint64  `json:"count,omitempty"`
 }
 
 func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oauthClientSecret string) (MeasurementsClient, error) {
@@ -61,7 +76,7 @@ func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientI
 		return nil, fmt.Errorf("an invalid token was returned from %s", oauthTokenURL)
 	}
 
-	c := NewCache()
+	c := cache.NewCache()
 	c.Cleanup(5 * time.Minute)
 
 	return &measurementsClient{
@@ -70,7 +85,7 @@ func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientI
 		httpClient: http.Client{
 			Transport: otelhttp.NewTransport(http.DefaultTransport),
 		},
-		cache: c,
+		c: c,
 	}, nil
 }
 
@@ -85,6 +100,31 @@ func (c measurementsClient) GetMaxValue(ctx context.Context, measurmentID string
 	}
 
 	return *aggrResult.Maximum, nil
+}
+
+func (c measurementsClient) GetCountTrueValues(ctx context.Context, measurmentID string, timeAt, endTimeAt time.Time) (float64, error) {
+	params := url.Values{}
+	params.Add("id", measurmentID)
+	params.Add("aggrMethods", "count")
+	params.Add("timeAt", timeAt.Format(time.RFC3339))
+	params.Add("endTimeAt", endTimeAt.Format(time.RFC3339))
+
+	jar, err := c.getApiResponse(ctx, params)
+	if err != nil {
+		return 0.0, err
+	}
+
+	var aggrResult AggrResult
+	err = json.Unmarshal(jar.Data, &aggrResult)
+	if err != nil {
+		return 0.0, err
+	}
+
+	if aggrResult.Count == nil {
+		return 0.0, nil
+	}
+
+	return float64(*aggrResult.Count), nil
 }
 
 func (c measurementsClient) getAggrValue(ctx context.Context, measurmentID string, aggrMethods ...string) (*AggrResult, error) {
@@ -115,7 +155,7 @@ func (c measurementsClient) getApiResponse(ctx context.Context, params url.Value
 
 	url := fmt.Sprintf("%s/%s?%s", c.url, "api/v0/measurements", params.Encode())
 
-	cachedItem, found := c.cache.Get(url)
+	cachedItem, found := c.c.Get(url)
 	if found {
 		jar, ok := cachedItem.(jsonApiResponse)
 		if ok {
@@ -178,7 +218,7 @@ func (c measurementsClient) getApiResponse(ctx context.Context, params url.Value
 		return nil, err
 	}
 
-	c.cache.Set(url, jar, 1*time.Minute)
+	c.c.Set(url, jar, 1*time.Minute)
 
 	return &jar, nil
 }

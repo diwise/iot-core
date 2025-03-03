@@ -17,13 +17,13 @@ func TestGetValuesFromPack(t *testing.T) {
 
 	evt := NewMessageAccepted(senml.Pack{}, Rec("withValues", "str", &v, &b, float64(dt.Unix()), nil))
 
-	b, ok := evt.Pack.GetBoolValue(senml.FindByName("withValues"))
+	b, ok := evt.Pack().GetBoolValue(senml.FindByName("withValues"))
 	is.True(ok)
-	v, ok = evt.Pack.GetValue(senml.FindByName("withValues"))
+	v, ok = evt.Pack().GetValue(senml.FindByName("withValues"))
 	is.True(ok)
-	str, ok := evt.Pack.GetStringValue(senml.FindByName("withValues"))
+	str, ok := evt.Pack().GetStringValue(senml.FindByName("withValues"))
 	is.True(ok)
-	date, ok := evt.Pack.GetTime(senml.FindByName("withValues"))
+	date, ok := evt.Pack().GetTime(senml.FindByName("withValues"))
 	is.True(ok)
 
 	is.True(b)

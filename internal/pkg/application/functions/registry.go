@@ -122,7 +122,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 
 			storage.AddFnct(ctx, f.ID_, f.Type, f.SubType, f.Tenant, f.Source, 0, 0)
 
-			r.f[tokens[4]] = f
+			r.f[strings.ToLower(tokens[4])] = f
 			numFunctions++
 		}
 	}
@@ -176,7 +176,7 @@ func MatchAll() RegistryMatcherFunc {
 
 func MatchSensor(sensorId string) RegistryMatcherFunc {
 	return func(r *reg) []Function {
-		f, ok := r.f[sensorId]
+		f, ok := r.f[strings.ToLower(sensorId)]
 		if !ok {
 			return []Function{}
 		}

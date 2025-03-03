@@ -11,179 +11,224 @@ import (
 	"github.com/diwise/senml"
 )
 
+var ErrBadTimestamp = fmt.Errorf("bad timestamp")
+var ErrNoMatch = fmt.Errorf("event mismatch")
+
+type Message interface {
+	DeviceID() string
+	ObjectID() string
+	Pack() senml.Pack
+	Append(r senml.Record)
+	Replace(r senml.Record, find func(senml.Record) bool)
+	Tenant() string
+	Error() error
+}
+
 type MessageReceived struct {
-	Pack      senml.Pack `json:"pack"`
+	Pack_     senml.Pack `json:"pack"`
+	Timestamp time.Time  `json:"timestamp"`
+}
+type MessageAccepted struct {
+	Pack_     senml.Pack `json:"pack"`
+	Timestamp time.Time  `json:"timestamp"`
+}
+type MessageTransformed struct {
+	Pack_     senml.Pack `json:"pack"`
 	Timestamp time.Time  `json:"timestamp"`
 }
 
-func NewMessageReceived(pack senml.Pack) MessageReceived {
-	return MessageReceived{
-		Pack:      pack,
+func NewMessageReceived(pack senml.Pack, decorators ...EventDecoratorFunc) *MessageReceived {
+	mr := &MessageReceived{
+		Pack_:     pack,
 		Timestamp: time.Now().UTC(),
 	}
+	for _, d := range decorators {
+		d(mr)
+	}
+	return mr
+}
+func NewMessageAccepted(pack senml.Pack, decorators ...EventDecoratorFunc) *MessageAccepted {
+	ma := &MessageAccepted{
+		Pack_:     pack,
+		Timestamp: time.Now().UTC(),
+	}
+	for _, d := range decorators {
+		d(ma)
+	}
+	return ma
+}
+func NewMessageTransformed(pack senml.Pack, decorators ...EventDecoratorFunc) *MessageTransformed {
+	mt := &MessageTransformed{
+		Pack_:     pack,
+		Timestamp: time.Now().UTC(),
+	}
+	for _, d := range decorators {
+		d(mt)
+	}
+	return mt
 }
 
 func (m MessageReceived) DeviceID() string {
-	return GetDeviceID(m.Pack)
+	return GetDeviceID(m.Pack_)
 }
+func (m MessageReceived) ObjectID() string {
+	return GetObjectID(m.Pack_)
+}
+func (m MessageReceived) Pack() senml.Pack {
+	return m.Pack_
+}
+func (m *MessageReceived) Append(r senml.Record) {
+	m.Pack_ = append(m.Pack_, r)
+}
+func (m *MessageReceived) Replace(r senml.Record, find func(senml.Record) bool) {
+	for i, rec := range m.Pack_ {
+		if find(rec) {
+			m.Pack_[i] = r
+			return
+		}
+	}
+}
+func (m MessageReceived) Tenant() string {
+	s, ok := m.Pack().GetStringValue(senml.FindByName("tenant"))
+	if !ok {
+		return ""
+	}
+	return s
+}
+func (m MessageReceived) Error() error {
+	if len(m.Pack()) == 0 {
+		return errors.New("pack is empty")
+	}
+	if m.DeviceID() == "" {
+		return errors.New("device id is missing")
+	}
+	if m.Timestamp.IsZero() {
+		return errors.New("timestamp is mising")
+	}
 
+	return nil
+}
 func (m MessageReceived) Body() []byte {
 	b, _ := json.Marshal(m)
 	return b
 }
-
 func (m MessageReceived) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", GetObjectID(m.Pack))
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
+}
+func (m MessageReceived) TopicName() string {
+	return topics.MessageReceived
 }
 
-func (m MessageReceived) Error() error {
-	if GetDeviceID(m.Pack) == "" {
-		return errors.New("device id is missing")
-	}
-
-	if m.Timestamp.IsZero() {
-		return errors.New("timestamp is mising")
-	}
-
-	if len(m.Pack) == 0 {
-		return errors.New("pack is empty")
-	}
-
-	return nil
-}
-
-type MessageAccepted struct {
-	Pack      senml.Pack `json:"pack"`
-	Timestamp time.Time  `json:"timestamp"`
-}
-
-func NewMessageAccepted(pack senml.Pack, decorators ...EventDecoratorFunc) *MessageAccepted {
-	m := &MessageAccepted{
-		Pack:      pack,
-		Timestamp: time.Now().UTC(),
-	}
-
-	for _, d := range decorators {
-		d(m)
-	}
-
-	return m
-}
+/*------------*/
 
 func (m MessageAccepted) DeviceID() string {
-	return GetDeviceID(m.Pack)
+	return GetDeviceID(m.Pack_)
 }
-
 func (m MessageAccepted) ObjectID() string {
-	return GetObjectID(m.Pack)
+	return GetObjectID(m.Pack_)
 }
-
+func (m MessageAccepted) Pack() senml.Pack {
+	return m.Pack_
+}
+func (m *MessageAccepted) Append(r senml.Record) {
+	m.Pack_ = append(m.Pack_, r)
+}
+func (m *MessageAccepted) Replace(r senml.Record, find func(senml.Record) bool) {
+	for i, rec := range m.Pack_ {
+		if find(rec) {
+			m.Pack_[i] = r
+			return
+		}
+	}
+}
 func (m MessageAccepted) Tenant() string {
-	s, ok := m.Pack.GetStringValue(senml.FindByName("tenant"))
+	s, ok := m.Pack().GetStringValue(senml.FindByName("tenant"))
 	if !ok {
 		return ""
 	}
 	return s
 }
+func (m MessageAccepted) Error() error {
+	if len(m.Pack()) == 0 {
+		return errors.New("pack is empty")
+	}
+	if m.DeviceID() == "" {
+		return errors.New("device id is missing")
+	}
+	if m.Timestamp.IsZero() {
+		return errors.New("timestamp is mising")
+	}
 
+	return nil
+}
 func (m MessageAccepted) Body() []byte {
 	b, _ := json.Marshal(m)
 	return b
 }
-
 func (m MessageAccepted) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", GetObjectID(m.Pack))
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
 }
-
 func (m MessageAccepted) TopicName() string {
 	return topics.MessageAccepted
 }
 
-func (m MessageAccepted) Error() error {
-	if GetDeviceID(m.Pack) == "" {
-		return errors.New("device id is missing")
-	}
-
-	if m.Timestamp.IsZero() {
-		return errors.New("timestamp is mising")
-	}
-
-	if len(m.Pack) == 0 {
-		return errors.New("pack is empty")
-	}
-
-	return nil
-}
-
-type MessageTransformed struct {
-	Pack      senml.Pack `json:"pack"`
-	Timestamp time.Time  `json:"timestamp"`
-}
-
-func NewMessageTransformed(pack senml.Pack, tenant string) *MessageTransformed {
-	_, ok := pack.GetStringValue(senml.FindByName("tenant"))
-	if !ok {
-		pack = append(pack, senml.Record{Name: "tenant", StringValue: tenant})
-	}
-
-	m := &MessageTransformed{
-		Pack:      pack,
-		Timestamp: time.Now().UTC(),
-	}
-
-	return m
-}
+/*------------*/
 
 func (m MessageTransformed) DeviceID() string {
-	return GetDeviceID(m.Pack)
+	return GetDeviceID(m.Pack_)
 }
-
 func (m MessageTransformed) ObjectID() string {
-	return GetObjectID(m.Pack)
+	return GetObjectID(m.Pack_)
 }
-
+func (m MessageTransformed) Pack() senml.Pack {
+	return m.Pack_
+}
+func (m *MessageTransformed) Append(r senml.Record) {
+	m.Pack_ = append(m.Pack_, r)
+}
+func (m *MessageTransformed) Replace(r senml.Record, find func(senml.Record) bool) {
+	for i, rec := range m.Pack_ {
+		if find(rec) {
+			m.Pack_[i] = r
+			return
+		}
+	}
+}
 func (m MessageTransformed) Tenant() string {
-	s, ok := m.Pack.GetStringValue(senml.FindByName("tenant"))
+	s, ok := m.Pack().GetStringValue(senml.FindByName("tenant"))
 	if !ok {
 		return ""
 	}
 	return s
 }
-
-func (m MessageTransformed) Body() []byte {
-	b, _ := json.Marshal(m)
-	return b
-}
-
-func (m MessageTransformed) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", GetObjectID(m.Pack))
-}
-
-func (m MessageTransformed) TopicName() string {
-	return topics.MessageTransformed
-}
-
 func (m MessageTransformed) Error() error {
-	if GetDeviceID(m.Pack) == "" {
+	if len(m.Pack()) == 0 {
+		return errors.New("pack is empty")
+	}
+	if m.DeviceID() == "" {
 		return errors.New("device id is missing")
 	}
-
 	if m.Timestamp.IsZero() {
-		return errors.New("timestamp is missing")
-	}
-
-	if len(m.Pack) == 0 {
-		return errors.New("pack is empty")
+		return errors.New("timestamp is mising")
 	}
 
 	return nil
 }
+func (m MessageTransformed) Body() []byte {
+	b, _ := json.Marshal(m)
+	return b
+}
+func (m MessageTransformed) ContentType() string {
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
+}
+func (m MessageTransformed) TopicName() string {
+	return topics.MessageTransformed
+}
 
-var ErrBadTimestamp = fmt.Errorf("bad timestamp")
-var ErrNoMatch = fmt.Errorf("event mismatch")
+/*------------*/
 
-func Matches(m MessageAccepted, objectURN string) bool {
-	return (GetObjectURN(m.Pack) == objectURN)
+func Matches(m Message, objectURN string) bool {
+	return (GetObjectURN(m.Pack()) == objectURN)
 }
 
 func GetDeviceID(m senml.Pack) string {
