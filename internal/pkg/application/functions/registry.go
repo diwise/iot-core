@@ -46,7 +46,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 		tokens := strings.Split(line, ";")
 		tokenCount := len(tokens)
 
-		if tokenCount >= 4 {
+		if tokenCount >= 5 {
 			f := &fnct{
 				ID_:      tokens[0],
 				Name_:    tokens[1],
@@ -63,7 +63,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 			} else if f.Type == levels.FunctionTypeName {
 				levelConfig := ""
 				if tokenCount > 5 {
-					levelConfig = tokens[5]
+					levelConfig = tokens[6]
 				}
 				f.defaultHistoryLabel = "level"
 				l := lastLogValue(ctx, storage, f)
