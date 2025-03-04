@@ -5,7 +5,7 @@ go 1.23
 toolchain go1.23.2
 
 require (
-	github.com/diwise/iot-agent v0.0.0-20241021091855-2844c96e343a
+	github.com/diwise/iot-agent v0.0.0-20241120135350-e50fb582bb01
 	github.com/diwise/iot-device-mgmt v0.0.0-20241020195250-f918e5c28caa
 	github.com/diwise/messaging-golang v0.0.0-20241021090331-143508a441a2
 	github.com/diwise/senml v0.0.0-20240402140901-e4008e065e05

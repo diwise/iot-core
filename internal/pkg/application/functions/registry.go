@@ -52,7 +52,7 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				Name_:    tokens[1],
 				Type:     tokens[2],
 				SubType:  tokens[3],
-				OnUpdate: tokens[5] == "true",
+				OnUpdate: (tokenCount > 5 && tokens[5] == "true"),
 				storage:  storage,
 			}
 
@@ -62,8 +62,8 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				f.defaultHistoryLabel = "count"
 			} else if f.Type == levels.FunctionTypeName {
 				levelConfig := ""
-				if tokenCount > 5 {
-					levelConfig = tokens[5]
+				if tokenCount > 6 {
+					levelConfig = tokens[6]
 				}
 				f.defaultHistoryLabel = "level"
 				l := lastLogValue(ctx, storage, f)

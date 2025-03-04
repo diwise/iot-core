@@ -87,7 +87,7 @@ func TestLevel(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","deviceID":"testId","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","level":{"current":-2.1}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","deviceID":"testId","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","level":{"current":1.4,"percent":56}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
@@ -123,7 +123,7 @@ func TestLevelFromAnAngle(t *testing.T) {
 	is.Equal(len(msgctx.PublishOnTopicCalls()), 1)
 	generatedMessagePayload := msgctx.PublishOnTopicCalls()[0].Message.Body()
 
-	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","deviceID":"testId","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","level":{"current":-2.1}}`
+	const expectation string = `{"id":"functionID","name":"name","type":"level","subtype":"sand","deviceID":"testId","onupdate":false,"timestamp":"2024-03-20T11:19:48Z","level":{"current":1.21,"percent":48.4}}`
 	is.Equal(string(generatedMessagePayload), expectation)
 }
 
