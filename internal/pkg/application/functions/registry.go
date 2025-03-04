@@ -47,17 +47,12 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 		tokenCount := len(tokens)
 
 		if tokenCount >= 4 {
-			onUpdate := false
-			if tokenCount > 5 {
-				onUpdate = tokens[5] == "true"
-			}
-
 			f := &fnct{
 				ID_:      tokens[0],
 				Name_:    tokens[1],
 				Type:     tokens[2],
 				SubType:  tokens[3],
-				OnUpdate: onUpdate,
+				OnUpdate: (tokenCount > 5 && tokens[5] == "true"),
 				storage:  storage,
 			}
 
