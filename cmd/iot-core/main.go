@@ -35,7 +35,7 @@ var functionsConfigPath string
 
 func main() {
 	serviceVersion := buildinfo.SourceVersion()
-	ctx, _, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion)
+	ctx, _, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion, "json")
 	defer cleanup()
 
 	flag.StringVar(&functionsConfigPath, "functions", "/opt/diwise/config/functions.csv", "configuration file for functions")
