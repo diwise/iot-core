@@ -4,7 +4,7 @@ go 1.24
 
 require (
 	github.com/diwise/iot-agent v0.0.0-20250306092645-37d84af5c559
-	github.com/diwise/iot-device-mgmt v0.0.0-20250304123451-6ded75a38109
+	github.com/diwise/iot-device-mgmt v0.0.0-20250321155049-ef0907293927
 	github.com/diwise/messaging-golang v0.0.0-20241021090331-143508a441a2
 	github.com/diwise/senml v0.0.0-20240402140901-e4008e065e05
 	github.com/go-chi/chi/v5 v5.2.1
