@@ -166,6 +166,8 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 		logger = logger.With(slog.String("device_id", evt.DeviceID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
+		logger.Debug("message.received", "device_id", evt.DeviceID(), "object_id", evt.ObjectID())
+
 		m, err := app.MessageReceived(ctx, evt)
 		if err != nil {
 			if errors.Is(err, application.ErrCouldNotFindDevice) {

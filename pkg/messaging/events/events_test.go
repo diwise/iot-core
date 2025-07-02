@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/diwise/iot-agent/pkg/lwm2m"
 	"github.com/diwise/senml"
 	"github.com/matryer/is"
 )
@@ -30,6 +31,17 @@ func TestGetValuesFromPack(t *testing.T) {
 	is.Equal(v, 1.0)
 	is.Equal(str, "str")
 	is.Equal(dt, date.UTC())
+}
+
+func TestMultipleTemperatures(t *testing.T) {
+	is := testSetup(t)
+
+	temp0 := lwm2m.NewTemperature("aaa-bbb-ccc/0", 10.0, time.Now())
+	
+	evt := NewMessageAccepted(lwm2m.ToPack(temp0))
+	
+	is.Equal("aaa-bbb-ccc", evt.DeviceID())
+	is.Equal("3303", evt.ObjectID())
 }
 
 func testSetup(t *testing.T) *is.I {
