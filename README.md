@@ -45,6 +45,7 @@ Testing is best done using unit tests. For integration testing the preferred way
 ```
 ## CLI flags
 none
+-
 
 ## Configuration files
 none
