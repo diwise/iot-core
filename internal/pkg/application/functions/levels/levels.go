@@ -41,7 +41,8 @@ func New(config string, current float64) (Level, error) {
 	for _, s := range settings {
 		pair := strings.Split(s, "=")
 		if len(pair) == 2 {
-			if pair[0] == "angle" {
+			switch pair[0] {
+			case "angle":
 				angle, err := strconv.ParseFloat(pair[1], 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse level angle \"%s\": %w", s, err)
@@ -51,27 +52,27 @@ func New(config string, current float64) (Level, error) {
 				}
 				// precalculate the cosine of the mount angle (after conversion to radians)
 				lvl.cosAlpha = math.Cos(angle * math.Pi / 180.0)
-			} else if pair[0] == "maxd" {
+			case "maxd":
 				lvl.maxDistance, err = strconv.ParseFloat(pair[1], 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse level config \"%s\": %w", s, err)
 				}
-			} else if pair[0] == "maxl" {
+			case "maxl":
 				lvl.maxLevel, err = strconv.ParseFloat(pair[1], 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse level config \"%s\": %w", s, err)
 				}
-			} else if pair[0] == "mean" {
+			case "mean":
 				lvl.meanLevel, err = strconv.ParseFloat(pair[1], 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse level config \"%s\": %w", s, err)
 				}
-			} else if pair[0] == "offset" {
+			case "offset":
 				lvl.offsetLevel, err = strconv.ParseFloat(pair[1], 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse offset config \"%s\": %w", s, err)
 				}
-			} else {
+			default:
 				return nil, fmt.Errorf("failed to parse level config \"%s\": %w", s, err)
 			}
 		}
@@ -263,7 +264,7 @@ func (l *level) handleDistance(ctx context.Context, e *events.MessageAccepted, o
 	distance, ok := sensorValue.GetValue()
 	if !ok {
 		return false, fmt.Errorf("could not find distance value in distance pack")
-	}	
+	}
 
 	distance += l.offsetLevel
 
