@@ -6,11 +6,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
@@ -22,59 +22,183 @@ import (
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/buildinfo"
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
+	k8shandlers "github.com/diwise/service-chassis/pkg/infrastructure/net/http/handlers"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
+
+	"github.com/diwise/service-chassis/pkg/infrastructure/servicerunner"
 	"go.opentelemetry.io/otel"
 )
 
 const serviceName string = "iot-core"
 
 var tracer = otel.Tracer(serviceName)
-var functionsConfigPath string
 
-func main() {
-	serviceVersion := buildinfo.SourceVersion()
-	ctx, _, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion, "json")
-	defer cleanup()
+func defaultFlags() flagMap {
+	return flagMap{
+		listenAddress: "0.0.0.0",
+		servicePort:   "8080",
+		controlPort:   "8000",
 
-	flag.StringVar(&functionsConfigPath, "functions", "/opt/diwise/config/functions.csv", "configuration file for functions")
-	flag.Parse()
+		functionsFile:       "/opt/diwise/config/functions.csv",
+		deviceManagementUrl: "http://iot-device-mgmt",
+		measurementsUrl:     "http://iot-events",
 
-	var err error
+		oauth2TokenUrl:     "",
+		oauth2ClientId:     "",
+		oauth2ClientSecret: "",
+		oauth2InsecureURL:  "true",
 
-	dmClient := createDeviceManagementClientOrDie(ctx)
-	defer dmClient.Close(ctx)
-
-	measurementsClient := createMeasurementsClientOrDie(ctx)
-
-	msgCtx := createMessagingContextOrDie(ctx)
-	defer msgCtx.Close()
-
-	storage := createDatabaseConnectionOrDie(ctx)
-
-	var configFile *os.File
-
-	if functionsConfigPath != "" {
-		configFile, err = os.Open(functionsConfigPath)
-		if err != nil {
-			fatal(ctx, "failed to open functions config file", err)
-		}
-		defer configFile.Close()
-	}
-
-	_, api_, err := initialize(ctx, dmClient, measurementsClient, msgCtx, configFile, storage)
-	if err != nil {
-		fatal(ctx, "initialization failed", err)
-	}
-
-	servicePort := env.GetVariableOrDefault(ctx, "SERVICE_PORT", "8080")
-	err = http.ListenAndServe(":"+servicePort, api_.Router())
-	if err != nil {
-		fatal(ctx, "failed to start request router", err)
+		dbHost:     "",
+		dbUser:     "",
+		dbPassword: "",
+		dbPort:     "5432",
+		dbName:     "diwise",
+		dbSSLMode:  "disable",
 	}
 }
 
+func main() {
+	serviceVersion := buildinfo.SourceVersion()
+	ctx, logger, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion, "json")
+	defer cleanup()
+
+	ctx, flags := parseExternalConfig(ctx, defaultFlags())
+
+	cfg := &appConfig{}
+
+	runner, err := initialize(ctx, flags, cfg)
+	exitIf(err, logger, "failed to initialize service runner")
+
+	err = runner.Run(ctx)
+	exitIf(err, logger, "failed to start service runner")
+}
+
+func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunner.Runner[appConfig], error) {
+	probes := map[string]k8shandlers.ServiceProber{
+		"rabbitmq": func(context.Context) (string, error) { return "ok", nil },
+	}
+
+	log := logging.GetFromContext(ctx)
+
+	var err error
+	var dmClient client.DeviceManagementClient
+	var msgCtx messaging.MsgContext
+	var mClient measurements.MeasurementsClient
+	var storage database.Storage
+	var registry functions.Registry
+	var app application.App
+
+	_, runner := servicerunner.New(ctx, *cfg,
+		webserver("control", listen(flags[listenAddress]), port(flags[controlPort]),
+			pprof(), liveness(func() error { return nil }), readiness(probes),
+		),
+		webserver("public", listen(flags[listenAddress]), port(flags[servicePort]), withtracing(true),
+			muxinit(func(ctx context.Context, identifier string, port string, appCfg *appConfig, handler *http.ServeMux) error {
+				api.RegisterHandlers(ctx, handler, app)
+				return nil
+			}),
+		),
+		oninit(func(ctx context.Context, ac *appConfig) error {
+			dmClient, err = client.New(ctx, flags[deviceManagementUrl], flags[oauth2TokenUrl], flags[oauth2InsecureURL] == "true", flags[oauth2ClientId], flags[oauth2ClientSecret])
+			if err != nil {
+				return err
+			}
+
+			config := messaging.LoadConfiguration(ctx, serviceName, log)
+			msgCtx, err = messaging.Initialize(ctx, config)
+			if err != nil {
+				return err
+			}
+
+			mClient, err = measurements.NewMeasurementsClient(ctx, flags[measurementsUrl], flags[oauth2TokenUrl], flags[oauth2ClientId], flags[oauth2ClientSecret])
+			if err != nil {
+				return err
+			}
+
+			storage, err = database.Connect(ctx, database.NewConfig(flags[dbHost], flags[dbUser], flags[dbPassword], flags[dbPort], flags[dbName], flags[dbSSLMode]))
+			if err != nil {
+				return err
+			}
+
+			f, _ := os.Open(flags[functionsFile])
+			if f != nil {
+				defer f.Close()
+			}
+
+			registry, err = functions.NewRegistry(ctx, f, storage)
+			if err != nil {
+				return err
+			}
+
+			app = application.New(dmClient, mClient, registry)
+
+			return nil
+		}),
+		onstarting(func(ctx context.Context, svcCfg *appConfig) error {
+			msgCtx.Start()
+
+			msgCtx.RegisterCommandHandler(func(m messaging.Message) bool {
+				return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m")
+			}, newCommandHandler(msgCtx, app))
+
+			msgCtx.RegisterTopicMessageHandler("message.accepted", newTopicMessageHandler(msgCtx, app))
+			msgCtx.RegisterTopicMessageHandler("function.updated", newFunctionUpdatedTopicMessageHandler(msgCtx))
+
+			err = storage.Initialize(ctx)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}),
+		onshutdown(func(ctx context.Context, svcCfg *appConfig) error {
+			dmClient.Close(ctx)
+			msgCtx.Close()
+
+			return nil
+		}))
+
+	return runner, nil
+}
+
+func parseExternalConfig(ctx context.Context, flags flagMap) (context.Context, flagMap) {
+	// Allow environment variables to override certain defaults
+	envOrDef := env.GetVariableOrDefault
+
+	flags[servicePort] = envOrDef(ctx, "SERVICE_PORT", flags[servicePort])
+	flags[controlPort] = envOrDef(ctx, "CONTROL_PORT", flags[controlPort])
+
+	flags[deviceManagementUrl] = envOrDef(ctx, "DEV_MGMT_URL", flags[deviceManagementUrl])
+
+	flags[oauth2TokenUrl] = envOrDef(ctx, "OAUTH2_TOKEN_URL", flags[oauth2TokenUrl])
+	flags[oauth2ClientId] = envOrDef(ctx, "OAUTH2_CLIENT_ID", flags[oauth2ClientId])
+	flags[oauth2ClientSecret] = envOrDef(ctx, "OAUTH2_CLIENT_SECRET", flags[oauth2ClientSecret])
+	flags[oauth2InsecureURL] = envOrDef(ctx, "OAUTH2_REALM_INSECURE", flags[oauth2InsecureURL])
+
+	flags[dbHost] = envOrDef(ctx, "POSTGRES_HOST", flags[dbHost])
+	flags[dbPort] = envOrDef(ctx, "POSTGRES_PORT", flags[dbPort])
+	flags[dbName] = envOrDef(ctx, "POSTGRES_DBNAME", flags[dbName])
+	flags[dbUser] = envOrDef(ctx, "POSTGRES_USER", flags[dbUser])
+	flags[dbPassword] = envOrDef(ctx, "POSTGRES_PASSWORD", flags[dbPassword])
+	flags[dbSSLMode] = envOrDef(ctx, "POSTGRES_SSLMODE", flags[dbSSLMode])
+
+	apply := func(f flagType) func(string) error {
+		return func(value string) error {
+			flags[f] = value
+			return nil
+		}
+	}
+
+	flag.Func("functions", "configuration file for functions", apply(functionsFile))
+
+	flag.Parse()
+
+	return ctx, flags
+}
+
+/*
 func createDeviceManagementClientOrDie(ctx context.Context) client.DeviceManagementClient {
 	dmURL := env.GetVariableOrDie(ctx, "DEV_MGMT_URL", "url to iot-device-mgmt")
 	tokenURL := env.GetVariableOrDie(ctx, "OAUTH2_TOKEN_URL", "a valid oauth2 token URL")
@@ -111,7 +235,7 @@ func createMessagingContextOrDie(ctx context.Context) messaging.MsgContext {
 	config := messaging.LoadConfiguration(ctx, serviceName, logger)
 	messenger, err := messaging.Initialize(ctx, config)
 	if err != nil {
-		fatal(ctx, "failed to init messaging", err)
+		return nil
 	}
 	messenger.Start()
 
@@ -129,8 +253,9 @@ func createDatabaseConnectionOrDie(ctx context.Context) database.Storage {
 	}
 	return storage
 }
-
-func initialize(ctx context.Context, dmClient client.DeviceManagementClient, mClient measurements.MeasurementsClient, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
+*/
+/*
+func initializeOLD(ctx context.Context, dmClient client.DeviceManagementClient, mClient measurements.MeasurementsClient, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
 	functionsRegistry, err := functions.NewRegistry(ctx, fconfig, storage)
 	if err != nil {
 		return nil, nil, err
@@ -147,7 +272,7 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, mCl
 
 	return app, api.New(ctx, functionsRegistry), nil
 }
-
+*/
 func newCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {
 	return func(ctx context.Context, wrapper messaging.IncomingCommand, logger *slog.Logger) error {
 		var err error
@@ -240,8 +365,10 @@ func newFunctionUpdatedTopicMessageHandler(messenger messaging.MsgContext) messa
 	}
 }
 
-func fatal(ctx context.Context, msg string, err error) {
-	logger := logging.GetFromContext(ctx)
-	logger.Error(msg, "err", err.Error())
-	os.Exit(1)
+func exitIf(err error, logger *slog.Logger, msg string, args ...any) {
+	if err != nil {
+		logger.With(args...).Error(msg, "err", err.Error())
+		time.Sleep(2 * time.Second)
+		os.Exit(1)
+	}
 }

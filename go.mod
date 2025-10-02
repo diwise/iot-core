@@ -3,12 +3,11 @@ module github.com/diwise/iot-core
 go 1.25
 
 require (
-	github.com/diwise/iot-agent v0.0.0-20250904090734-e5623bbcdbff
-	github.com/diwise/iot-device-mgmt v0.0.0-20250904090434-b50b04da4266
+	github.com/diwise/iot-agent v0.0.0-20250930131659-f594103fd33a
+	github.com/diwise/iot-device-mgmt v0.0.0-20250910121546-25397413c702
 	github.com/diwise/messaging-golang v0.0.0-20250628135946-f23f34d06003
-	github.com/diwise/senml v0.0.0-20240402140901-e4008e065e05
+	github.com/diwise/senml v0.0.0-20250930091756-4b5cca508535
 	github.com/go-chi/chi/v5 v5.2.3
-	github.com/rs/cors v1.11.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0
 	go.opentelemetry.io/otel v1.38.0
 	golang.org/x/oauth2 v0.31.0
@@ -27,7 +26,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
-	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/bridges/otelslog v0.13.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.14.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.38.0 // indirect
@@ -37,11 +36,11 @@ require (
 	go.opentelemetry.io/otel/sdk v1.38.0 // indirect
 	go.opentelemetry.io/otel/sdk/log v0.14.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.38.0 // indirect
-	go.yaml.in/yaml/v2 v2.4.2 // indirect
+	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/crypto v0.42.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250908214217-97024824d090 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250908214217-97024824d090 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250929231259-57b25ae835d4 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250929231259-57b25ae835d4 // indirect
 )
 
 require (
