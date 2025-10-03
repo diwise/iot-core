@@ -94,6 +94,9 @@ func testSetup(t *testing.T) (*is.I, context.Context, App, client.DeviceManageme
 		PublishOnTopicFunc: func(ctx context.Context, message messaging.TopicMessage) error {
 			return nil
 		},
+		SendCommandToFunc: func(ctx context.Context, command messaging.Command, key string) error {
+			return nil
+		},
 	}
 	s := &database.StorageMock{
 		HistoryFunc: func(ctx context.Context, id, label string, lastN int) ([]database.LogValue, error) {
