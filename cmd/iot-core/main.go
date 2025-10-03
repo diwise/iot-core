@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -132,7 +131,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 				return err
 			}
 
-			app = application.New(dmClient, mClient, registry)
+			app = application.New(dmClient, mClient, registry, msgCtx)
 
 			return nil
 		}),
@@ -141,10 +140,10 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 
 			msgCtx.RegisterCommandHandler(func(m messaging.Message) bool {
 				return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m")
-			}, newCommandHandler(msgCtx, app))
+			}, newMessageReceivedCommandHandler(msgCtx, app))
 
-			msgCtx.RegisterTopicMessageHandler("message.accepted", newTopicMessageHandler(msgCtx, app))
-			msgCtx.RegisterTopicMessageHandler("function.updated", newFunctionUpdatedTopicMessageHandler(msgCtx))
+			msgCtx.RegisterTopicMessageHandler("message.accepted", newMessageAcceptedHandler(app))
+			msgCtx.RegisterTopicMessageHandler("function.updated", newFunctionUpdatedTopicMessageHandler(app))
 
 			err = storage.Initialize(ctx)
 			if err != nil {
@@ -198,7 +197,7 @@ func parseExternalConfig(ctx context.Context, flags flagMap) (context.Context, f
 	return ctx, flags
 }
 
-func newCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {
+func newMessageReceivedCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {
 	return func(ctx context.Context, wrapper messaging.IncomingCommand, logger *slog.Logger) error {
 		var err error
 
@@ -209,14 +208,12 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 		evt := events.MessageReceived{}
 		err = json.Unmarshal(wrapper.Body(), &evt)
 		if err != nil {
-			logger.Error("failed to decode message from json", "err", err.Error())
+			logger.Error("failed to unmarshal message.received command from json", "err", err.Error())
 			return err
 		}
 
-		logger = logger.With(slog.String("device_id", evt.DeviceID()))
+		logger = logger.With(slog.String("device_id", evt.DeviceID())).With(slog.String("object_id", evt.ObjectID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
-
-		logger.Debug("message.received", "device_id", evt.DeviceID(), "object_id", evt.ObjectID())
 
 		m, err := app.MessageReceived(ctx, evt)
 		if err != nil {
@@ -229,23 +226,23 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 			return err
 		}
 
-		logger.Debug("publishing message", slog.String("device_id", m.DeviceID()), slog.String("object_id", m.ObjectID()), slog.String("topic", m.TopicName()))
-
 		err = messenger.PublishOnTopic(ctx, m)
 		if err != nil {
 			logger.Error("failed to publish message", "err", err.Error())
 			return err
 		}
 
+		logger.Debug("received message accepted", slog.String("content_type", m.ContentType()), slog.String("topic", m.TopicName()))
+
 		return nil
 	}
 }
 
-func newTopicMessageHandler(messenger messaging.MsgContext, app application.App) messaging.TopicMessageHandler {
+func newMessageAcceptedHandler(app application.App) messaging.TopicMessageHandler {
 	return func(ctx context.Context, msg messaging.IncomingTopicMessage, logger *slog.Logger) {
 		var err error
 
-		ctx, span := tracer.Start(ctx, "receive-message")
+		ctx, span := tracer.Start(ctx, "accept-message")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
@@ -253,29 +250,29 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 
 		err = json.Unmarshal(msg.Body(), &evt)
 		if err != nil {
-			logger.Error("unable to unmarshal incoming message", "err", err.Error())
+			logger.Error("unable to unmarshal incoming topic message message.accepted", "err", err.Error())
 			return
 		}
-
-		err = evt.Error()
-		if err != nil {
-			logger.Warn("received malformed topic message", "err", err.Error())
-			return
-		}
-
-		logger.Debug(fmt.Sprintf("handling topic message for %s with type %s and content-type %s", evt.DeviceID(), evt.ObjectID(), evt.ContentType()))
 
 		logger = logger.With(slog.String("device_id", evt.DeviceID()), slog.String("object_id", evt.ObjectID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
-		err = app.MessageAccepted(ctx, evt, messenger)
+		err = evt.Error()
+		if err != nil {
+			logger.Warn("received malformed message.accepted message", "err", err.Error())
+			return
+		}
+
+		err = app.MessageAccepted(ctx, evt)
 		if err != nil {
 			logger.Error("failed to handle message", "err", err.Error())
 		}
+
+		logger.Debug("message.accepted handled", slog.String("content_type", evt.ContentType()), slog.String("topic", evt.TopicName()))
 	}
 }
 
-func newFunctionUpdatedTopicMessageHandler(messenger messaging.MsgContext) messaging.TopicMessageHandler {
+func newFunctionUpdatedTopicMessageHandler(app application.App) messaging.TopicMessageHandler {
 	return func(ctx context.Context, msg messaging.IncomingTopicMessage, logger *slog.Logger) {
 		var err error
 
@@ -283,7 +280,7 @@ func newFunctionUpdatedTopicMessageHandler(messenger messaging.MsgContext) messa
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
-		err = functions.Transform(ctx, messenger, msg)
+		err = app.FunctionUpdated(ctx, msg.Body())
 		if err != nil {
 			logger.Error("failed to transform message", "err", err.Error())
 		}

@@ -28,7 +28,6 @@ type Registry interface {
 }
 
 func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage) (Registry, error) {
-
 	r := &reg{
 		f: make(map[string]Function),
 	}
@@ -69,21 +68,14 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				}
 				f.defaultHistoryLabel = "level"
 				l := lastLogValue(ctx, storage, f)
-
-				logger.Debug("new level created", "function_id", f.ID_, "value", l.Value)
-
 				f.Level, err = levels.New(levelConfig, l.Value)
 				if err != nil {
 					return nil, err
 				}
-
 				f.handle = f.Level.Handle
 			case presences.FunctionTypeName:
 				f.defaultHistoryLabel = "presence"
 				l := lastLogValue(ctx, storage, f)
-
-				logger.Debug("new presence created", "function_id", f.ID_, "value", l.Value)
-
 				f.Presence = presences.New(l.Value)
 				f.handle = f.Presence.Handle
 			case timers.FunctionTypeName:
@@ -109,9 +101,6 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 			case digitalinput.FunctionTypeName:
 				f.defaultHistoryLabel = "digitalinput"
 				l := lastLogValue(ctx, storage, f)
-
-				logger.Debug("new digital input created", "function_id", f.ID_, "value", l.Value)
-
 				f.DigitalInput = digitalinput.New(l.Value)
 				f.handle = f.DigitalInput.Handle
 			default:
@@ -139,7 +128,6 @@ type reg struct {
 }
 
 func (r *reg) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error) {
-
 	if len(matchers) == 0 {
 		return nil, fmt.Errorf("at least one matcher must be supplied to Find")
 	}

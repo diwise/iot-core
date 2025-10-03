@@ -32,10 +32,6 @@ type MessageAccepted struct {
 	Pack_     senml.Pack `json:"pack"`
 	Timestamp time.Time  `json:"timestamp"`
 }
-type MessageTransformed struct {
-	Pack_     senml.Pack `json:"pack"`
-	Timestamp time.Time  `json:"timestamp"`
-}
 
 func NewMessageReceived(pack senml.Pack, decorators ...EventDecoratorFunc) *MessageReceived {
 	mr := &MessageReceived{
@@ -57,16 +53,7 @@ func NewMessageAccepted(pack senml.Pack, decorators ...EventDecoratorFunc) *Mess
 	}
 	return ma
 }
-func NewMessageTransformed(pack senml.Pack, decorators ...EventDecoratorFunc) *MessageTransformed {
-	mt := &MessageTransformed{
-		Pack_:     pack,
-		Timestamp: time.Now().UTC(),
-	}
-	for _, d := range decorators {
-		d(mt)
-	}
-	return mt
-}
+
 
 func (m MessageReceived) DeviceID() string {
 	return GetDeviceID(m.Pack_)
@@ -170,59 +157,6 @@ func (m MessageAccepted) ContentType() string {
 }
 func (m MessageAccepted) TopicName() string {
 	return topics.MessageAccepted
-}
-
-/*------------*/
-
-func (m MessageTransformed) DeviceID() string {
-	return GetDeviceID(m.Pack_)
-}
-func (m MessageTransformed) ObjectID() string {
-	return GetObjectID(m.Pack_)
-}
-func (m MessageTransformed) Pack() senml.Pack {
-	return m.Pack_
-}
-func (m *MessageTransformed) Append(r senml.Record) {
-	m.Pack_ = append(m.Pack_, r)
-}
-func (m *MessageTransformed) Replace(r senml.Record, find func(senml.Record) bool) {
-	for i, rec := range m.Pack_ {
-		if find(rec) {
-			m.Pack_[i] = r
-			return
-		}
-	}
-}
-func (m MessageTransformed) Tenant() string {
-	s, ok := m.Pack().GetStringValue(senml.FindByName("tenant"))
-	if !ok {
-		return ""
-	}
-	return s
-}
-func (m MessageTransformed) Error() error {
-	if len(m.Pack()) == 0 {
-		return errors.New("pack is empty")
-	}
-	if m.DeviceID() == "" {
-		return errors.New("device id is missing")
-	}
-	if m.Timestamp.IsZero() {
-		return errors.New("timestamp is mising")
-	}
-
-	return nil
-}
-func (m MessageTransformed) Body() []byte {
-	b, _ := json.Marshal(m)
-	return b
-}
-func (m MessageTransformed) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
-}
-func (m MessageTransformed) TopicName() string {
-	return topics.MessageTransformed
 }
 
 /*------------*/

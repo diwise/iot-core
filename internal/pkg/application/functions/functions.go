@@ -86,8 +86,6 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	f.DeviceID = e.DeviceID()
 
 	onchange := func(prop string, value float64, ts time.Time) error {
-		log.Debug(fmt.Sprintf("property %s changed to %f with time %s", prop, value, ts.Format(time.RFC3339)))
-
 		err := f.storage.Add(ctx, f.ID(), prop, value, ts)
 		if err != nil {
 			log.Error("failed to add values to database", "err", err.Error())
@@ -108,7 +106,6 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	if tenant, ok := e.Pack().GetStringValue(senml.FindByName("tenant")); ok {
 		// Temporary fix to force an update the first time a function is called
 		if f.Tenant == "" {
-			log.Debug("add tenant to function")
 			f.Tenant = tenant
 			changed = true
 		}
@@ -117,7 +114,6 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	if source, ok := e.Pack().GetStringValue(senml.FindByName("source")); ok {
 		// Temporary fix to force an update the first time a function is called
 		if f.Source == "" {
-			log.Debug("add source to function")
 			f.Source = source
 			changed = true
 		}
@@ -125,7 +121,6 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 
 	if lat, lon, ok := e.Pack().GetLatLon(); ok {
 		if f.Location == nil {
-			log.Debug("add location to function")
 			f.Location = &location{
 				Latitude:  lat,
 				Longitude: lon,
@@ -137,7 +132,6 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	changed, err := f.handle(ctx, e, onchange)
 	if err != nil {
 		if errors.Is(err, events.ErrNoMatch) {
-			log.Debug(fmt.Sprintf("%s function should not handle this message type (%s)", f.Type, e.ObjectID()))
 			return nil
 		}
 		return err
@@ -148,24 +142,11 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 			f.Timestamp = e.Timestamp.UTC()
 		}
 
-		fumsg := NewFunctionUpdatedMessage(f)
-
-		log.Debug("publishing message",
-			slog.String("body", string(fumsg.Body())),
-			slog.String("topic", fumsg.TopicName()),
-			slog.String("content-type", fumsg.ContentType()),
-			slog.Bool("changed", changed),
-			slog.Bool("onupdate", f.OnUpdate))
-
-		err := msgctx.PublishOnTopic(ctx, fumsg)
+		err := msgctx.PublishOnTopic(ctx, newFunctionUpdatedMessage(f))
 		if err != nil {
 			return err
 		}
-	} else {
-		log.Debug(fmt.Sprintf("no message published, change is %t, onUpdate %t", changed, f.OnUpdate))
 	}
-
-	log.Debug(fmt.Sprintf("function %s handled incoming message.accepted of type %s, change is %t, onUpdate is %t", f.Type, e.ObjectID(), changed, f.OnUpdate))
 
 	return nil
 }
@@ -192,7 +173,7 @@ func (f *fnct) History(ctx context.Context, label string, lastN int) ([]LogValue
 	return loggedValues, nil
 }
 
-func NewFunctionUpdatedMessage(f *fnct) messaging.TopicMessage {
+func newFunctionUpdatedMessage(f *fnct) messaging.TopicMessage {
 	subType := ""
 	if len(f.SubType) > 0 {
 		subType = fmt.Sprintf(".%s", f.SubType)
@@ -204,6 +185,7 @@ func NewFunctionUpdatedMessage(f *fnct) messaging.TopicMessage {
 
 	contentType := strings.ToLower(fmt.Sprintf("application/vnd.diwise.%s%s+json", f.Type, subType))
 	m, _ := messaging.NewTopicMessageJSON("function.updated", contentType, *f)
+
 	return m
 }
 
