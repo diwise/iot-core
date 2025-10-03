@@ -27,6 +27,7 @@ type measurementsClient struct {
 	c                 *cache.Cache
 }
 
+//go:generate moq -rm -out measurementsclient_mock.go . MeasurementsClient
 type MeasurementsClient interface {
 	MaxValueFinder
 	CountBoolValueFinder
