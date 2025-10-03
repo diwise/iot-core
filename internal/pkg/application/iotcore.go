@@ -113,12 +113,30 @@ type functionUpdated struct {
 	Tenant    string    `json:"tenant"`
 	Timestamp time.Time `json:"timestamp"`
 
-	Level *level `json:"level"`
+	Level     *level     `json:"level"`
+	Timer     *timer     `json:"timer"`
+	Stopwatch *stopwatch `json:"stopwatch"`
 }
 
 type level struct {
 	Current float64 `json:"current"`
 	Percent float64 `json:"percent"`
+}
+
+type timer struct {
+	StartTime     time.Time      `json:"startTime"`
+	State         bool           `json:"state"`
+	Duration      *time.Duration `json:"duration"`
+	TotalDuration time.Duration  `json:"totalDuration"`
+}
+
+type stopwatch struct {
+	StartTime      time.Time      `json:"startTime"`
+	StopTime       time.Time      `json:"stopTime"`
+	Duration       *time.Duration `json:"duration"`
+	State          bool           `json:"state"`
+	Count          int            `json:"count"`
+	CumulativeTime time.Duration  `json:"cumulativeTime"`
 }
 
 func (a *app) FunctionUpdated(ctx context.Context, body []byte) error {
@@ -145,6 +163,27 @@ func (a *app) FunctionUpdated(ctx context.Context, body []byte) error {
 		log.Debug("filling level function updated", slog.String("deviceID", fn.DeviceID), slog.Float64("percent", fn.Level.Percent), slog.Float64("current", fn.Level.Current))
 
 		evt = events.NewMessageReceived(lwm2m.ToPack(fl))
+	case "timer":
+		if fn.Timer == nil {
+			return nil
+		}
+
+		tmr := lwm2m.NewTimer(fn.DeviceID, fn.Timer.Duration.Seconds(), fn.Timestamp)
+		tmr.OnOff = fn.Timer.State
+		cumulative := float64(fn.Timer.TotalDuration.Seconds())
+		tmr.CumulativeTime = &cumulative
+
+		evt = events.NewMessageReceived(lwm2m.ToPack(tmr))
+	case "stopwatch":
+		if fn.Stopwatch == nil {
+			return nil
+		}
+
+		sw := lwm2m.NewStopwatch(fn.DeviceID, float64(fn.Stopwatch.CumulativeTime.Seconds()), fn.Timestamp)
+		sw.OnOff = &fn.Stopwatch.State
+		sw.DigitalInputCounter = int32(fn.Stopwatch.Count)
+
+		evt = events.NewMessageReceived(lwm2m.ToPack(sw))
 	default:
 		return nil
 	}
