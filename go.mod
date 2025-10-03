@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/diwise/iot-agent v0.0.0-20250930131659-f594103fd33a
-	github.com/diwise/iot-device-mgmt v0.0.0-20250910121546-25397413c702
+	github.com/diwise/iot-device-mgmt v0.0.0-20251002111003-f850b71139da
 	github.com/diwise/messaging-golang v0.0.0-20250628135946-f23f34d06003
 	github.com/diwise/senml v0.0.0-20250930091756-4b5cca508535
 	github.com/go-chi/chi/v5 v5.2.3
@@ -59,5 +59,5 @@ require (
 	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 	google.golang.org/grpc v1.75.1 // indirect
-	google.golang.org/protobuf v1.36.9 // indirect
+	google.golang.org/protobuf v1.36.10 // indirect
 )

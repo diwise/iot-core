@@ -21,13 +21,13 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
+//go:generate moq -rm -out registry_mock.go . Registry
 type Registry interface {
 	Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error)
 	Get(ctx context.Context, functionID string) (Function, error)
 }
 
 func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage) (Registry, error) {
-
 	r := &reg{
 		f: make(map[string]Function),
 	}
@@ -56,63 +56,54 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 				storage:  storage,
 			}
 
-			if f.Type == counters.FunctionTypeName {
+			switch f.Type {
+			case counters.FunctionTypeName:
 				f.Counter = counters.New()
 				f.handle = f.Counter.Handle
 				f.defaultHistoryLabel = "count"
-			} else if f.Type == levels.FunctionTypeName {
+			case levels.FunctionTypeName:
 				levelConfig := ""
 				if tokenCount > 6 {
 					levelConfig = tokens[6]
 				}
 				f.defaultHistoryLabel = "level"
 				l := lastLogValue(ctx, storage, f)
-
-				logger.Debug("new level created", "function_id", f.ID_, "value", l.Value)
-
 				f.Level, err = levels.New(levelConfig, l.Value)
 				if err != nil {
 					return nil, err
 				}
-
 				f.handle = f.Level.Handle
-			} else if f.Type == presences.FunctionTypeName {
+			case presences.FunctionTypeName:
 				f.defaultHistoryLabel = "presence"
 				l := lastLogValue(ctx, storage, f)
-
-				logger.Debug("new presence created", "function_id", f.ID_, "value", l.Value)
-
 				f.Presence = presences.New(l.Value)
 				f.handle = f.Presence.Handle
-			} else if f.Type == timers.FunctionTypeName {
+			case timers.FunctionTypeName:
 				f.Timer = timers.New()
 				f.handle = f.Timer.Handle
 				f.defaultHistoryLabel = "time"
-			} else if f.Type == waterqualities.FunctionTypeName {
+			case waterqualities.FunctionTypeName:
 				f.WaterQuality = waterqualities.New()
 				f.handle = f.WaterQuality.Handle
 				f.defaultHistoryLabel = "temperature"
-			} else if f.Type == buildings.FunctionTypeName {
+			case buildings.FunctionTypeName:
 				f.Building = buildings.New()
 				f.handle = f.Building.Handle
 				f.defaultHistoryLabel = "power"
-			} else if f.Type == airquality.FunctionTypeName {
+			case airquality.FunctionTypeName:
 				f.AirQuality = airquality.New()
 				f.handle = f.AirQuality.Handle
 				f.defaultHistoryLabel = "temperature"
-			} else if f.Type == stopwatch.FunctionTypeName {
+			case stopwatch.FunctionTypeName:
 				f.Stopwatch = stopwatch.New()
 				f.handle = f.Stopwatch.Handle
 				f.defaultHistoryLabel = "duration"
-			} else if f.Type == digitalinput.FunctionTypeName {
+			case digitalinput.FunctionTypeName:
 				f.defaultHistoryLabel = "digitalinput"
 				l := lastLogValue(ctx, storage, f)
-
-				logger.Debug("new digital input created", "function_id", f.ID_, "value", l.Value)
-
 				f.DigitalInput = digitalinput.New(l.Value)
 				f.handle = f.DigitalInput.Handle
-			} else {
+			default:
 				numErrors++
 				if numErrors > 1 {
 					return nil, fmt.Errorf("unable to parse function config line: \"%s\"", line)
@@ -137,7 +128,6 @@ type reg struct {
 }
 
 func (r *reg) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error) {
-
 	if len(matchers) == 0 {
 		return nil, fmt.Errorf("at least one matcher must be supplied to Find")
 	}
