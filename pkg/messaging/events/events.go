@@ -33,6 +33,58 @@ type MessageAccepted struct {
 	Timestamp time.Time  `json:"timestamp"`
 }
 
+// Validation
+
+type MessageNotValidated struct {
+	Pack_     senml.Pack `json:"pack"`
+	Timestamp time.Time  `json:"timestamp"`
+	Reason    []string   `json:"reason"`
+}
+
+func (m MessageNotValidated) Body() []byte {
+	b, _ := json.Marshal(m)
+	return b
+}
+func (m MessageNotValidated) ContentType() string {
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
+}
+func (m MessageNotValidated) TopicName() string {
+	return topics.MessageReceived
+}
+
+func (m MessageNotValidated) DeviceID() string {
+	return GetDeviceID(m.Pack_)
+}
+func (m MessageNotValidated) ObjectID() string {
+	return GetObjectID(m.Pack_)
+}
+
+func (m MessageAborted) Body() []byte {
+	b, _ := json.Marshal(m)
+	return b
+}
+func (m MessageAborted) ContentType() string {
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
+}
+func (m MessageAborted) TopicName() string {
+	return topics.MessageReceived
+}
+
+func (m MessageAborted) DeviceID() string {
+	return GetDeviceID(m.Pack_)
+}
+func (m MessageAborted) ObjectID() string {
+	return GetObjectID(m.Pack_)
+}
+
+type MessageAborted struct {
+	Pack_     senml.Pack `json:"pack"`
+	Timestamp time.Time  `json:"timestamp"`
+	Reason    []string   `json:"reason"`
+}
+
+// #
+
 func NewMessageReceived(pack senml.Pack, decorators ...EventDecoratorFunc) *MessageReceived {
 	mr := &MessageReceived{
 		Pack_:     pack,
@@ -54,6 +106,23 @@ func NewMessageAccepted(pack senml.Pack, decorators ...EventDecoratorFunc) *Mess
 	return ma
 }
 
+func NewMessageNotValidated(pack senml.Pack, reason []string) *MessageNotValidated {
+	mnv := &MessageNotValidated{
+		Pack_:     pack,
+		Timestamp: time.Now().UTC(),
+		Reason:    reason,
+	}
+	return mnv
+}
+
+func NewMessageAborted(pack senml.Pack, reason []string) *MessageAborted {
+	ma := &MessageAborted{
+		Pack_:     pack,
+		Timestamp: time.Now().UTC(),
+		Reason:    reason,
+	}
+	return ma
+}
 
 func (m MessageReceived) DeviceID() string {
 	return GetDeviceID(m.Pack_)
