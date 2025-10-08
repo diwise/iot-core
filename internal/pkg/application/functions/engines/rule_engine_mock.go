@@ -8,7 +8,6 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/senml"
-	"log/slog"
 	"sync"
 )
 
@@ -22,10 +21,10 @@ var _ RuleEngine = &RuleEngineMock{}
 //
 //		// make and configure a mocked RuleEngine
 //		mockedRuleEngine := &RuleEngineMock{
-//			ValidateMessageReceivedFunc: func(ctx context.Context, msg events.MessageReceived, logger *slog.Logger) ([]RuleValidation, error) {
+//			ValidateMessageReceivedFunc: func(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error) {
 //				panic("mock out the ValidateMessageReceived method")
 //			},
-//			ValidateRecordFunc: func(record senml.Record, rule rules.Rule, logger *slog.Logger) (RuleValidation, error) {
+//			ValidateRecordFunc: func(record senml.Record, rule rules.Rule) RuleValidation {
 //				panic("mock out the ValidateRecord method")
 //			},
 //		}
@@ -36,10 +35,10 @@ var _ RuleEngine = &RuleEngineMock{}
 //	}
 type RuleEngineMock struct {
 	// ValidateMessageReceivedFunc mocks the ValidateMessageReceived method.
-	ValidateMessageReceivedFunc func(ctx context.Context, msg events.MessageReceived, logger *slog.Logger) ([]RuleValidation, error)
+	ValidateMessageReceivedFunc func(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error)
 
 	// ValidateRecordFunc mocks the ValidateRecord method.
-	ValidateRecordFunc func(record senml.Record, rule rules.Rule, logger *slog.Logger) (RuleValidation, error)
+	ValidateRecordFunc func(record senml.Record, rule rules.Rule) RuleValidation
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -49,8 +48,6 @@ type RuleEngineMock struct {
 			Ctx context.Context
 			// Msg is the msg argument value.
 			Msg events.MessageReceived
-			// Logger is the logger argument value.
-			Logger *slog.Logger
 		}
 		// ValidateRecord holds details about calls to the ValidateRecord method.
 		ValidateRecord []struct {
@@ -58,8 +55,6 @@ type RuleEngineMock struct {
 			Record senml.Record
 			// Rule is the rule argument value.
 			Rule rules.Rule
-			// Logger is the logger argument value.
-			Logger *slog.Logger
 		}
 	}
 	lockValidateMessageReceived sync.RWMutex
@@ -67,23 +62,21 @@ type RuleEngineMock struct {
 }
 
 // ValidateMessageReceived calls ValidateMessageReceivedFunc.
-func (mock *RuleEngineMock) ValidateMessageReceived(ctx context.Context, msg events.MessageReceived, logger *slog.Logger) ([]RuleValidation, error) {
+func (mock *RuleEngineMock) ValidateMessageReceived(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error) {
 	if mock.ValidateMessageReceivedFunc == nil {
 		panic("RuleEngineMock.ValidateMessageReceivedFunc: method is nil but RuleEngine.ValidateMessageReceived was just called")
 	}
 	callInfo := struct {
-		Ctx    context.Context
-		Msg    events.MessageReceived
-		Logger *slog.Logger
+		Ctx context.Context
+		Msg events.MessageReceived
 	}{
-		Ctx:    ctx,
-		Msg:    msg,
-		Logger: logger,
+		Ctx: ctx,
+		Msg: msg,
 	}
 	mock.lockValidateMessageReceived.Lock()
 	mock.calls.ValidateMessageReceived = append(mock.calls.ValidateMessageReceived, callInfo)
 	mock.lockValidateMessageReceived.Unlock()
-	return mock.ValidateMessageReceivedFunc(ctx, msg, logger)
+	return mock.ValidateMessageReceivedFunc(ctx, msg)
 }
 
 // ValidateMessageReceivedCalls gets all the calls that were made to ValidateMessageReceived.
@@ -91,14 +84,12 @@ func (mock *RuleEngineMock) ValidateMessageReceived(ctx context.Context, msg eve
 //
 //	len(mockedRuleEngine.ValidateMessageReceivedCalls())
 func (mock *RuleEngineMock) ValidateMessageReceivedCalls() []struct {
-	Ctx    context.Context
-	Msg    events.MessageReceived
-	Logger *slog.Logger
+	Ctx context.Context
+	Msg events.MessageReceived
 } {
 	var calls []struct {
-		Ctx    context.Context
-		Msg    events.MessageReceived
-		Logger *slog.Logger
+		Ctx context.Context
+		Msg events.MessageReceived
 	}
 	mock.lockValidateMessageReceived.RLock()
 	calls = mock.calls.ValidateMessageReceived
@@ -107,23 +98,21 @@ func (mock *RuleEngineMock) ValidateMessageReceivedCalls() []struct {
 }
 
 // ValidateRecord calls ValidateRecordFunc.
-func (mock *RuleEngineMock) ValidateRecord(record senml.Record, rule rules.Rule, logger *slog.Logger) (RuleValidation, error) {
+func (mock *RuleEngineMock) ValidateRecord(record senml.Record, rule rules.Rule) RuleValidation {
 	if mock.ValidateRecordFunc == nil {
 		panic("RuleEngineMock.ValidateRecordFunc: method is nil but RuleEngine.ValidateRecord was just called")
 	}
 	callInfo := struct {
 		Record senml.Record
 		Rule   rules.Rule
-		Logger *slog.Logger
 	}{
 		Record: record,
 		Rule:   rule,
-		Logger: logger,
 	}
 	mock.lockValidateRecord.Lock()
 	mock.calls.ValidateRecord = append(mock.calls.ValidateRecord, callInfo)
 	mock.lockValidateRecord.Unlock()
-	return mock.ValidateRecordFunc(record, rule, logger)
+	return mock.ValidateRecordFunc(record, rule)
 }
 
 // ValidateRecordCalls gets all the calls that were made to ValidateRecord.
@@ -133,12 +122,10 @@ func (mock *RuleEngineMock) ValidateRecord(record senml.Record, rule rules.Rule,
 func (mock *RuleEngineMock) ValidateRecordCalls() []struct {
 	Record senml.Record
 	Rule   rules.Rule
-	Logger *slog.Logger
 } {
 	var calls []struct {
 		Record senml.Record
 		Rule   rules.Rule
-		Logger *slog.Logger
 	}
 	mock.lockValidateRecord.RLock()
 	calls = mock.calls.ValidateRecord

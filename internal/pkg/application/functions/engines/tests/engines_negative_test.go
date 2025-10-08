@@ -68,7 +68,7 @@ func TestInvalidRule_VMin_ReturnsNonValid(t *testing.T) {
 		t.Fatalf("Add(V): %v", err)
 	}
 
-	validations, _ := e.ValidateMessageReceived(testCtx, msg, log)
+	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 
 	for _, validation := range validations {
 		is.True(validation.IsValid == false)
@@ -93,7 +93,7 @@ func TestInvalidRule_VMax_ReturnsNonValid(t *testing.T) {
 		t.Fatalf("Add(V): %v", err)
 	}
 
-	validations, _ := e.ValidateMessageReceived(testCtx, msg, log)
+	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 
 	for _, validation := range validations {
 		is.True(validation.IsValid == false)
@@ -141,7 +141,7 @@ func TestInvalidRule_VS_ReturnsNonValid(t *testing.T) {
 		t.Fatalf("Add(V): %v", err)
 	}
 
-	validations, _ := e.ValidateMessageReceived(testCtx, msg, log)
+	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 
 	for _, validation := range validations {
 		is.True(validation.IsValid == false)
@@ -166,7 +166,7 @@ func TestInvalidRule_VB_ReturnsNonValid(t *testing.T) {
 		t.Fatalf("Add(V): %v", err)
 	}
 
-	validations, _ := e.ValidateMessageReceived(testCtx, msg, log)
+	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 
 	for _, validation := range validations {
 		is.True(validation.IsValid == false)

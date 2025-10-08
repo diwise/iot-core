@@ -13,8 +13,11 @@ import (
 
 	"github.com/diwise/iot-core/internal/pkg/application"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/engines"
 	"github.com/diwise/iot-core/internal/pkg/application/measurements"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/repository"
 	"github.com/diwise/iot-core/internal/pkg/presentation/api"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
@@ -85,8 +88,9 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 	var dmClient client.DeviceManagementClient
 	var msgCtx messaging.MsgContext
 	var mClient measurements.MeasurementsClient
-	var funcStorage database.Storage
-	var registry functions.Registry
+	var ruleStorage rules.RuleStorage
+	var funcStorage database.FuncStorage
+	var funcRegistry functions.FuncRegistry
 	var app application.App
 
 	_, runner := servicerunner.New(ctx, *cfg,
@@ -117,11 +121,14 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 			}
 
 			dbConfig := database.NewConfig(flags[dbHost], flags[dbUser], flags[dbPassword], flags[dbPort], flags[dbName], flags[dbSSLMode])
-			conn, _ := database.GetConnection(ctx, dbConfig)
+			conn, err := database.GetConnection(ctx, dbConfig)
 
 			if err != nil {
 				return err
 			}
+
+			ruleStorage = rules.Connect(conn)
+			ruleRepository := repository.NewRepository(ruleStorage)
 
 			funcStorage = database.Connect(conn)
 
@@ -130,12 +137,14 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 				defer f.Close()
 			}
 
-			registry, err = functions.NewFuncRegistry(ctx, f, funcStorage)
+			funcRegistry, err = functions.NewFuncRegistry(ctx, f, funcStorage)
 			if err != nil {
 				return err
 			}
 
-			app = application.New(dmClient, mClient, registry, msgCtx)
+			ruleEngine := engines.NewEngine(ruleRepository)
+
+			app = application.New(dmClient, mClient, funcRegistry, ruleEngine, msgCtx)
 
 			return nil
 		}),

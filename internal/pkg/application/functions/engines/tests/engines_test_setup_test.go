@@ -139,7 +139,7 @@ func newTestRepository() repository.RuleRepository {
 }
 
 func newTestEngine() engines.RuleEngine {
-	return engines.NewEngine(testRuleRepository, log)
+	return engines.NewEngine(testRuleRepository)
 }
 
 // {F: n:1, v:22.5} {FS: n:3, vs:w1e} {VB: n:10, vb:true}

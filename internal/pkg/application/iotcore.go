@@ -86,12 +86,12 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 			log.Debug("message did not validate by it's rule", "device_id", device.ID())
 
 			if validation.ShouldAbort {
-				abortMessage := events.NewMessageAborted(clone, validation.Errors)
+				abortMessage := events.NewMessageAborted(clone, validation.ValidationMessages)
 				err = a.messenger.PublishOnTopic(ctx, abortMessage)
 				return nil, fmt.Errorf("message did not validate and is set to abort")
 			}
 
-			notValidatedMessage := events.NewMessageNotValidated(clone, validation.Errors)
+			notValidatedMessage := events.NewMessageNotValidated(clone, validation.ValidationMessages)
 			err = a.messenger.PublishOnTopic(ctx, notValidatedMessage)
 		}
 	}
