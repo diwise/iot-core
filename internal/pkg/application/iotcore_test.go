@@ -5,17 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/engines"
 	"github.com/diwise/iot-core/internal/pkg/application/measurements"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/diwise/iot-device-mgmt/pkg/test"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/senml"
 	"github.com/matryer/is"
 )
 
@@ -175,7 +179,16 @@ func testSetup(t *testing.T) (*is.I, context.Context, App, client.DeviceManageme
 	}
 	r, _ := functions.NewFuncRegistry(ctx, io.NopCloser(strings.NewReader(functionsFileContent)), s)
 
-	a := New(d, m, r, mctx)
+	engine := &engines.RuleEngineMock{
+		ValidateMessageReceivedFunc: func(ctx context.Context, msg events.MessageReceived, log *slog.Logger) ([]engines.RuleValidation, error) {
+			return nil, nil
+		},
+		ValidateRecordFunc: func(record senml.Record, rule rules.Rule, log *slog.Logger) (engines.RuleValidation, error) {
+			return engines.RuleValidation{}, nil
+		},
+	}
+
+	a := New(d, m, r, engine, mctx)
 
 	return is, ctx, a, d, m, r, mctx
 }
