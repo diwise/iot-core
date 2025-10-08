@@ -85,7 +85,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 	var dmClient client.DeviceManagementClient
 	var msgCtx messaging.MsgContext
 	var mClient measurements.MeasurementsClient
-	var storage database.Storage
+	var funcStorage database.Storage
 	var registry functions.Registry
 	var app application.App
 
@@ -116,17 +116,21 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 				return err
 			}
 
-			storage, err = database.Connect(ctx, database.NewConfig(flags[dbHost], flags[dbUser], flags[dbPassword], flags[dbPort], flags[dbName], flags[dbSSLMode]))
+			dbConfig := database.NewConfig(flags[dbHost], flags[dbUser], flags[dbPassword], flags[dbPort], flags[dbName], flags[dbSSLMode])
+			conn, _ := database.GetConnection(ctx, dbConfig)
+
 			if err != nil {
 				return err
 			}
+
+			funcStorage = database.Connect(conn)
 
 			f, _ := os.Open(flags[functionsFile])
 			if f != nil {
 				defer f.Close()
 			}
 
-			registry, err = functions.NewRegistry(ctx, f, storage)
+			registry, err = functions.NewFuncRegistry(ctx, f, funcStorage)
 			if err != nil {
 				return err
 			}
@@ -145,7 +149,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 			msgCtx.RegisterTopicMessageHandler("message.accepted", newMessageAcceptedHandler(app))
 			msgCtx.RegisterTopicMessageHandler("function.updated", newFunctionUpdatedTopicMessageHandler(app))
 
-			err = storage.Initialize(ctx)
+			err = funcStorage.Initialize(ctx)
 			if err != nil {
 				return err
 			}

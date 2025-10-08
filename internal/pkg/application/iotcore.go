@@ -30,12 +30,12 @@ type App interface {
 type app struct {
 	deviceManagement   client.DeviceManagementClient
 	measurementsClient measurements.MeasurementsClient
-	registry           functions.Registry
+	registry           functions.FuncRegistry
 	mu                 sync.Mutex
 	messenger          messaging.MsgContext
 }
 
-func New(client client.DeviceManagementClient, measurementsClient measurements.MeasurementsClient, functionRegistry functions.Registry, msgCtx messaging.MsgContext) App {
+func New(client client.DeviceManagementClient, measurementsClient measurements.MeasurementsClient, functionRegistry functions.FuncRegistry, msgCtx messaging.MsgContext) App {
 	return &app{
 		deviceManagement:   client,
 		registry:           functionRegistry,

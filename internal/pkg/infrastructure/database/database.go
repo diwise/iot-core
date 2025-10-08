@@ -10,9 +10,14 @@ import (
 )
 
 //go:generate moq -rm -out storage_mock.go . Storage
+//go:generate moq -rm -out func_storage_mock.go . FuncStorage
 
 type Storage interface {
 	Initialize(context.Context) error
+}
+
+type FuncStorage interface {
+	Storage
 	Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
 	AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error
 	History(ctx context.Context, id, label string, lastN int) ([]LogValue, error)
@@ -62,7 +67,7 @@ func LoadConfiguration(ctx context.Context) Config {
 	}
 }
 
-func Connect(ctx context.Context, cfg Config) (Storage, error) {
+func GetConnection(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
 	conn, err := pgxpool.New(ctx, cfg.ConnStr())
 	if err != nil {
 		return nil, err
@@ -73,9 +78,12 @@ func Connect(ctx context.Context, cfg Config) (Storage, error) {
 		return nil, err
 	}
 
+	return conn, nil
+}
+func Connect(conn *pgxpool.Pool) FuncStorage {
 	return &impl{
 		db: conn,
-	}, nil
+	}
 }
 
 func (i *impl) Initialize(ctx context.Context) error {

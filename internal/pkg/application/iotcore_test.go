@@ -131,7 +131,7 @@ func TestFunctionUpdatedWithDistance(t *testing.T) {
 	is.NoErr(err)
 }
 
-func testSetup(t *testing.T) (*is.I, context.Context, App, client.DeviceManagementClient, *measurements.MeasurementsClientMock, functions.Registry, messaging.MsgContext) {
+func testSetup(t *testing.T) (*is.I, context.Context, App, client.DeviceManagementClient, *measurements.MeasurementsClientMock, functions.FuncRegistry, messaging.MsgContext) {
 	is := is.New(t)
 	d := &test.DeviceManagementClientMock{
 		FindDeviceFromInternalIDFunc: func(ctx context.Context, deviceID string) (client.Device, error) {
@@ -162,18 +162,18 @@ func testSetup(t *testing.T) (*is.I, context.Context, App, client.DeviceManageme
 			return nil
 		},
 	}
-	s := &database.StorageMock{
+	s := &database.FuncStorageMock{
 		HistoryFunc: func(ctx context.Context, id, label string, lastN int) ([]database.LogValue, error) {
 			return []database.LogValue{}, nil
 		},
-		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+		AddFnctFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
 			return nil
 		},
 	}
-	r, _ := functions.NewRegistry(ctx, io.NopCloser(strings.NewReader(functionsFileContent)), s)
+	r, _ := functions.NewFuncRegistry(ctx, io.NopCloser(strings.NewReader(functionsFileContent)), s)
 
 	a := New(d, m, r, mctx)
 

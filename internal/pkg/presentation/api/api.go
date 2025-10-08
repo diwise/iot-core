@@ -42,7 +42,7 @@ func RegisterHandlers(ctx context.Context, rootMux *http.ServeMux, app applicati
 		}
 
 		evt := events.MessageReceived{}
-		
+
 		err = json.Unmarshal(b, &evt)
 		if err != nil {
 			http.Error(w, "could not unmarshal body", http.StatusBadRequest)
@@ -71,7 +71,7 @@ func RegisterHandlers(ctx context.Context, rootMux *http.ServeMux, app applicati
 	return nil
 }
 
-func NewQueryFunctionsHandler(ctx context.Context, registry functions.Registry) http.HandlerFunc {
+func NewQueryFunctionsHandler(ctx context.Context, funcRegistry functions.FuncRegistry) http.HandlerFunc {
 	logger := logging.GetFromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +85,7 @@ func NewQueryFunctionsHandler(ctx context.Context, registry functions.Registry) 
 
 		log.Debug("functions requested")
 
-		functions, _ := registry.Find(ctx, functions.MatchAll())
+		functions, _ := funcRegistry.Find(ctx, functions.MatchAll())
 		b, _ := json.MarshalIndent(functions, "  ", "  ")
 
 		w.WriteHeader(http.StatusOK)
@@ -93,7 +93,7 @@ func NewQueryFunctionsHandler(ctx context.Context, registry functions.Registry) 
 	}
 }
 
-func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Registry) http.HandlerFunc {
+func NewQueryFunctionHistoryHandler(ctx context.Context, funcRegistry functions.FuncRegistry) http.HandlerFunc {
 	logger := logging.GetFromContext(ctx)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -113,7 +113,7 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 			return
 		}
 
-		function, err := registry.Get(ctx, functionID)
+		function, err := funcRegistry.Get(ctx, functionID)
 		if err != nil {
 			log.Error("not found", "err", err.Error())
 			w.WriteHeader(http.StatusNotFound)

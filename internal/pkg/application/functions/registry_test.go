@@ -15,8 +15,8 @@ func TestCreateRegistry(t *testing.T) {
 	sensorId := "testId"
 
 	config := "functionID;name;counter;overflow;" + sensorId + ";false"
-	reg, err := NewRegistry(context.Background(), bytes.NewBufferString(config), &database.StorageMock{
-		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+	reg, err := NewFuncRegistry(context.Background(), bytes.NewBufferString(config), &database.FuncStorageMock{
+		AddFnctFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
@@ -38,8 +38,8 @@ func TestFindNonMatchingFunctionReturnsEmptySlice(t *testing.T) {
 	is := is.New(t)
 
 	config := "functionID;name;counter;overflow;sensorId;false"
-	reg, err := NewRegistry(context.Background(), bytes.NewBufferString(config), &database.StorageMock{
-		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+	reg, err := NewFuncRegistry(context.Background(), bytes.NewBufferString(config), &database.FuncStorageMock{
+		AddFnctFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {

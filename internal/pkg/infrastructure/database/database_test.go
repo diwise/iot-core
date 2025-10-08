@@ -39,7 +39,7 @@ func TestSQL(t *testing.T) {
 	}
 }
 
-func testSetup() (Storage, context.Context, error) {
+func testSetup() (FuncStorage, context.Context, error) {
 	cfg := Config{
 		host:     "localhost",
 		user:     "diwise",
@@ -51,11 +51,12 @@ func testSetup() (Storage, context.Context, error) {
 
 	ctx := context.Background()
 
-	s, err := Connect(ctx, cfg)
+	conn, err := GetConnection(ctx, cfg)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	s := Connect(conn)
 	_ = s.Initialize(ctx)
 
 	return s, ctx, nil

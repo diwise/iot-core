@@ -21,13 +21,13 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
-//go:generate moq -rm -out registry_mock.go . Registry
-type Registry interface {
+//go:generate moq -rm -out func_registry_mock.go . Registry
+type FuncRegistry interface {
 	Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error)
 	Get(ctx context.Context, functionID string) (Function, error)
 }
 
-func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage) (Registry, error) {
+func NewFuncRegistry(ctx context.Context, input io.Reader, storage database.FuncStorage) (FuncRegistry, error) {
 	r := &reg{
 		f: make(map[string]Function),
 	}
@@ -48,12 +48,12 @@ func NewRegistry(ctx context.Context, input io.Reader, storage database.Storage)
 
 		if tokenCount >= 4 {
 			f := &fnct{
-				ID_:      tokens[0],
-				Name_:    tokens[1],
-				Type:     tokens[2],
-				SubType:  tokens[3],
-				OnUpdate: (tokenCount > 5 && tokens[5] == "true"),
-				storage:  storage,
+				ID_:         tokens[0],
+				Name_:       tokens[1],
+				Type:        tokens[2],
+				SubType:     tokens[3],
+				OnUpdate:    (tokenCount > 5 && tokens[5] == "true"),
+				funcStorage: storage,
 			}
 
 			switch f.Type {
@@ -175,7 +175,7 @@ func MatchSensor(sensorId string) RegistryMatcherFunc {
 	}
 }
 
-func lastLogValue(ctx context.Context, s database.Storage, f *fnct) database.LogValue {
+func lastLogValue(ctx context.Context, s database.FuncStorage, f *fnct) database.LogValue {
 	lv, err := s.History(ctx, f.ID_, f.defaultHistoryLabel, 1)
 	if err != nil {
 		return database.LogValue{}
