@@ -73,7 +73,7 @@ func requireDB(t *testing.T) {
 	if dbAvailable {
 		return
 	}
-	msg := "skippas: ingen DB tillgänglig"
+	msg := "Skip: No DB available"
 	if lastSetupError != "" {
 		msg += " (" + lastSetupError + ")"
 	}
