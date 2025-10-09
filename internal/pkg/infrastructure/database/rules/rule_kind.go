@@ -2,10 +2,10 @@ package rules
 
 import "errors"
 
-type ruleKind int
+type kind int
 
 const (
-	UnknownRuleKind ruleKind = iota
+	UnknownRuleKind kind = iota
 	kindV
 	kindVS
 	kindVB
@@ -16,7 +16,7 @@ var (
 	ErrorMultipleKindSet = errors.New("rule must have exactly one of V/VS/VB set (got multiple)")
 )
 
-func detectKind(r Rule) (ruleKind, error) {
+func detectKind(r Rule) (kind, error) {
 	hasV := r.RuleValues.V != nil &&
 		(r.RuleValues.V.MinValue != nil || r.RuleValues.V.MaxValue != nil)
 
@@ -27,7 +27,7 @@ func detectKind(r Rule) (ruleKind, error) {
 		r.RuleValues.Vb.Value != nil
 
 	counter := 0
-	var k ruleKind
+	var k kind
 
 	if hasV {
 		counter++

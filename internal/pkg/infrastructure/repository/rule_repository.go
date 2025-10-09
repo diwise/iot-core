@@ -18,10 +18,10 @@ type RuleRepository interface {
 }
 
 type repository struct {
-	storage rules.RuleStorage
+	storage rules.Storage
 }
 
-func NewRepository(storage rules.RuleStorage) RuleRepository {
+func NewRepository(storage rules.Storage) RuleRepository {
 	return &repository{storage: storage}
 }
 

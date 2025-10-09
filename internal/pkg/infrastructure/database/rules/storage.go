@@ -14,9 +14,9 @@ type impl struct {
 	db *pgxpool.Pool
 }
 
-//go:generate moq -rm -out rule_storage_mock.go . RuleStorage
+//go:generate moq -rm -out storage_mock.go . Storage
 
-type RuleStorage interface {
+type Storage interface {
 	database.Storage
 	Add(ctx context.Context, rule Rule) error
 	Get(ctx context.Context, id string) ([]Rule, []error, error)
@@ -213,6 +213,6 @@ func (i *impl) createTables(ctx context.Context) (err error) {
 	return tx.Commit(ctx)
 }
 
-func Connect(conn *pgxpool.Pool) RuleStorage {
+func Connect(conn *pgxpool.Pool) Storage {
 	return &impl{db: conn}
 }

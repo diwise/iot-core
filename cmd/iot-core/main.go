@@ -88,7 +88,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 	var dmClient client.DeviceManagementClient
 	var msgCtx messaging.MsgContext
 	var mClient measurements.MeasurementsClient
-	var ruleStorage rules.RuleStorage
+	var ruleStorage rules.Storage
 	var funcStorage database.FuncStorage
 	var funcRegistry functions.FuncRegistry
 	var app application.App

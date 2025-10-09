@@ -19,7 +19,7 @@ import (
 var (
 	testCtx        context.Context
 	testPool       *pgxpool.Pool
-	testRuleStore  rules.RuleStorage
+	testRuleStore  rules.Storage
 	dbAvailable    bool
 	lastSetupError string
 	log            *slog.Logger

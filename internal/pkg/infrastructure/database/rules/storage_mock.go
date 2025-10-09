@@ -8,16 +8,16 @@ import (
 	"sync"
 )
 
-// Ensure, that RuleStorageMock does implement RuleStorage.
+// Ensure, that StorageMock does implement Storage.
 // If this is not the case, regenerate this file with moq.
-var _ RuleStorage = &RuleStorageMock{}
+var _ Storage = &StorageMock{}
 
-// RuleStorageMock is a mock implementation of RuleStorage.
+// StorageMock is a mock implementation of Storage.
 //
-//	func TestSomethingThatUsesRuleStorage(t *testing.T) {
+//	func TestSomethingThatUsesStorage(t *testing.T) {
 //
-//		// make and configure a mocked RuleStorage
-//		mockedRuleStorage := &RuleStorageMock{
+//		// make and configure a mocked Storage
+//		mockedStorage := &StorageMock{
 //			AddFunc: func(ctx context.Context, rule Rule) error {
 //				panic("mock out the Add method")
 //			},
@@ -35,11 +35,11 @@ var _ RuleStorage = &RuleStorageMock{}
 //			},
 //		}
 //
-//		// use mockedRuleStorage in code that requires RuleStorage
+//		// use mockedStorage in code that requires Storage
 //		// and then make assertions.
 //
 //	}
-type RuleStorageMock struct {
+type StorageMock struct {
 	// AddFunc mocks the Add method.
 	AddFunc func(ctx context.Context, rule Rule) error
 
@@ -99,9 +99,9 @@ type RuleStorageMock struct {
 }
 
 // Add calls AddFunc.
-func (mock *RuleStorageMock) Add(ctx context.Context, rule Rule) error {
+func (mock *StorageMock) Add(ctx context.Context, rule Rule) error {
 	if mock.AddFunc == nil {
-		panic("RuleStorageMock.AddFunc: method is nil but RuleStorage.Add was just called")
+		panic("StorageMock.AddFunc: method is nil but Storage.Add was just called")
 	}
 	callInfo := struct {
 		Ctx  context.Context
@@ -119,8 +119,8 @@ func (mock *RuleStorageMock) Add(ctx context.Context, rule Rule) error {
 // AddCalls gets all the calls that were made to Add.
 // Check the length with:
 //
-//	len(mockedRuleStorage.AddCalls())
-func (mock *RuleStorageMock) AddCalls() []struct {
+//	len(mockedStorage.AddCalls())
+func (mock *StorageMock) AddCalls() []struct {
 	Ctx  context.Context
 	Rule Rule
 } {
@@ -135,9 +135,9 @@ func (mock *RuleStorageMock) AddCalls() []struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *RuleStorageMock) Delete(ctx context.Context, id string) error {
+func (mock *StorageMock) Delete(ctx context.Context, id string) error {
 	if mock.DeleteFunc == nil {
-		panic("RuleStorageMock.DeleteFunc: method is nil but RuleStorage.Delete was just called")
+		panic("StorageMock.DeleteFunc: method is nil but Storage.Delete was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
@@ -155,8 +155,8 @@ func (mock *RuleStorageMock) Delete(ctx context.Context, id string) error {
 // DeleteCalls gets all the calls that were made to Delete.
 // Check the length with:
 //
-//	len(mockedRuleStorage.DeleteCalls())
-func (mock *RuleStorageMock) DeleteCalls() []struct {
+//	len(mockedStorage.DeleteCalls())
+func (mock *StorageMock) DeleteCalls() []struct {
 	Ctx context.Context
 	ID  string
 } {
@@ -171,9 +171,9 @@ func (mock *RuleStorageMock) DeleteCalls() []struct {
 }
 
 // Get calls GetFunc.
-func (mock *RuleStorageMock) Get(ctx context.Context, id string) ([]Rule, []error, error) {
+func (mock *StorageMock) Get(ctx context.Context, id string) ([]Rule, []error, error) {
 	if mock.GetFunc == nil {
-		panic("RuleStorageMock.GetFunc: method is nil but RuleStorage.Get was just called")
+		panic("StorageMock.GetFunc: method is nil but Storage.Get was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
@@ -191,8 +191,8 @@ func (mock *RuleStorageMock) Get(ctx context.Context, id string) ([]Rule, []erro
 // GetCalls gets all the calls that were made to Get.
 // Check the length with:
 //
-//	len(mockedRuleStorage.GetCalls())
-func (mock *RuleStorageMock) GetCalls() []struct {
+//	len(mockedStorage.GetCalls())
+func (mock *StorageMock) GetCalls() []struct {
 	Ctx context.Context
 	ID  string
 } {
@@ -207,9 +207,9 @@ func (mock *RuleStorageMock) GetCalls() []struct {
 }
 
 // Initialize calls InitializeFunc.
-func (mock *RuleStorageMock) Initialize(contextMoqParam context.Context) error {
+func (mock *StorageMock) Initialize(contextMoqParam context.Context) error {
 	if mock.InitializeFunc == nil {
-		panic("RuleStorageMock.InitializeFunc: method is nil but RuleStorage.Initialize was just called")
+		panic("StorageMock.InitializeFunc: method is nil but Storage.Initialize was just called")
 	}
 	callInfo := struct {
 		ContextMoqParam context.Context
@@ -225,8 +225,8 @@ func (mock *RuleStorageMock) Initialize(contextMoqParam context.Context) error {
 // InitializeCalls gets all the calls that were made to Initialize.
 // Check the length with:
 //
-//	len(mockedRuleStorage.InitializeCalls())
-func (mock *RuleStorageMock) InitializeCalls() []struct {
+//	len(mockedStorage.InitializeCalls())
+func (mock *StorageMock) InitializeCalls() []struct {
 	ContextMoqParam context.Context
 } {
 	var calls []struct {
@@ -239,9 +239,9 @@ func (mock *RuleStorageMock) InitializeCalls() []struct {
 }
 
 // Update calls UpdateFunc.
-func (mock *RuleStorageMock) Update(ctx context.Context, rule Rule) error {
+func (mock *StorageMock) Update(ctx context.Context, rule Rule) error {
 	if mock.UpdateFunc == nil {
-		panic("RuleStorageMock.UpdateFunc: method is nil but RuleStorage.Update was just called")
+		panic("StorageMock.UpdateFunc: method is nil but Storage.Update was just called")
 	}
 	callInfo := struct {
 		Ctx  context.Context
@@ -259,8 +259,8 @@ func (mock *RuleStorageMock) Update(ctx context.Context, rule Rule) error {
 // UpdateCalls gets all the calls that were made to Update.
 // Check the length with:
 //
-//	len(mockedRuleStorage.UpdateCalls())
-func (mock *RuleStorageMock) UpdateCalls() []struct {
+//	len(mockedStorage.UpdateCalls())
+func (mock *StorageMock) UpdateCalls() []struct {
 	Ctx  context.Context
 	Rule Rule
 } {
