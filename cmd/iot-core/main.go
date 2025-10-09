@@ -142,7 +142,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 				return err
 			}
 
-			ruleEngine := engines.NewEngine(ruleRepository)
+			ruleEngine := engines.New(ruleRepository)
 
 			app = application.New(dmClient, mClient, funcRegistry, ruleEngine, msgCtx)
 

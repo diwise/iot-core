@@ -22,9 +22,9 @@ type engine struct {
 	repository repository.RuleRepository
 }
 
-func NewEngine(repository repository.RuleRepository) RuleEngine {
+func New(repository repository.RuleRepository) RuleEngine {
 	if repository == nil {
-		panic("NewEngine: repository is nil")
+		panic("New: repository is nil")
 	}
 	return &engine{repository: repository}
 }
