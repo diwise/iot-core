@@ -1,4 +1,4 @@
-package repository
+package repository_test
 
 import (
 	"testing"
@@ -50,6 +50,6 @@ func TestValidRule_VB_ReturnsOk(t *testing.T) {
 	in := rules.MakeRuleVB(t, measurementId, deviceId, rules.B(true))
 	r := newTestRepository()
 	err := r.Add(testCtx, in)
-	
+
 	is.True(err == nil)
 }
