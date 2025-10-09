@@ -21,9 +21,8 @@ func TestValidRule_VMin_ReturnsOk(t *testing.T) {
 	r := newTestRepository()
 	e := newTestEngine()
 
-	if err := r.Add(testCtx, in); err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
+	err := r.Add(testCtx, in)
+	is.True(err == nil)
 
 	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 
@@ -46,9 +45,8 @@ func TestValidRule_VMax_ReturnsOk(t *testing.T) {
 	r := newTestRepository()
 	e := newTestEngine()
 
-	if err := r.Add(testCtx, in); err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
+	err := r.Add(testCtx, in)
+	is.True(err == nil)
 
 	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 
@@ -71,9 +69,8 @@ func TestValidRule_V_ReturnsOk(t *testing.T) {
 	r := newTestRepository()
 	e := newTestEngine()
 
-	if err := r.Add(testCtx, in); err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
+	err := r.Add(testCtx, in)
+	is.True(err == nil)
 
 	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 
@@ -96,9 +93,8 @@ func TestValidRule_VS_ReturnsOk(t *testing.T) {
 	r := newTestRepository()
 	e := newTestEngine()
 
-	if err := r.Add(testCtx, in); err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
+	err := r.Add(testCtx, in)
+	is.True(err == nil)
 
 	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 
@@ -121,9 +117,8 @@ func TestValidRule_VB_ReturnsOk(t *testing.T) {
 	r := newTestRepository()
 	e := newTestEngine()
 
-	if err := r.Add(testCtx, in); err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
+	err := r.Add(testCtx, in)
+	is.True(err == nil)
 
 	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 

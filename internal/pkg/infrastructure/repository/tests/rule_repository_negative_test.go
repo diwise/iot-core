@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"strings"
 	"testing"
 
 	prod "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
@@ -23,11 +22,9 @@ func TestAdd_Fails_WhenMultipleKindsSet(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 
-	if err == nil {
-		t.Fatalf("expected error for multiple kinds, got nil")
-	}
+	is.True(err != nil) // expected error for multiple kinds, got nil
 
-	is.True(strings.Contains(err.Error(), "multiple"))
+	is.Equal(err.Error(), "rule must have exactly one of V/VS/VB set (got multiple)")
 }
 
 func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
@@ -43,9 +40,6 @@ func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 
-	if err == nil {
-		t.Fatalf("expected error for no kinds set, got nil")
-	}
-
-	is.True(strings.Contains(err.Error(), "No kinds"))
+	is.True(err != nil) // expected error for no kinds set, got nil
+	is.Equal(err.Error(), "No kinds. One of rule kind v, vs, vb must be set")
 }

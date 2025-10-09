@@ -23,11 +23,8 @@ func TestAdd_Fails_WhenMultipleKindsSet(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 
-	if err == nil {
-		t.Fatalf("expected error for multiple kinds, got nil")
-	}
-
-	is.True(strings.Contains(err.Error(), "multiple"))
+	is.True(err != nil) // expected error for multiple kinds, got nil
+	is.Equal(err.Error(), "rule must have exactly one of V/VS/VB set (got multiple)")
 }
 
 func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
@@ -43,10 +40,7 @@ func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 
-	if err == nil {
-		t.Fatalf("expected error for no kinds set, got nil")
-	}
-
+	is.True(err != nil) // expected error for no kinds set, got nil
 	is.True(strings.Contains(err.Error(), "No kinds"))
 }
 
@@ -64,9 +58,8 @@ func TestInvalidRule_VMin_ReturnsNonValid(t *testing.T) {
 	r := newTestRepository()
 	e := newTestEngine()
 
-	if err := r.Add(testCtx, in); err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
+	err := r.Add(testCtx, in)
+	is.True(err == nil)
 
 	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 
@@ -89,9 +82,8 @@ func TestInvalidRule_VMax_ReturnsNonValid(t *testing.T) {
 	r := newTestRepository()
 	e := newTestEngine()
 
-	if err := r.Add(testCtx, in); err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
+	err := r.Add(testCtx, in)
+	is.True(err == nil)
 
 	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 
@@ -114,12 +106,7 @@ func TestInvalidRule_V_Min_Max_Mixed_Up_ReturnsError(t *testing.T) {
 	r := newTestRepository()
 
 	err := r.Add(testCtx, in)
-
-	if err == nil {
-		t.Fatalf("Test should fail due to mixed up min and max, got nil")
-	}
-
-	is.True(err != nil)
+	is.True(err != nil) // expected error
 	is.True(err.Error() == "v_min_value must be <= v_max_value")
 }
 
@@ -137,9 +124,8 @@ func TestInvalidRule_VS_ReturnsNonValid(t *testing.T) {
 	r := newTestRepository()
 	e := newTestEngine()
 
-	if err := r.Add(testCtx, in); err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
+	err := r.Add(testCtx, in)
+	is.True(err == nil)
 
 	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 
@@ -162,9 +148,8 @@ func TestInvalidRule_VB_ReturnsNonValid(t *testing.T) {
 	r := newTestRepository()
 	e := newTestEngine()
 
-	if err := r.Add(testCtx, in); err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
+	err := r.Add(testCtx, in)
+	is.True(err == nil)
 
 	validations, _ := e.ValidateMessageReceived(testCtx, msg)
 

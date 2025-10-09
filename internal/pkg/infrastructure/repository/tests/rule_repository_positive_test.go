@@ -21,10 +21,6 @@ func TestValidRule_V_ReturnsOk(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 
-	if err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
-
 	is.True(err == nil)
 }
 
@@ -37,14 +33,8 @@ func TestValidRule_VS_ReturnsOk(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	in := rules.MakeRuleVS(t, measurementId, deviceId, rules.S("test"))
-
 	r := newTestRepository()
-
 	err := r.Add(testCtx, in)
-
-	if err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
 
 	is.True(err == nil)
 }
@@ -58,14 +48,8 @@ func TestValidRule_VB_ReturnsOk(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	in := rules.MakeRuleVB(t, measurementId, deviceId, rules.B(true))
-
 	r := newTestRepository()
-
 	err := r.Add(testCtx, in)
-
-	if err != nil {
-		t.Fatalf("Add(V): %v", err)
-	}
-
+	
 	is.True(err == nil)
 }
