@@ -1,9 +1,9 @@
 package rules
 
 type Rule struct {
-	Id              string     `json:"id"`
-	MeasurementId   string     `json:"measurement_id"`
-	DeviceId        string     `json:"device_id"`
+	ID              string     `json:"id"`
+	MeasurementID   string     `json:"measurement_id"`
+	DeviceID        string     `json:"device_id"`
 	MeasurementType int        `json:"measurement_type"`
 	ShouldAbort     bool       `json:"should_abort"`
 	RuleValues      RuleValues `json:"rule_values"`

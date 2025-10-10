@@ -12,7 +12,7 @@ import (
 
 type RuleRepository interface {
 	Add(ctx context.Context, rule rules.Rule) error
-	Get(ctx context.Context, id string) ([]rules.Rule, []error, error)
+	Get(ctx context.Context, id string) []rules.Rule
 	Update(ctx context.Context, rule rules.Rule) error
 	Delete(ctx context.Context, id string) error
 }
@@ -36,8 +36,10 @@ func (e *repository) Add(ctx context.Context, rule rules.Rule) error {
 	return e.storage.Add(ctx, rule)
 }
 
-func (e *repository) Get(ctx context.Context, id string) ([]rules.Rule, []error, error) {
-	return e.storage.Get(ctx, id)
+func (e *repository) Get(ctx context.Context, id string) []rules.Rule {
+	result, _, _ := e.storage.Get(ctx, id)
+
+	return result
 }
 
 func (e *repository) Update(ctx context.Context, rule rules.Rule) error {

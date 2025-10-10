@@ -51,13 +51,17 @@ func (i *impl) Add(ctx context.Context, r Rule) error {
 				vb_value         = EXCLUDED.vb_value;`
 
 	_, err = i.db.Exec(ctx, q,
-		r.Id, r.MeasurementId, r.DeviceId, r.MeasurementType, r.ShouldAbort,
+		r.ID, r.MeasurementID, r.DeviceID, r.MeasurementType, r.ShouldAbort,
 		vmin, vmax, vs, vb,
 	)
 	return err
 }
 
 func (i *impl) Get(ctx context.Context, id string) ([]Rule, []error, error) {
+
+	var rules []Rule
+	var rowErrors []error
+
 	const q = `
 		SELECT
 			id, measurement_id, device_id, measurement_type, should_abort,
@@ -67,12 +71,10 @@ func (i *impl) Get(ctx context.Context, id string) ([]Rule, []error, error) {
 
 	rows, err := i.db.Query(ctx, q, id)
 	if err != nil {
-		return nil, nil, err
+		return rules, nil, err
 	}
-	defer rows.Close()
 
-	var rules []Rule
-	var rowErrors []error
+	defer rows.Close()
 
 	for rows.Next() {
 		var (
@@ -84,7 +86,7 @@ func (i *impl) Get(ctx context.Context, id string) ([]Rule, []error, error) {
 		)
 
 		err := rows.Scan(
-			&r.Id, &r.MeasurementId, &r.DeviceId, &r.MeasurementType, &r.ShouldAbort,
+			&r.ID, &r.MeasurementID, &r.DeviceID, &r.MeasurementType, &r.ShouldAbort,
 			&vmin, &vmax, &vs, &vb,
 		)
 		if err != nil {
@@ -121,10 +123,6 @@ func (i *impl) Get(ctx context.Context, id string) ([]Rule, []error, error) {
 		return rules, rowErrors, err
 	}
 
-	if len(rules) == 0 && len(rowErrors) == 0 {
-		return nil, nil, nil
-	}
-
 	return rules, rowErrors, nil
 }
 
@@ -149,7 +147,7 @@ func (i *impl) Update(ctx context.Context, r Rule) error {
 				WHERE id = $1;`
 
 	ct, err := i.db.Exec(ctx, q,
-		r.Id, r.MeasurementId, r.DeviceId, r.MeasurementType, r.ShouldAbort,
+		r.ID, r.MeasurementID, r.DeviceID, r.MeasurementType, r.ShouldAbort,
 		vmin, vmax, vs, vb,
 	)
 	if err != nil {

@@ -91,12 +91,12 @@ func returnVKind(r Rule) (any, any, any, any, error) {
 	if r.RuleValues.V == nil || (r.RuleValues.V.MinValue == nil && r.RuleValues.V.MaxValue == nil) {
 		return nil, nil, nil, nil, errors.New("v is set but neither vmin nor vmax provided")
 	}
-	var min, max any
+	var minValue, maxValue any
 	if r.RuleValues.V.MinValue != nil {
-		min = *r.RuleValues.V.MinValue
+		minValue = *r.RuleValues.V.MinValue
 	}
 	if r.RuleValues.V.MaxValue != nil {
-		max = *r.RuleValues.V.MaxValue
+		maxValue = *r.RuleValues.V.MaxValue
 	}
-	return min, max, nil, nil, nil
+	return minValue, maxValue, nil, nil, nil
 }

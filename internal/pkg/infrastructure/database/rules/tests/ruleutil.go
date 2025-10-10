@@ -10,9 +10,9 @@ import (
 func MakeRuleBase(t *testing.T, measurementId, deviceId string) dbrules.Rule {
 	t.Helper()
 	return dbrules.Rule{
-		Id:              measurementId,
-		MeasurementId:   measurementId,
-		DeviceId:        deviceId,
+		ID:              measurementId,
+		MeasurementID:   measurementId,
+		DeviceID:        deviceId,
 		MeasurementType: 1,
 		ShouldAbort:     false,
 		RuleValues:      dbrules.RuleValues{},
