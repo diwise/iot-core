@@ -10,6 +10,7 @@ import (
 
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
+	rule_tests "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules/tests"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/repository"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/senml"
@@ -90,7 +91,7 @@ func cleanDB(t *testing.T) {
 
 /** Assert functions for pointer values **/
 
-func assertFloatPtrEq(t *testing.T, got, want *float64) {
+func AssertFloatPtrEq(t *testing.T, got, want *float64) {
 	t.Helper()
 	if got == nil && want == nil {
 		return
@@ -105,7 +106,7 @@ func assertFloatPtrEq(t *testing.T, got, want *float64) {
 	}
 }
 
-func assertStringPtrEq(t *testing.T, got, want *string) {
+func AssertStringPtrEq(t *testing.T, got, want *string) {
 	t.Helper()
 	if got == nil && want == nil {
 		return
@@ -118,7 +119,7 @@ func assertStringPtrEq(t *testing.T, got, want *string) {
 	}
 }
 
-func assertBoolPtrEq(t *testing.T, got, want *bool) {
+func AssertBoolPtrEq(t *testing.T, got, want *bool) {
 	t.Helper()
 	if got == nil && want == nil {
 		return
@@ -151,7 +152,7 @@ func newMessageReceived(id string) events.MessageReceived {
 			},
 			senml.Record{
 				Name:  "1",
-				Value: F64(22.5),
+				Value: rule_tests.F64(22.5),
 				Unit:  "m3",
 			},
 			senml.Record{
@@ -160,13 +161,9 @@ func newMessageReceived(id string) events.MessageReceived {
 			},
 			senml.Record{
 				Name:      "10",
-				BoolValue: B(true),
+				BoolValue: rule_tests.B(true),
 			},
 		}}
 
 	return msg
 }
-
-func F64(v float64) *float64 { return &v }
-func S(v string) *string     { return &v }
-func B(v bool) *bool         { return &v }

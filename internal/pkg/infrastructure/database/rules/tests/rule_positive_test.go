@@ -1,17 +1,17 @@
-package rules_test
+package rule_tests
 
 import (
 	"testing"
 
 	dbrules "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
-	rules "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules/tests"
+
 	"github.com/matryer/is"
 )
 
 func Test_That_Rule_For_Vs_Verify(t *testing.T) {
 	is := is.New(t)
 	deviceId := "test"
-	in := rules.MakeRuleVS(t, "r-vs", deviceId, rules.S("test"))
+	in := MakeRuleVS(t, "r-vs", deviceId, S("test"))
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParams(in)
 
 	is.True(err == nil)                              // NormalizedParams
@@ -25,7 +25,7 @@ func Test_That_Rule_For_Vs_Verify(t *testing.T) {
 func Test_That_Rule_For_V_Verify(t *testing.T) {
 	is := is.New(t)
 	deviceId := "test"
-	in := rules.MakeRuleV(t, "r-vmax-vmin", deviceId, rules.F64(3), rules.F64(5))
+	in := MakeRuleV(t, "r-vmax-vmin", deviceId, F64(3), F64(5))
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParams(in)
 
 	is.True(err == nil)             // NormalizedParams
@@ -43,7 +43,7 @@ func Test_That_Rule_For_V_Verify(t *testing.T) {
 func Test_That_Rule_For_VMax_Verify(t *testing.T) {
 	is := is.New(t)
 	deviceId := "test"
-	in := rules.MakeRuleV(t, "r-vmax", deviceId, nil, rules.F64(5))
+	in := MakeRuleV(t, "r-vmax", deviceId, nil, F64(5))
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParams(in)
 
 	is.True(err == nil)             // NormalizedParams
@@ -58,7 +58,7 @@ func Test_That_Rule_For_VMax_Verify(t *testing.T) {
 func Test_That_Rule_For_VMin_Verify(t *testing.T) {
 	is := is.New(t)
 	deviceId := "test"
-	in := rules.MakeRuleV(t, "r-vmin", deviceId, rules.F64(3), nil)
+	in := MakeRuleV(t, "r-vmin", deviceId, F64(3), nil)
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParams(in)
 
 	is.True(err == nil)             // NormalizedParams
@@ -74,7 +74,7 @@ func Test_That_Rule_For_Vb_Verify(t *testing.T) {
 	is := is.New(t)
 	deviceId := "test"
 	value := true
-	in := rules.MakeRuleVB(t, "r-vb", deviceId, rules.B(value))
+	in := MakeRuleVB(t, "r-vb", deviceId, B(value))
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParams(in)
 
 	is.True(err == nil)                              // NormalizedParams

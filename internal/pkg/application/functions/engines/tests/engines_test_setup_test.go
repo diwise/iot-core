@@ -188,7 +188,3 @@ func newMessageReceived(records []senml.Record) events.MessageReceived {
 	}
 	return msg
 }
-
-func F64(v float64) *float64 { return &v }
-func S(v string) *string     { return &v }
-func B(v bool) *bool         { return &v }

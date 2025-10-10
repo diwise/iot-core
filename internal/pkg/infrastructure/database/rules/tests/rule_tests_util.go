@@ -1,4 +1,4 @@
-package rules
+package rule_tests
 
 import (
 	"testing"
@@ -52,7 +52,6 @@ func MakeRuleVB(t *testing.T, measurementID, deviceID string, b *bool) dbrules.R
 	return r
 }
 
-/** Creates basic types to pointer values **/
 func F64(v float64) *float64 { return &v }
 func S(v string) *string     { return &v }
 func B(v bool) *bool         { return &v }
