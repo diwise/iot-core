@@ -26,8 +26,6 @@ type Storage interface {
 
 var ErrNotFound = errors.New("rule not found")
 
-// TODO ID ska bli: "DeviceID/ObjectID/5603(senml id)"
-
 func (i *impl) Add(ctx context.Context, r Rule) error {
 
 	vmin, vmax, vs, vb, err := NormalizedParams(r)
@@ -199,15 +197,13 @@ func (i *impl) createTables(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback(ctx)
-		}
-	}()
+
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	if _, err = tx.Exec(ctx, ddl); err != nil {
 		return err
 	}
+
 	return tx.Commit(ctx)
 }
 
