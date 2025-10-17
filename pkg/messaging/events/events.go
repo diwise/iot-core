@@ -83,8 +83,6 @@ type MessageAborted struct {
 	Reason    []string   `json:"reason"`
 }
 
-// #
-
 func NewMessageReceived(pack senml.Pack, decorators ...EventDecoratorFunc) *MessageReceived {
 	mr := &MessageReceived{
 		Pack_:     pack,
