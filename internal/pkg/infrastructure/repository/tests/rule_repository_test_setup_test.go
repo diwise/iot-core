@@ -133,7 +133,7 @@ func AssertBoolPtrEq(t *testing.T, got, want *bool) {
 }
 
 func newTestRepository() repository.RuleRepository {
-	return repository.NewRepository(testRuleStore)
+	return repository.New(testRuleStore)
 }
 
 // F: 1, 22.5. FS: 3, w1e. VB: 10, true

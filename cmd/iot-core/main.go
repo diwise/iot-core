@@ -128,7 +128,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 			}
 
 			ruleStorage = rules.Connect(conn)
-			ruleRepository := repository.NewRepository(ruleStorage)
+			ruleRepository := repository.New(ruleStorage)
 
 			funcStorage = database.Connect(conn)
 

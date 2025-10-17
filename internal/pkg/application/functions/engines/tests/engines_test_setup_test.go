@@ -61,7 +61,7 @@ func TestMain(m *testing.M) {
 		dbAvailable = true
 		fmt.Fprintln(os.Stderr, "[setup] DB available: OK")
 	}
-	testRuleRepository = repository.NewRepository(testRuleStore)
+	testRuleRepository = repository.New(testRuleStore)
 
 RUN:
 	code := m.Run()
@@ -135,7 +135,7 @@ func assertBoolPtrEq(t *testing.T, got, want *bool) {
 }
 
 func newTestRepository() repository.RuleRepository {
-	return repository.NewRepository(testRuleStore)
+	return repository.New(testRuleStore)
 }
 
 func newTestEngine() engines.RuleEngine {

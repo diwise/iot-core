@@ -21,7 +21,7 @@ type repository struct {
 	storage rules.Storage
 }
 
-func NewRepository(storage rules.Storage) RuleRepository {
+func New(storage rules.Storage) RuleRepository {
 	return &repository{storage: storage}
 }
 
