@@ -2,8 +2,6 @@ package rules
 
 import "errors"
 
-var ErrRuleHasNoKind = errors.New("rule has no kind")
-
 type Rule struct {
 	ID              string     `json:"id"`
 	MeasurementID   string     `json:"measurement_id"`
@@ -31,3 +29,8 @@ type RuleVs struct {
 type RuleVb struct {
 	Value *bool `json:"value"`
 }
+
+var (
+	ErrorNotFloatValue  = errors.New("v_min_value and v_min_value must be a valid float")
+	ErrorVHasWrongOrder = errors.New("v_min_value must be lower than v_max_value")
+)

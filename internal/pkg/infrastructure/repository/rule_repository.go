@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"math"
 
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
@@ -66,7 +65,7 @@ func validateRule(r rules.Rule) error {
 	}
 
 	if r.RuleValues.V == nil && r.RuleValues.Vs == nil && r.RuleValues.Vb == nil {
-		return rules.ErrRuleHasNoKind
+		return rules.ErrorNoKindSet
 	}
 
 	return nil
@@ -75,17 +74,17 @@ func validateRule(r rules.Rule) error {
 func validateRuleValues(r rules.Rule) error {
 	if r.RuleValues.V != nil && r.RuleValues.V.MinValue != nil {
 		if !isValidFloat64(*r.RuleValues.V.MinValue) {
-			return errors.New("v_min_value must be a valid float")
+			return rules.ErrorNotFloatValue
 		}
 	}
 	if r.RuleValues.V != nil && r.RuleValues.V.MaxValue != nil {
 		if !isValidFloat64(*r.RuleValues.V.MaxValue) {
-			return errors.New("v_max_value must be a valid float")
+			return rules.ErrorNotFloatValue
 		}
 	}
 	if r.RuleValues.V != nil && r.RuleValues.V.MinValue != nil && r.RuleValues.V.MaxValue != nil {
 		if *r.RuleValues.V.MinValue > *r.RuleValues.V.MaxValue {
-			return errors.New("v_min_value must be <= v_max_value")
+			return rules.ErrorVHasWrongOrder
 		}
 	}
 

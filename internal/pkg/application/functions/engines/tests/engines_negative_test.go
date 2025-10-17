@@ -23,8 +23,8 @@ func TestAdd_Fails_WhenMultipleKindsSet(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 
-	is.NoErr(err) // expected error for multiple kinds, got nil
-	is.Equal(err.Error(), "rule must have exactly one of V/VS/VB set (got multiple)")
+	is.True(err != nil) // expected error for multiple kinds, got nil
+	is.Equal(err, rules.ErrorMultipleKindSet)
 }
 
 func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
@@ -40,7 +40,7 @@ func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 
-	is.Equal(err, rules.ErrRuleHasNoKind)
+	is.Equal(err, rules.ErrorNoKindSet)
 }
 
 func TestInvalidRule_VMin_ReturnsNonValid(t *testing.T) {
@@ -105,8 +105,8 @@ func TestInvalidRule_V_Min_Max_Mixed_Up_ReturnsError(t *testing.T) {
 	r := newTestRepository()
 
 	err := r.Add(testCtx, in)
-	is.NoErr(err) // expected error
-	is.True(err.Error() == "v_min_value must be <= v_max_value")
+	is.True(err != nil) // expected error
+	is.Equal(err, rules.ErrorVHasWrongOrder)
 }
 
 func TestInvalidRule_VS_ReturnsNonValid(t *testing.T) {
