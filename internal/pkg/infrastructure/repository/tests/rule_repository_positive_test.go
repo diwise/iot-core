@@ -21,7 +21,7 @@ func TestValidRule_V_ReturnsOk(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 
-	is.True(err == nil)
+	is.NoErr(err)
 }
 
 func TestValidRule_VS_ReturnsOk(t *testing.T) {
@@ -36,7 +36,7 @@ func TestValidRule_VS_ReturnsOk(t *testing.T) {
 	r := newTestRepository()
 	err := r.Add(testCtx, in)
 
-	is.True(err == nil)
+	is.NoErr(err)
 }
 
 func TestValidRule_VB_ReturnsOk(t *testing.T) {
@@ -51,5 +51,5 @@ func TestValidRule_VB_ReturnsOk(t *testing.T) {
 	r := newTestRepository()
 	err := r.Add(testCtx, in)
 
-	is.True(err == nil)
+	is.NoErr(err)
 }

@@ -14,7 +14,7 @@ func Test_That_Rule_For_Vs_Verify(t *testing.T) {
 	in := MakeRuleVS(t, "r-vs", deviceId, S("test"))
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParams(in)
 
-	is.True(err == nil)                              // NormalizedParams
+	is.NoErr(err)                                    // NormalizedParams
 	is.True(vmin == nil && vmax == nil && vb == nil) // expected nil for vmin, vmax, vb
 
 	s, ok := vs.(string)
@@ -28,7 +28,7 @@ func Test_That_Rule_For_V_Verify(t *testing.T) {
 	in := MakeRuleV(t, "r-vmax-vmin", deviceId, F64(3), F64(5))
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParams(in)
 
-	is.True(err == nil)             // NormalizedParams
+	is.NoErr(err)                   // NormalizedParams
 	is.True(vs == nil && vb == nil) // expected nil for vs, vb
 
 	minValue, ok1 := vmin.(float64)
@@ -46,7 +46,7 @@ func Test_That_Rule_For_VMax_Verify(t *testing.T) {
 	in := MakeRuleV(t, "r-vmax", deviceId, nil, F64(5))
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParams(in)
 
-	is.True(err == nil)             // NormalizedParams
+	is.NoErr(err)                   // NormalizedParams
 	is.True(vs == nil && vb == nil) // expected nil for vs, vb
 	is.True(vmin == nil)            // expected nil for vmin
 
@@ -61,7 +61,7 @@ func Test_That_Rule_For_VMin_Verify(t *testing.T) {
 	in := MakeRuleV(t, "r-vmin", deviceId, F64(3), nil)
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParams(in)
 
-	is.True(err == nil)             // NormalizedParams
+	is.NoErr(err)                   // NormalizedParams
 	is.True(vs == nil && vb == nil) // expected nil for vs, vb
 	is.True(vmax == nil)            // expected nil for vmax
 
@@ -77,7 +77,7 @@ func Test_That_Rule_For_Vb_Verify(t *testing.T) {
 	in := MakeRuleVB(t, "r-vb", deviceId, B(value))
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParams(in)
 
-	is.True(err == nil)                              // NormalizedParams
+	is.NoErr(err)                                    // NormalizedParams
 	is.True(vs == nil && vmin == nil && vmax == nil) // expected nil for vs,vmin,vmax
 
 	b, ok := vb.(bool)

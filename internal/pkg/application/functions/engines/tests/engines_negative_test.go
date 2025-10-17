@@ -59,7 +59,7 @@ func TestInvalidRule_VMin_ReturnsNonValid(t *testing.T) {
 	e := newTestEngine()
 
 	err := r.Add(testCtx, in)
-	is.True(err == nil)
+	is.NoErr(err)
 
 	validations, _ := e.ValidationResults(testCtx, msg)
 
@@ -83,7 +83,7 @@ func TestInvalidRule_VMax_ReturnsNonValid(t *testing.T) {
 	e := newTestEngine()
 
 	err := r.Add(testCtx, in)
-	is.True(err == nil)
+	is.NoErr(err)
 
 	validations, _ := e.ValidationResults(testCtx, msg)
 
@@ -125,7 +125,7 @@ func TestInvalidRule_VS_ReturnsNonValid(t *testing.T) {
 	e := newTestEngine()
 
 	err := r.Add(testCtx, in)
-	is.True(err == nil)
+	is.NoErr(err)
 
 	validations, _ := e.ValidationResults(testCtx, msg)
 
@@ -149,7 +149,7 @@ func TestInvalidRule_VB_ReturnsNonValid(t *testing.T) {
 	e := newTestEngine()
 
 	err := r.Add(testCtx, in)
-	is.True(err == nil)
+	is.NoErr(err)
 
 	validations, _ := e.ValidationResults(testCtx, msg)
 

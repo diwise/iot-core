@@ -22,7 +22,7 @@ func TestValidRule_VMin_ReturnsOk(t *testing.T) {
 	e := newTestEngine()
 
 	err := r.Add(testCtx, in)
-	is.True(err == nil)
+	is.NoErr(err)
 
 	validations, _ := e.ValidationResults(testCtx, msg)
 
@@ -46,7 +46,7 @@ func TestValidRule_VMax_ReturnsOk(t *testing.T) {
 	e := newTestEngine()
 
 	err := r.Add(testCtx, in)
-	is.True(err == nil)
+	is.NoErr(err)
 
 	validations, _ := e.ValidationResults(testCtx, msg)
 
@@ -70,7 +70,7 @@ func TestValidRule_V_ReturnsOk(t *testing.T) {
 	e := newTestEngine()
 
 	err := r.Add(testCtx, in)
-	is.True(err == nil)
+	is.NoErr(err)
 
 	validations, _ := e.ValidationResults(testCtx, msg)
 
@@ -94,7 +94,7 @@ func TestValidRule_VS_ReturnsOk(t *testing.T) {
 	e := newTestEngine()
 
 	err := r.Add(testCtx, in)
-	is.True(err == nil)
+	is.NoErr(err)
 
 	validations, _ := e.ValidationResults(testCtx, msg)
 
@@ -118,7 +118,7 @@ func TestValidRule_VB_ReturnsOk(t *testing.T) {
 	e := newTestEngine()
 
 	err := r.Add(testCtx, in)
-	is.True(err == nil)
+	is.NoErr(err)
 
 	validations, _ := e.ValidationResults(testCtx, msg)
 
