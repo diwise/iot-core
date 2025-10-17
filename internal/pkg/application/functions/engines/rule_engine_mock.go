@@ -21,8 +21,8 @@ var _ RuleEngine = &RuleEngineMock{}
 //
 //		// make and configure a mocked RuleEngine
 //		mockedRuleEngine := &RuleEngineMock{
-//			ValidateMessageReceivedFunc: func(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error) {
-//				panic("mock out the ValidateMessageReceived method")
+//			ValidationResultsFunc: func(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error) {
+//				panic("mock out the ValidationResults method")
 //			},
 //			ValidateRecordFunc: func(record senml.Record, rule rules.Rule) RuleValidation {
 //				panic("mock out the ValidateRecord method")
@@ -34,16 +34,16 @@ var _ RuleEngine = &RuleEngineMock{}
 //
 //	}
 type RuleEngineMock struct {
-	// ValidateMessageReceivedFunc mocks the ValidateMessageReceived method.
-	ValidateMessageReceivedFunc func(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error)
+	// ValidationResultsFunc mocks the ValidationResults method.
+	ValidationResultsFunc func(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error)
 
 	// ValidateRecordFunc mocks the ValidateRecord method.
 	ValidateRecordFunc func(record senml.Record, rule rules.Rule) RuleValidation
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// ValidateMessageReceived holds details about calls to the ValidateMessageReceived method.
-		ValidateMessageReceived []struct {
+		// ValidationResults holds details about calls to the ValidationResults method.
+		ValidationResults []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 			// Msg is the msg argument value.
@@ -57,14 +57,14 @@ type RuleEngineMock struct {
 			Rule rules.Rule
 		}
 	}
-	lockValidateMessageReceived sync.RWMutex
+	lockValidationResults sync.RWMutex
 	lockValidateRecord          sync.RWMutex
 }
 
-// ValidateMessageReceived calls ValidateMessageReceivedFunc.
-func (mock *RuleEngineMock) ValidateMessageReceived(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error) {
-	if mock.ValidateMessageReceivedFunc == nil {
-		panic("RuleEngineMock.ValidateMessageReceivedFunc: method is nil but RuleEngine.ValidateMessageReceived was just called")
+// ValidationResults calls ValidationResultsFunc.
+func (mock *RuleEngineMock) ValidationResults(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error) {
+	if mock.ValidationResultsFunc == nil {
+		panic("RuleEngineMock.ValidationResultsFunc: method is nil but RuleEngine.ValidationResults was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
@@ -73,17 +73,17 @@ func (mock *RuleEngineMock) ValidateMessageReceived(ctx context.Context, msg eve
 		Ctx: ctx,
 		Msg: msg,
 	}
-	mock.lockValidateMessageReceived.Lock()
-	mock.calls.ValidateMessageReceived = append(mock.calls.ValidateMessageReceived, callInfo)
-	mock.lockValidateMessageReceived.Unlock()
-	return mock.ValidateMessageReceivedFunc(ctx, msg)
+	mock.lockValidationResults.Lock()
+	mock.calls.ValidationResults = append(mock.calls.ValidationResults, callInfo)
+	mock.lockValidationResults.Unlock()
+	return mock.ValidationResultsFunc(ctx, msg)
 }
 
-// ValidateMessageReceivedCalls gets all the calls that were made to ValidateMessageReceived.
+// ValidationResultsCalls gets all the calls that were made to ValidationResults.
 // Check the length with:
 //
-//	len(mockedRuleEngine.ValidateMessageReceivedCalls())
-func (mock *RuleEngineMock) ValidateMessageReceivedCalls() []struct {
+//	len(mockedRuleEngine.ValidationResultsCalls())
+func (mock *RuleEngineMock) ValidationResultsCalls() []struct {
 	Ctx context.Context
 	Msg events.MessageReceived
 } {
@@ -91,9 +91,9 @@ func (mock *RuleEngineMock) ValidateMessageReceivedCalls() []struct {
 		Ctx context.Context
 		Msg events.MessageReceived
 	}
-	mock.lockValidateMessageReceived.RLock()
-	calls = mock.calls.ValidateMessageReceived
-	mock.lockValidateMessageReceived.RUnlock()
+	mock.lockValidationResults.RLock()
+	calls = mock.calls.ValidationResults
+	mock.lockValidationResults.RUnlock()
 	return calls
 }
 

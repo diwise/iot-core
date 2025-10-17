@@ -14,7 +14,7 @@ import (
 //go:generate moq -rm -out rule_engine_mock.go . RuleEngine
 
 type RuleEngine interface {
-	ValidateMessageReceived(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error)
+	ValidationResults(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error)
 	ValidateRecord(record senml.Record, rule rules.Rule) RuleValidation
 }
 
@@ -41,7 +41,7 @@ func (e *engine) ValidateRecord(record senml.Record, rule rules.Rule) RuleValida
 
 	if validatesValueExists(record) == false {
 
-		result.ValidationMessages = append(result.ValidationMessages, "No value found in record")
+		result.ValidationMessages = append(result.ValidationMessages, "no value found")
 		result.IsValid = false
 
 		return result
@@ -114,7 +114,7 @@ func (e *engine) ValidateRecord(record senml.Record, rule rules.Rule) RuleValida
 	return result
 }
 
-func (e *engine) ValidateMessageReceived(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error) {
+func (e *engine) ValidationResults(ctx context.Context, msg events.MessageReceived) ([]RuleValidation, error) {
 
 	pack := msg.Pack().Clone()
 

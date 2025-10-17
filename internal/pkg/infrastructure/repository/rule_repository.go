@@ -28,7 +28,6 @@ func NewRepository(storage rules.Storage) RuleRepository {
 func (e *repository) Add(ctx context.Context, rule rules.Rule) error {
 
 	validateRuleErr := validateRule(rule)
-
 	if validateRuleErr != nil {
 		return validateRuleErr
 	}

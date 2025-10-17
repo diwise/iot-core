@@ -79,7 +79,7 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 		decs = append(decs, decorators.DigitalInput(ctx, decorators.GetNumberOfTrueValues(ctx, a.measurementsClient, device.ID())))
 	}
 
-	validated, err := a.ruleEngine.ValidateMessageReceived(ctx, msg)
+	validated, err := a.ruleEngine.ValidationResults(ctx, msg)
 
 	for _, validation := range validated {
 		if !validation.IsValid {
