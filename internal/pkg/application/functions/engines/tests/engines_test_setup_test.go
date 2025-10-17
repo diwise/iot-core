@@ -15,6 +15,8 @@ import (
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/senml"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	dbrulesutil "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules/tests"
 )
 
 var (
@@ -151,7 +153,7 @@ func newMessageReceivedWithPacks(id string) events.MessageReceived {
 			// Float record
 			senml.Record{
 				Name:  "1",
-				Value: F64(22.5),
+				Value: dbrulesutil.F64(22.5),
 				Unit:  "m3",
 			},
 			// String record
@@ -162,7 +164,7 @@ func newMessageReceivedWithPacks(id string) events.MessageReceived {
 			// Boolean record
 			senml.Record{
 				Name:      "10",
-				BoolValue: B(true),
+				BoolValue: dbrulesutil.B(true),
 			},
 		}}
 
