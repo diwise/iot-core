@@ -66,7 +66,7 @@ func validateRule(r rules.Rule) error {
 	}
 
 	if r.RuleValues.V == nil && r.RuleValues.Vs == nil && r.RuleValues.Vb == nil {
-		return errors.New("No kinds. One of rule kind v, vs, vb must be set")
+		return rules.ErrRuleHasNoKind
 	}
 
 	return nil

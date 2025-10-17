@@ -3,8 +3,9 @@ package repository_test
 import (
 	"testing"
 
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
 	prod "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
-	rules "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules/tests"
+	rules_test "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules/tests"
 	"github.com/matryer/is"
 )
 
@@ -17,12 +18,12 @@ func TestAdd_Fails_WhenMultipleKindsSet(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	r := newTestRepository()
-	in := rules.MakeRuleV(t, measurementId, deviceId, rules.F64(3), nil)
-	in.RuleValues.Vs = &prod.RuleVs{Value: rules.S("oops")}
+	in := rules_test.MakeRuleV(t, measurementId, deviceId, rules_test.F64(3), nil)
+	in.RuleValues.Vs = &prod.RuleVs{Value: rules_test.S("oops")}
 
 	err := r.Add(testCtx, in)
 
-	is.True(err != nil) // expected error for multiple kinds, got nil
+	is.NoErr(err) // expected error for multiple kinds, got nil
 
 	is.Equal(err.Error(), "rule must have exactly one of V/VS/VB set (got multiple)")
 }
@@ -36,10 +37,9 @@ func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	r := newTestRepository()
-	in := rules.MakeRuleV(t, measurementId, deviceId, nil, nil)
+	in := rules_test.MakeRuleV(t, measurementId, deviceId, nil, nil)
 
 	err := r.Add(testCtx, in)
 
-	is.True(err != nil) // expected error for no kinds set, got nil
-	is.Equal(err.Error(), "No kinds. One of rule kind v, vs, vb must be set")
+	is.Equal(err, rules.ErrRuleHasNoKind)
 }

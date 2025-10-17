@@ -1,5 +1,9 @@
 package rules
 
+import "errors"
+
+var ErrRuleHasNoKind = errors.New("rule has no kind")
+
 type Rule struct {
 	ID              string     `json:"id"`
 	MeasurementID   string     `json:"measurement_id"`

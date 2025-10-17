@@ -1,11 +1,11 @@
 package engine_test
 
 import (
-	"strings"
 	"testing"
 
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
 	prod "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
-	rules "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules/tests"
+	rules_test "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules/tests"
 	"github.com/matryer/is"
 )
 
@@ -18,12 +18,12 @@ func TestAdd_Fails_WhenMultipleKindsSet(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	r := newTestRepository()
-	in := rules.MakeRuleV(t, measurementId, deviceId, rules.F64(3), nil)
-	in.RuleValues.Vs = &prod.RuleVs{Value: rules.S("oops")}
+	in := rules_test.MakeRuleV(t, measurementId, deviceId, rules_test.F64(3), nil)
+	in.RuleValues.Vs = &prod.RuleVs{Value: rules_test.S("oops")}
 
 	err := r.Add(testCtx, in)
 
-	is.True(err != nil) // expected error for multiple kinds, got nil
+	is.NoErr(err) // expected error for multiple kinds, got nil
 	is.Equal(err.Error(), "rule must have exactly one of V/VS/VB set (got multiple)")
 }
 
@@ -36,12 +36,12 @@ func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	r := newTestRepository()
-	in := rules.MakeRuleV(t, measurementId, deviceId, nil, nil)
+	in := rules_test.MakeRuleV(t, measurementId, deviceId, nil, nil)
 
 	err := r.Add(testCtx, in)
 
-	is.True(err != nil) // expected error for no kinds set, got nil
-	is.True(strings.Contains(err.Error(), "No kinds"))
+	is.NoErr(err) // expected error for no kinds set, got nil
+	is.Equal(err, rules.ErrRuleHasNoKind)
 }
 
 func TestInvalidRule_VMin_ReturnsNonValid(t *testing.T) {
@@ -53,7 +53,7 @@ func TestInvalidRule_VMin_ReturnsNonValid(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	msg := newMessageReceivedWithPacks(measurementId)
-	in := rules.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, rules.F64(30), nil)
+	in := rules_test.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, rules_test.F64(30), nil)
 
 	r := newTestRepository()
 	e := newTestEngine()
@@ -77,7 +77,7 @@ func TestInvalidRule_VMax_ReturnsNonValid(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	msg := newMessageReceivedWithPacks(measurementId)
-	in := rules.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, nil, rules.F64(20))
+	in := rules_test.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, nil, rules_test.F64(20))
 
 	r := newTestRepository()
 	e := newTestEngine()
@@ -101,12 +101,12 @@ func TestInvalidRule_V_Min_Max_Mixed_Up_ReturnsError(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	msg := newMessageReceivedWithPacks(measurementId)
-	in := rules.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, rules.F64(30), rules.F64(20))
+	in := rules_test.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, rules_test.F64(30), rules_test.F64(20))
 
 	r := newTestRepository()
 
 	err := r.Add(testCtx, in)
-	is.True(err != nil) // expected error
+	is.NoErr(err) // expected error
 	is.True(err.Error() == "v_min_value must be <= v_max_value")
 }
 
@@ -119,7 +119,7 @@ func TestInvalidRule_VS_ReturnsNonValid(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	msg := newMessageReceivedWithPacks(measurementId)
-	in := rules.MakeRuleVS(t, measurementId+msg.Pack()[2].Name, deviceId, rules.S("wrong string"))
+	in := rules_test.MakeRuleVS(t, measurementId+msg.Pack()[2].Name, deviceId, rules_test.S("wrong string"))
 
 	r := newTestRepository()
 	e := newTestEngine()
@@ -143,7 +143,7 @@ func TestInvalidRule_VB_ReturnsNonValid(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	msg := newMessageReceivedWithPacks(measurementId)
-	in := rules.MakeRuleVB(t, measurementId+msg.Pack()[3].Name, deviceId, rules.B(false))
+	in := rules_test.MakeRuleVB(t, measurementId+msg.Pack()[3].Name, deviceId, rules_test.B(false))
 
 	r := newTestRepository()
 	e := newTestEngine()
