@@ -40,7 +40,6 @@ func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 
-	is.NoErr(err) // expected error for no kinds set, got nil
 	is.Equal(err, rules.ErrRuleHasNoKind)
 }
 
