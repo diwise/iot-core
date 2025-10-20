@@ -57,7 +57,10 @@ func testSetup() (FuncStorage, context.Context, error) {
 	}
 
 	s := Connect(conn)
-	_ = s.Initialize(ctx)
+	err = s.Initialize(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return s, ctx, nil
 }

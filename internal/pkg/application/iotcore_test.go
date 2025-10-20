@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -180,11 +179,11 @@ func testSetup(t *testing.T) (*is.I, context.Context, App, client.DeviceManageme
 	r, _ := functions.NewFuncRegistry(ctx, io.NopCloser(strings.NewReader(functionsFileContent)), s)
 
 	engine := &engines.RuleEngineMock{
-		ValidationResultsFunc: func(ctx context.Context, msg events.MessageReceived, log *slog.Logger) ([]engines.RuleValidation, error) {
+		ValidationResultsFunc: func(ctx context.Context, msg events.MessageReceived) ([]engines.RuleValidation, error) {
 			return nil, nil
 		},
-		ValidateRecordFunc: func(record senml.Record, rule rules.Rule, log *slog.Logger) (engines.RuleValidation, error) {
-			return engines.RuleValidation{}, nil
+		ValidateRecordFunc: func(record senml.Record, rule rules.Rule) engines.RuleValidation {
+			return engines.RuleValidation{}
 		},
 	}
 

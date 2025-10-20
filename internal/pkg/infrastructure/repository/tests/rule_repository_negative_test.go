@@ -1,6 +1,7 @@
 package repository_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
@@ -25,7 +26,7 @@ func TestAdd_Fails_WhenMultipleKindsSet(t *testing.T) {
 
 	is.True(err != nil) // expected error for multiple kinds, got nil
 
-	is.Equal(err, rules.ErrorMultipleKindSet)
+	is.True(errors.Is(err, rules.ErrorMultipleKindSet))
 }
 
 func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
@@ -41,5 +42,5 @@ func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 
-	is.Equal(err, rules.ErrorNoKindSet)
+	is.True(errors.Is(err, rules.ErrorNoKindSet))
 }

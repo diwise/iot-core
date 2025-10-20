@@ -1,6 +1,7 @@
 package engine_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
@@ -24,7 +25,7 @@ func TestAdd_Fails_WhenMultipleKindsSet(t *testing.T) {
 	err := r.Add(testCtx, in)
 
 	is.True(err != nil) // expected error for multiple kinds, got nil
-	is.Equal(err, rules.ErrorMultipleKindSet)
+	is.True(errors.Is(err, rules.ErrorMultipleKindSet))
 }
 
 func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
@@ -40,7 +41,7 @@ func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 
-	is.Equal(err, rules.ErrorNoKindSet)
+	is.True(errors.Is(err, rules.ErrorNoKindSet))
 }
 
 func TestInvalidRule_VMin_ReturnsNonValid(t *testing.T) {
@@ -106,7 +107,7 @@ func TestInvalidRule_V_Min_Max_Mixed_Up_ReturnsError(t *testing.T) {
 
 	err := r.Add(testCtx, in)
 	is.True(err != nil) // expected error
-	is.Equal(err, rules.ErrorVHasWrongOrder)
+	is.True(errors.Is(err, rules.ErrorVHasWrongOrder))
 }
 
 func TestInvalidRule_VS_ReturnsNonValid(t *testing.T) {
