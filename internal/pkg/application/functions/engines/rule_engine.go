@@ -49,7 +49,7 @@ func (e *engine) ValidateRecord(record senml.Record, rule rules.Rule) RuleValida
 
 	appliedRules := 0
 
-	if validatesRangedInteger(rule) {
+	if rule.ValidatesRangedInteger() {
 		appliedRules++
 
 		if record.Value == nil {
@@ -74,7 +74,7 @@ func (e *engine) ValidateRecord(record senml.Record, rule rules.Rule) RuleValida
 		}
 	}
 
-	if validatesStringValueExists(rule) {
+	if rule.ValidatesStringValueExists() {
 		appliedRules++
 
 		expected := deref(rule.RuleValues.Vs.Value, "")
@@ -89,7 +89,7 @@ func (e *engine) ValidateRecord(record senml.Record, rule rules.Rule) RuleValida
 		}
 	}
 
-	if validatesBoolValueExists(rule) {
+	if rule.ValidatesBoolValueExists() {
 		appliedRules++
 
 		if record.BoolValue == nil {
@@ -141,22 +141,6 @@ func (e *engine) ValidationResults(ctx context.Context, msg events.MessageReceiv
 	}
 
 	return result, nil
-}
-
-func validatesRangedInteger(rule rules.Rule) bool {
-	return rule.RuleValues.V != nil && (rule.RuleValues.V.MinValue != nil || rule.RuleValues.V.MaxValue != nil)
-}
-
-func validatesValueExists(record senml.Record) bool {
-	return record.Value != nil || record.BoolValue != nil || record.StringValue != ""
-}
-
-func validatesStringValueExists(rule rules.Rule) bool {
-	return rule.RuleValues.Vs != nil && rule.RuleValues.Vs.Value != nil
-}
-
-func validatesBoolValueExists(rule rules.Rule) bool {
-	return rule.RuleValues.Vb != nil && rule.RuleValues.Vb.Value != nil
 }
 
 func deref[T any](p *T, def T) T {

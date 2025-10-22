@@ -1,6 +1,8 @@
 package rules
 
-import "errors"
+import (
+	"errors"
+)
 
 type Rule struct {
 	ID              string     `json:"id"`
@@ -34,3 +36,15 @@ var (
 	ErrorNotFloatValue  = errors.New("v_min_value and v_min_value must be a valid float")
 	ErrorVHasWrongOrder = errors.New("v_min_value must be lower than v_max_value")
 )
+
+func (rule *Rule) ValidatesRangedInteger() bool {
+	return rule.RuleValues.V != nil && (rule.RuleValues.V.MinValue != nil || rule.RuleValues.V.MaxValue != nil)
+}
+
+func (rule *Rule) ValidatesStringValueExists() bool {
+	return rule.RuleValues.Vs != nil && rule.RuleValues.Vs.Value != nil
+}
+
+func (rule *Rule) ValidatesBoolValueExists() bool {
+	return rule.RuleValues.Vb != nil && rule.RuleValues.Vb.Value != nil
+}
