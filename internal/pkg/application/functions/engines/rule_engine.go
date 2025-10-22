@@ -133,8 +133,7 @@ func (e *engine) ValidationResults(ctx context.Context, msg events.MessageReceiv
 	for _, rule := range ruleList {
 		recordFinder := senml.FindByName(rule.MeasurementID)
 
-		record, ok := pack.GetRecord(recordFinder)
-		if ok {
+		if record, ok := pack.GetRecord(recordFinder); ok {
 			validatedRecord := e.ValidateRecord(record, rule)
 			result = append(result, validatedRecord)
 		}
