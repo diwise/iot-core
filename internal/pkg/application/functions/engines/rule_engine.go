@@ -39,7 +39,7 @@ func (e *engine) ValidateRecord(record senml.Record, rule rules.Rule) RuleValida
 		ValidationMessages: []string{},
 	}
 
-	if validatesValueExists(record) == false {
+	if !record.HasValue() {
 
 		result.ValidationMessages = append(result.ValidationMessages, "no value found")
 		result.IsValid = false
