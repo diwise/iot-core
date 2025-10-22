@@ -25,7 +25,7 @@ var _ RuleRepository = &RuleRepositoryMock{}
 //			DeleteFunc: func(ctx context.Context, id string) error {
 //				panic("mock out the Delete method")
 //			},
-//			GetFunc: func(ctx context.Context, id string) []rules.Rule {
+//			GetFunc: func(ctx context.Context, id string) ([]rules.Rule, error) {
 //				panic("mock out the Get method")
 //			},
 //			UpdateFunc: func(ctx context.Context, rule rules.Rule) error {
@@ -45,7 +45,7 @@ type RuleRepositoryMock struct {
 	DeleteFunc func(ctx context.Context, id string) error
 
 	// GetFunc mocks the Get method.
-	GetFunc func(ctx context.Context, id string) []rules.Rule
+	GetFunc func(ctx context.Context, id string) ([]rules.Rule, error)
 
 	// UpdateFunc mocks the Update method.
 	UpdateFunc func(ctx context.Context, rule rules.Rule) error
@@ -160,7 +160,7 @@ func (mock *RuleRepositoryMock) DeleteCalls() []struct {
 }
 
 // Get calls GetFunc.
-func (mock *RuleRepositoryMock) Get(ctx context.Context, id string) []rules.Rule {
+func (mock *RuleRepositoryMock) Get(ctx context.Context, id string) ([]rules.Rule, error) {
 	if mock.GetFunc == nil {
 		panic("RuleRepositoryMock.GetFunc: method is nil but RuleRepository.Get was just called")
 	}

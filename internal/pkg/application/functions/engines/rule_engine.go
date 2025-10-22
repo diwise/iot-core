@@ -126,7 +126,11 @@ func (e *engine) ValidationResults(ctx context.Context, msg events.MessageReceiv
 
 	pack.Normalize()
 
-	ruleList := e.repository.Get(ctx, msg.DeviceID())
+	ruleList, err := e.repository.Get(ctx, msg.DeviceID())
+
+	if err != nil {
+		return nil, err
+	}
 
 	result := make([]RuleValidation, 0, len(ruleList))
 
