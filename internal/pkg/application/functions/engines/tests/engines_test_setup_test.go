@@ -3,7 +3,6 @@ package engine_test
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"testing"
 
@@ -19,23 +18,23 @@ import (
 )
 
 var (
-	testCtx            context.Context
 	testPool           *pgxpool.Pool
 	testRuleStore      rules.Storage
 	testRuleRepository repository.RuleRepository
 	dbAvailable        bool
 	lastSetupError     string
-	log                *slog.Logger
-)
 
-func init() {
-	fmt.Fprintln(os.Stderr, "[setup] init(): engines_test_setup.go loaded")
-}
+	measurementId string
+	deviceId      string
+)
 
 func TestMain(m *testing.M) {
 	fmt.Fprintln(os.Stderr, "[setup] TestMain: start (tests/engines)")
 
-	testCtx = context.Background()
+	measurementId = "internal-id-for-device/3424/"
+	deviceId = "internal-id-for-device"
+
+	testCtx := context.Background()
 	cfg := database.NewConfig("localhost", "diwise", "diwise", "5432", "diwise", "disable")
 
 	pool, err := database.GetConnection(testCtx, cfg)
@@ -86,7 +85,7 @@ func requireDB(t *testing.T) {
 func cleanDB(t *testing.T) {
 	t.Helper()
 	requireDB(t)
-	if _, err := testPool.Exec(testCtx, `TRUNCATE TABLE rules;`); err != nil {
+	if _, err := testPool.Exec(t.Context(), `TRUNCATE TABLE rules;`); err != nil {
 		t.Fatalf("truncate rules: %v", err)
 	}
 }
@@ -187,4 +186,13 @@ func newMessageReceived(records []senml.Record) events.MessageReceived {
 		Pack_: records,
 	}
 	return msg
+}
+
+func resetDbAndStorage(t *testing.T) (repository.RuleRepository, engines.RuleEngine) {
+	requireDB(t)
+	cleanDB(t)
+
+	r := newTestRepository()
+	e := newTestEngine()
+	return r, e
 }

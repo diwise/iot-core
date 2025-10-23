@@ -16,7 +16,6 @@ import (
 )
 
 var (
-	//testCtx        context.Context
 	testPool       *pgxpool.Pool
 	testRuleStore  rules.Storage
 	dbAvailable    bool
