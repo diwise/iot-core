@@ -19,7 +19,7 @@ func TestValidRule_V_ReturnsOk(t *testing.T) {
 
 	r := newTestRepository()
 
-	err := r.Add(testCtx, in)
+	err := r.Add(t.Context(), in)
 
 	is.NoErr(err)
 }
@@ -34,7 +34,7 @@ func TestValidRule_VS_ReturnsOk(t *testing.T) {
 
 	in := rules.MakeRuleVS(t, measurementId, deviceId, rules.S("test"))
 	r := newTestRepository()
-	err := r.Add(testCtx, in)
+	err := r.Add(t.Context(), in)
 
 	is.NoErr(err)
 }
@@ -49,7 +49,7 @@ func TestValidRule_VB_ReturnsOk(t *testing.T) {
 
 	in := rules.MakeRuleVB(t, measurementId, deviceId, rules.B(true))
 	r := newTestRepository()
-	err := r.Add(testCtx, in)
+	err := r.Add(t.Context(), in)
 
 	is.NoErr(err)
 }

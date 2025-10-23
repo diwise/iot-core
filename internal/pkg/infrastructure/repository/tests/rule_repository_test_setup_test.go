@@ -3,8 +3,6 @@ package repository_test
 import (
 	"context"
 	"fmt"
-	"io"
-	"log/slog"
 	"os"
 	"testing"
 
@@ -18,23 +16,17 @@ import (
 )
 
 var (
-	testCtx        context.Context
+	//testCtx        context.Context
 	testPool       *pgxpool.Pool
 	testRuleStore  rules.Storage
 	dbAvailable    bool
 	lastSetupError string
-	log            *slog.Logger
 )
-
-func init() {
-	fmt.Fprintln(os.Stderr, "[setup] init(): engines_test_setup.go loaded")
-}
 
 func TestMain(m *testing.M) {
 	fmt.Fprintln(os.Stderr, "[setup] TestMain: start (tests/engines)")
-	log = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 
-	testCtx = context.Background()
+	testCtx := context.Background()
 	cfg := database.NewConfig("localhost", "diwise", "diwise", "5432", "diwise", "disable")
 
 	pool, err := database.GetConnection(testCtx, cfg)
@@ -84,7 +76,7 @@ func requireDB(t *testing.T) {
 func cleanDB(t *testing.T) {
 	t.Helper()
 	requireDB(t)
-	if _, err := testPool.Exec(testCtx, `TRUNCATE TABLE rules;`); err != nil {
+	if _, err := testPool.Exec(t.Context(), `TRUNCATE TABLE rules;`); err != nil {
 		t.Fatalf("truncate rules: %v", err)
 	}
 }

@@ -22,7 +22,7 @@ func TestAdd_Fails_WhenMultipleKindsSet(t *testing.T) {
 	in := rules_test.MakeRuleV(t, measurementId, deviceId, rules_test.F64(3), nil)
 	in.RuleValues.Vs = &prod.RuleVs{Value: rules_test.S("oops")}
 
-	err := r.Add(testCtx, in)
+	err := r.Add(t.Context(), in)
 
 	is.True(err != nil) // expected error for multiple kinds, got nil
 
@@ -40,7 +40,7 @@ func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
 	r := newTestRepository()
 	in := rules_test.MakeRuleV(t, measurementId, deviceId, nil, nil)
 
-	err := r.Add(testCtx, in)
+	err := r.Add(t.Context(), in)
 
 	is.True(errors.Is(err, rules.ErrorNoKindSet))
 }

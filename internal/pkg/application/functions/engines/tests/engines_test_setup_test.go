@@ -3,7 +3,6 @@ package engine_test
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"testing"
@@ -35,7 +34,6 @@ func init() {
 
 func TestMain(m *testing.M) {
 	fmt.Fprintln(os.Stderr, "[setup] TestMain: start (tests/engines)")
-	log = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 
 	testCtx = context.Background()
 	cfg := database.NewConfig("localhost", "diwise", "diwise", "5432", "diwise", "disable")
