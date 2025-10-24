@@ -19,6 +19,8 @@ github.com/diwise/senml v0.0.0-20250930091756-4b5cca508535 h1:t9GLPRxKY6vBC9BVvG
 github.com/diwise/senml v0.0.0-20250930091756-4b5cca508535/go.mod h1:ufA3dosHOpdrV7y/Cx5hOPNiWM4hD82YHNlsN3T4dLQ=
 github.com/diwise/service-chassis v0.0.0-20250910115917-3609c77c5355 h1:/+iGo/B22c1jHrdpxUNtsNF1CU4OGpNKUIXBKpWZfH4=
 github.com/diwise/service-chassis v0.0.0-20250910115917-3609c77c5355/go.mod h1:Iei5leO4Re039tNFQN87hJfHvJ+RfjMtjmv+RutKU8k=
+github.com/diwise/service-chassis v0.0.0-20251023105306-e3e865897dd7 h1:vJlYElC3iOzS2k4WKYyLV1zYjppxDKMLJa1UJmR88oI=
+github.com/diwise/service-chassis v0.0.0-20251023105306-e3e865897dd7/go.mod h1:Iei5leO4Re039tNFQN87hJfHvJ+RfjMtjmv+RutKU8k=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/go-chi/chi/v5 v5.2.3 h1:WQIt9uxdsAbgIYgid+BpYc+liqQZGMHRaUwp0JUcvdE=
