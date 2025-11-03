@@ -28,7 +28,7 @@ var ErrNotFound = errors.New("rule not found")
 
 func (i *impl) Add(ctx context.Context, r Rule) error {
 
-	vmin, vmax, vs, vb, err := NormalizedParams(r)
+	vmin, vmax, vs, vb, err := NormalizedParamsAndValidate(r)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (i *impl) Add(ctx context.Context, r Rule) error {
 
 func (i *impl) Get(ctx context.Context, id string) ([]Rule, []error, error) {
 
-	var rules []Rule
+	rules := make([]Rule, 0, 5)
 	var rowErrors []error
 
 	const q = `
@@ -126,7 +126,7 @@ func (i *impl) Get(ctx context.Context, id string) ([]Rule, []error, error) {
 
 func (i *impl) Update(ctx context.Context, r Rule) error {
 
-	vmin, vmax, vs, vb, err := NormalizedParams(r)
+	vmin, vmax, vs, vb, err := NormalizedParamsAndValidate(r)
 	if err != nil {
 		return err
 	}

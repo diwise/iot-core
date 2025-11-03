@@ -52,7 +52,7 @@ func detectKind(r Rule) (kind, error) {
 	}
 }
 
-func NormalizedParams(r Rule) (vmin, vmax, vs, vb any, err error) {
+func NormalizedParamsAndValidate(r Rule) (vmin, vmax, vs, vb any, err error) {
 	k, err := detectKind(r)
 	if err != nil {
 		return nil, nil, nil, nil, err
