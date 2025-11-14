@@ -43,7 +43,7 @@ func defaultFlags() flagMap {
 		servicePort:   "8080",
 		controlPort:   "8000",
 
-		functionsFile:       "/opt/diwise/config/functions.csv",
+		functionsFilePath:   "/opt/diwise/config/functions.csv",
 		deviceManagementUrl: "http://iot-device-mgmt",
 		measurementsUrl:     "http://iot-events",
 
@@ -82,8 +82,6 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 		"rabbitmq": func(context.Context) (string, error) { return "ok", nil },
 	}
 
-	log := logging.GetFromContext(ctx)
-
 	var err error
 	var dmClient client.DeviceManagementClient
 	var msgCtx messaging.MsgContext
@@ -99,8 +97,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 		),
 		webserver("public", listen(flags[listenAddress]), port(flags[servicePort]), withtracing(true),
 			muxinit(func(ctx context.Context, identifier string, port string, appCfg *appConfig, handler *http.ServeMux) error {
-				api.RegisterHandlers(ctx, handler, app)
-				return nil
+				return api.RegisterHandlers(ctx, handler, app)
 			}),
 		),
 		oninit(func(ctx context.Context, ac *appConfig) error {
@@ -109,7 +106,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 				return err
 			}
 
-			config := messaging.LoadConfiguration(ctx, serviceName, log)
+			config := messaging.LoadConfiguration(ctx, serviceName, logging.GetFromContext(ctx))
 			msgCtx, err = messaging.Initialize(ctx, config)
 			if err != nil {
 				return err
@@ -132,7 +129,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 
 			funcStorage = database.Connect(conn)
 
-			f, _ := os.Open(flags[functionsFile])
+			f, _ := os.Open(flags[functionsFilePath])
 			if f != nil {
 				defer f.Close()
 			}
@@ -203,7 +200,7 @@ func parseExternalConfig(ctx context.Context, flags flagMap) (context.Context, f
 		}
 	}
 
-	flag.Func("functions", "configuration file for functions", apply(functionsFile))
+	flag.Func("functions", "configuration file for functions", apply(functionsFilePath))
 
 	flag.Parse()
 
@@ -228,7 +225,8 @@ func newMessageReceivedCommandHandler(messenger messaging.MsgContext, app applic
 		logger = logger.With(slog.String("device_id", evt.DeviceID())).With(slog.String("object_id", evt.ObjectID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
-		m, err := app.MessageReceived(ctx, evt)
+		var m *events.MessageAccepted
+		m, err = app.MessageReceived(ctx, evt)
 		if err != nil {
 			if errors.Is(err, application.ErrCouldNotFindDevice) {
 				logger.Debug("could not find device, message not accepted")

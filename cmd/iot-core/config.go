@@ -14,7 +14,7 @@ const (
 
 	deviceManagementUrl
 	measurementsUrl
-	functionsFile
+	functionsFilePath
 
 	dbHost
 	dbUser
