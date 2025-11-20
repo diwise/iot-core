@@ -12,6 +12,7 @@ import (
 type RuleRepository interface {
 	Add(ctx context.Context, rule rules.Rule) error
 	Get(ctx context.Context, id string) ([]rules.Rule, error)
+	GetByID(ctx context.Context, id string) (*rules.Rule, error)
 	Update(ctx context.Context, rule rules.Rule) error
 	Delete(ctx context.Context, id string) error
 }
@@ -36,6 +37,12 @@ func (e *repository) Add(ctx context.Context, rule rules.Rule) error {
 
 func (e *repository) Get(ctx context.Context, id string) ([]rules.Rule, error) {
 	result, _, err := e.storage.Get(ctx, id)
+
+	return result, err
+}
+
+func (e *repository) GetByID(ctx context.Context, id string) (*rules.Rule, error) {
+	result, err := e.storage.GetByID(ctx, id)
 
 	return result, err
 }

@@ -27,6 +27,9 @@ var _ Storage = &StorageMock{}
 //			GetFunc: func(ctx context.Context, id string) ([]Rule, []error, error) {
 //				panic("mock out the Get method")
 //			},
+//			GetByIDFunc: func(ctx context.Context, id string) (*Rule, error) {
+//				panic("mock out the GetByID method")
+//			},
 //			InitializeFunc: func(contextMoqParam context.Context) error {
 //				panic("mock out the Initialize method")
 //			},
@@ -48,6 +51,9 @@ type StorageMock struct {
 
 	// GetFunc mocks the Get method.
 	GetFunc func(ctx context.Context, id string) ([]Rule, []error, error)
+
+	// GetByIDFunc mocks the GetByID method.
+	GetByIDFunc func(ctx context.Context, id string) (*Rule, error)
 
 	// InitializeFunc mocks the Initialize method.
 	InitializeFunc func(contextMoqParam context.Context) error
@@ -78,6 +84,13 @@ type StorageMock struct {
 			// ID is the id argument value.
 			ID string
 		}
+		// GetByID holds details about calls to the GetByID method.
+		GetByID []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ID is the id argument value.
+			ID string
+		}
 		// Initialize holds details about calls to the Initialize method.
 		Initialize []struct {
 			// ContextMoqParam is the contextMoqParam argument value.
@@ -94,6 +107,7 @@ type StorageMock struct {
 	lockAdd        sync.RWMutex
 	lockDelete     sync.RWMutex
 	lockGet        sync.RWMutex
+	lockGetByID    sync.RWMutex
 	lockInitialize sync.RWMutex
 	lockUpdate     sync.RWMutex
 }
@@ -203,6 +217,42 @@ func (mock *StorageMock) GetCalls() []struct {
 	mock.lockGet.RLock()
 	calls = mock.calls.Get
 	mock.lockGet.RUnlock()
+	return calls
+}
+
+// GetByID calls GetByIDFunc.
+func (mock *StorageMock) GetByID(ctx context.Context, id string) (*Rule, error) {
+	if mock.GetByIDFunc == nil {
+		panic("StorageMock.GetByIDFunc: method is nil but Storage.GetByID was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		ID  string
+	}{
+		Ctx: ctx,
+		ID:  id,
+	}
+	mock.lockGetByID.Lock()
+	mock.calls.GetByID = append(mock.calls.GetByID, callInfo)
+	mock.lockGetByID.Unlock()
+	return mock.GetByIDFunc(ctx, id)
+}
+
+// GetByIDCalls gets all the calls that were made to GetByID.
+// Check the length with:
+//
+//	len(mockedStorage.GetByIDCalls())
+func (mock *StorageMock) GetByIDCalls() []struct {
+	Ctx context.Context
+	ID  string
+} {
+	var calls []struct {
+		Ctx context.Context
+		ID  string
+	}
+	mock.lockGetByID.RLock()
+	calls = mock.calls.GetByID
+	mock.lockGetByID.RUnlock()
 	return calls
 }
 
