@@ -75,7 +75,7 @@ func RegisterHandlers(ctx context.Context, rootMux *http.ServeMux, app applicati
 	return nil
 }
 
-func NewQueryFunctionsHandler(ctx context.Context, registry functions.Registry) http.HandlerFunc {
+func NewQueryFunctionsHandler(ctx context.Context, funcRegistry functions.FuncRegistry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
@@ -85,7 +85,7 @@ func NewQueryFunctionsHandler(ctx context.Context, registry functions.Registry) 
 
 		logging.GetFromContext(ctx).Debug("functions requested")
 
-		functions, _ := registry.Find(ctx, functions.MatchAll())
+		functions, _ := funcRegistry.Find(ctx, functions.MatchAll())
 		b, _ := json.MarshalIndent(functions, "  ", "  ")
 
 		w.WriteHeader(http.StatusOK)
@@ -93,7 +93,7 @@ func NewQueryFunctionsHandler(ctx context.Context, registry functions.Registry) 
 	}
 }
 
-func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Registry) http.HandlerFunc {
+func NewQueryFunctionHistoryHandler(ctx context.Context, funcRegistry functions.FuncRegistry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
@@ -111,7 +111,7 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 			return
 		}
 
-		function, err := registry.Get(ctx, functionID)
+		function, err := funcRegistry.Get(ctx, functionID)
 		if err != nil {
 			logger.Error("not found", "err", err.Error())
 			w.WriteHeader(http.StatusNotFound)

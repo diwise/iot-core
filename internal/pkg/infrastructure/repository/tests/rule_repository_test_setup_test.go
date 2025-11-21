@@ -1,0 +1,160 @@
+package repository_test
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"testing"
+
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
+	rule_tests "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules/tests"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/repository"
+	"github.com/diwise/iot-core/pkg/messaging/events"
+	"github.com/diwise/senml"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+var (
+	testPool       *pgxpool.Pool
+	testRuleStore  rules.Storage
+	dbAvailable    bool
+	lastSetupError string
+)
+
+func TestMain(m *testing.M) {
+	fmt.Fprintln(os.Stderr, "[setup] TestMain: start (tests/engines)")
+
+	testCtx := context.Background()
+	cfg := database.NewConfig("localhost", "diwise", "diwise", "5432", "diwise", "disable")
+
+	pool, err := database.GetConnection(testCtx, cfg)
+	if err != nil {
+		lastSetupError = fmt.Sprintf("connect failed: %v", err)
+		fmt.Fprintln(os.Stderr, "[setup]", lastSetupError)
+		goto RUN
+	}
+	if pingErr := pool.Ping(testCtx); pingErr != nil {
+		lastSetupError = fmt.Sprintf("ping failed: %v", pingErr)
+		fmt.Fprintln(os.Stderr, "[setup]", lastSetupError)
+		pool.Close()
+		goto RUN
+	}
+
+	testPool = pool
+
+	testRuleStore = rules.Connect(testPool)
+	if initErr := testRuleStore.Initialize(testCtx); initErr != nil {
+		lastSetupError = fmt.Sprintf("initialize failed: %v", initErr)
+		fmt.Fprintln(os.Stderr, "[setup]", lastSetupError)
+	} else {
+		dbAvailable = true
+		fmt.Fprintln(os.Stderr, "[setup] DB available: OK")
+	}
+
+RUN:
+	code := m.Run()
+	if testPool != nil {
+		testPool.Close()
+	}
+	os.Exit(code)
+}
+
+func requireDB(t *testing.T) {
+	t.Helper()
+	if dbAvailable {
+		return
+	}
+	msg := "Skip: No DB available"
+	if lastSetupError != "" {
+		msg += " (" + lastSetupError + ")"
+	}
+	t.Skip(msg)
+}
+
+func cleanDB(t *testing.T) {
+	t.Helper()
+	requireDB(t)
+	if _, err := testPool.Exec(t.Context(), `TRUNCATE TABLE rules;`); err != nil {
+		t.Fatalf("truncate rules: %v", err)
+	}
+}
+
+/** Assert functions for pointer values **/
+
+func AssertFloatPtrEq(t *testing.T, got, want *float64) {
+	t.Helper()
+	if got == nil && want == nil {
+		return
+	}
+	if (got == nil) != (want == nil) {
+		t.Fatalf("nil mismatch: got=%v want=%v", got, want)
+	}
+	const eps = 1e-9
+	diff := *got - *want
+	if diff < -eps || diff > eps {
+		t.Fatalf("float mismatch: got=%v want=%v", *got, *want)
+	}
+}
+
+func AssertStringPtrEq(t *testing.T, got, want *string) {
+	t.Helper()
+	if got == nil && want == nil {
+		return
+	}
+	if (got == nil) != (want == nil) {
+		t.Fatalf("nil mismatch: got=%v want=%v", got, want)
+	}
+	if *got != *want {
+		t.Fatalf("string mismatch: got=%q want=%q", *got, *want)
+	}
+}
+
+func AssertBoolPtrEq(t *testing.T, got, want *bool) {
+	t.Helper()
+	if got == nil && want == nil {
+		return
+	}
+	if (got == nil) != (want == nil) {
+		t.Fatalf("nil mismatch: got=%v want=%v", got, want)
+	}
+	if *got != *want {
+		t.Fatalf("bool mismatch: got=%v want=%v", *got, *want)
+	}
+}
+
+func newTestRepository() repository.RuleRepository {
+	return repository.New(testRuleStore)
+}
+
+// F: 1, 22.5. FS: 3, w1e. VB: 10, true
+func newMessageReceived(id string) events.MessageReceived {
+	msg := events.MessageReceived{
+		Pack_: senml.Pack{
+			senml.Record{
+				XMLName:     nil,
+				BaseName:    id,
+				BaseTime:    1563735600,
+				BaseUnit:    "",
+				Name:        "0",
+				Unit:        "",
+				StringValue: "",
+				DataValue:   "",
+			},
+			senml.Record{
+				Name:  "1",
+				Value: rule_tests.F64(22.5),
+				Unit:  "m3",
+			},
+			senml.Record{
+				Name:        "3",
+				StringValue: "w1e",
+			},
+			senml.Record{
+				Name:      "10",
+				BoolValue: rule_tests.B(true),
+			},
+		}}
+
+	return msg
+}

@@ -17,6 +17,8 @@ github.com/diwise/messaging-golang v0.0.0-20250628135946-f23f34d06003 h1:ihc06l5
 github.com/diwise/messaging-golang v0.0.0-20250628135946-f23f34d06003/go.mod h1:oxItnOgjQbbE2Qn2nSC/qNL3eAUGy6lzGZjcjUd7nQY=
 github.com/diwise/senml v0.0.0-20250930091756-4b5cca508535 h1:t9GLPRxKY6vBC9BVvG9r1jMVnicH9N327zwhxEOXJQM=
 github.com/diwise/senml v0.0.0-20250930091756-4b5cca508535/go.mod h1:ufA3dosHOpdrV7y/Cx5hOPNiWM4hD82YHNlsN3T4dLQ=
+github.com/diwise/senml v0.0.0-20251022134045-d0045d1dd610 h1:r4vY4YdZh2reo6Wfsl2TU3txMEX2Z4mdwfDF8g5Xsrc=
+github.com/diwise/senml v0.0.0-20251022134045-d0045d1dd610/go.mod h1:ufA3dosHOpdrV7y/Cx5hOPNiWM4hD82YHNlsN3T4dLQ=
 github.com/diwise/service-chassis v0.0.0-20250910115917-3609c77c5355 h1:/+iGo/B22c1jHrdpxUNtsNF1CU4OGpNKUIXBKpWZfH4=
 github.com/diwise/service-chassis v0.0.0-20250910115917-3609c77c5355/go.mod h1:Iei5leO4Re039tNFQN87hJfHvJ+RfjMtjmv+RutKU8k=
 github.com/diwise/service-chassis v0.0.0-20251023105306-e3e865897dd7 h1:vJlYElC3iOzS2k4WKYyLV1zYjppxDKMLJa1UJmR88oI=

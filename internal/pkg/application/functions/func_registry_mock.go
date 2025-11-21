@@ -8,16 +8,16 @@ import (
 	"sync"
 )
 
-// Ensure, that RegistryMock does implement Registry.
+// Ensure, that FuncRegistryMock does implement FuncRegistry.
 // If this is not the case, regenerate this file with moq.
-var _ Registry = &RegistryMock{}
+var _ FuncRegistry = &FuncRegistryMock{}
 
-// RegistryMock is a mock implementation of Registry.
+// FuncRegistryMock is a mock implementation of FuncRegistry.
 //
-//	func TestSomethingThatUsesRegistry(t *testing.T) {
+//	func TestSomethingThatUsesFuncRegistry(t *testing.T) {
 //
-//		// make and configure a mocked Registry
-//		mockedRegistry := &RegistryMock{
+//		// make and configure a mocked FuncRegistry
+//		mockedFuncRegistry := &FuncRegistryMock{
 //			FindFunc: func(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error) {
 //				panic("mock out the Find method")
 //			},
@@ -26,11 +26,11 @@ var _ Registry = &RegistryMock{}
 //			},
 //		}
 //
-//		// use mockedRegistry in code that requires Registry
+//		// use mockedFuncRegistry in code that requires FuncRegistry
 //		// and then make assertions.
 //
 //	}
-type RegistryMock struct {
+type FuncRegistryMock struct {
 	// FindFunc mocks the Find method.
 	FindFunc func(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error)
 
@@ -59,9 +59,9 @@ type RegistryMock struct {
 }
 
 // Find calls FindFunc.
-func (mock *RegistryMock) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error) {
+func (mock *FuncRegistryMock) Find(ctx context.Context, matchers ...RegistryMatcherFunc) ([]Function, error) {
 	if mock.FindFunc == nil {
-		panic("RegistryMock.FindFunc: method is nil but Registry.Find was just called")
+		panic("FuncRegistryMock.FindFunc: method is nil but FuncRegistry.Find was just called")
 	}
 	callInfo := struct {
 		Ctx      context.Context
@@ -79,8 +79,8 @@ func (mock *RegistryMock) Find(ctx context.Context, matchers ...RegistryMatcherF
 // FindCalls gets all the calls that were made to Find.
 // Check the length with:
 //
-//	len(mockedRegistry.FindCalls())
-func (mock *RegistryMock) FindCalls() []struct {
+//	len(mockedFuncRegistry.FindCalls())
+func (mock *FuncRegistryMock) FindCalls() []struct {
 	Ctx      context.Context
 	Matchers []RegistryMatcherFunc
 } {
@@ -95,9 +95,9 @@ func (mock *RegistryMock) FindCalls() []struct {
 }
 
 // Get calls GetFunc.
-func (mock *RegistryMock) Get(ctx context.Context, functionID string) (Function, error) {
+func (mock *FuncRegistryMock) Get(ctx context.Context, functionID string) (Function, error) {
 	if mock.GetFunc == nil {
-		panic("RegistryMock.GetFunc: method is nil but Registry.Get was just called")
+		panic("FuncRegistryMock.GetFunc: method is nil but FuncRegistry.Get was just called")
 	}
 	callInfo := struct {
 		Ctx        context.Context
@@ -115,8 +115,8 @@ func (mock *RegistryMock) Get(ctx context.Context, functionID string) (Function,
 // GetCalls gets all the calls that were made to Get.
 // Check the length with:
 //
-//	len(mockedRegistry.GetCalls())
-func (mock *RegistryMock) GetCalls() []struct {
+//	len(mockedFuncRegistry.GetCalls())
+func (mock *FuncRegistryMock) GetCalls() []struct {
 	Ctx        context.Context
 	FunctionID string
 } {

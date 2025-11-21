@@ -62,7 +62,7 @@ type fnct struct {
 	handle func(context.Context, *events.MessageAccepted, func(prop string, value float64, ts time.Time) error) (bool, error)
 
 	defaultHistoryLabel string
-	storage             database.Storage
+	funcStorage         database.FuncStorage
 }
 
 func (f *fnct) ID() string {
@@ -86,7 +86,7 @@ func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx mes
 	f.DeviceID = e.DeviceID()
 
 	onchange := func(prop string, value float64, ts time.Time) error {
-		err := f.storage.Add(ctx, f.ID(), prop, value, ts)
+		err := f.funcStorage.Add(ctx, f.ID(), prop, value, ts)
 		if err != nil {
 			log.Error("failed to add values to database", "err", err.Error())
 			return err
@@ -156,7 +156,7 @@ func (f *fnct) History(ctx context.Context, label string, lastN int) ([]LogValue
 		label = f.defaultHistoryLabel
 	}
 
-	lv, err := f.storage.History(ctx, f.ID(), label, lastN)
+	lv, err := f.funcStorage.History(ctx, f.ID(), label, lastN)
 	if err != nil {
 		return nil, err
 	}

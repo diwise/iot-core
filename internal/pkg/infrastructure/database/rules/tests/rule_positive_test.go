@@ -1,0 +1,85 @@
+package rule_tests
+
+import (
+	"testing"
+
+	dbrules "github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
+
+	"github.com/matryer/is"
+)
+
+func Test_That_Rule_For_Vs_Verify(t *testing.T) {
+	is := is.New(t)
+	deviceId := "test"
+	in := MakeRuleVS(t, "r-vs", deviceId, S("test"))
+	vmin, vmax, vs, vb, err := dbrules.NormalizedParamsAndValidate(in)
+
+	is.NoErr(err)                                    // NormalizedParamsAndValidate
+	is.True(vmin == nil && vmax == nil && vb == nil) // expected nil for vmin, vmax, vb
+
+	s, ok := vs.(string)
+
+	is.True(ok == true && s == "test") // expected vs=string("test")
+}
+
+func Test_That_Rule_For_V_Verify(t *testing.T) {
+	is := is.New(t)
+	deviceId := "test"
+	in := MakeRuleV(t, "r-vmax-vmin", deviceId, F64(3), F64(5))
+	vmin, vmax, vs, vb, err := dbrules.NormalizedParamsAndValidate(in)
+
+	is.NoErr(err)                   // NormalizedParamsAndValidate
+	is.True(vs == nil && vb == nil) // expected nil for vs, vb
+
+	minValue, ok1 := vmin.(float64)
+	maxValue, ok2 := vmax.(float64)
+
+	is.True(ok1 == true) // expected vmin as float64
+	is.True(ok2 == true) // expected vmax as float64
+
+	is.True(minValue == 3 && maxValue == 5) // expected vmin=3 vmax=5
+}
+
+func Test_That_Rule_For_VMax_Verify(t *testing.T) {
+	is := is.New(t)
+	deviceId := "test"
+	in := MakeRuleV(t, "r-vmax", deviceId, nil, F64(5))
+	vmin, vmax, vs, vb, err := dbrules.NormalizedParamsAndValidate(in)
+
+	is.NoErr(err)                   // NormalizedParamsAndValidate
+	is.True(vs == nil && vb == nil) // expected nil for vs, vb
+	is.True(vmin == nil)            // expected nil for vmin
+
+	maxValue, ok := vmax.(float64)
+
+	is.True(ok == true && maxValue == 5) // expected vmax=5
+}
+
+func Test_That_Rule_For_VMin_Verify(t *testing.T) {
+	is := is.New(t)
+	deviceId := "test"
+	in := MakeRuleV(t, "r-vmin", deviceId, F64(3), nil)
+	vmin, vmax, vs, vb, err := dbrules.NormalizedParamsAndValidate(in)
+
+	is.NoErr(err)                   // NormalizedParamsAndValidate
+	is.True(vs == nil && vb == nil) // expected nil for vs, vb
+	is.True(vmax == nil)            // expected nil for vmax
+
+	minValue, ok := vmin.(float64)
+
+	is.True(ok == true && minValue == 3) // expected vmax=3
+}
+
+func Test_That_Rule_For_Vb_Verify(t *testing.T) {
+	is := is.New(t)
+	deviceId := "test"
+	value := true
+	in := MakeRuleVB(t, "r-vb", deviceId, B(value))
+	vmin, vmax, vs, vb, err := dbrules.NormalizedParamsAndValidate(in)
+
+	is.NoErr(err)                                    // NormalizedParamsAndValidate
+	is.True(vs == nil && vmin == nil && vmax == nil) // expected nil for vs,vmin,vmax
+
+	b, ok := vb.(bool)
+	is.True(ok == true && b == true) // expected vb=true (bool)
+}

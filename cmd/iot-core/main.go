@@ -13,8 +13,11 @@ import (
 
 	"github.com/diwise/iot-core/internal/pkg/application"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/engines"
 	"github.com/diwise/iot-core/internal/pkg/application/measurements"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/repository"
 	"github.com/diwise/iot-core/internal/pkg/presentation/api"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
@@ -83,8 +86,9 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 	var dmClient client.DeviceManagementClient
 	var msgCtx messaging.MsgContext
 	var mClient measurements.MeasurementsClient
-	var storage database.Storage
-	var registry functions.Registry
+	var ruleStorage rules.Storage
+	var funcStorage database.FuncStorage
+	var funcRegistry functions.FuncRegistry
 	var app application.App
 
 	_, runner := servicerunner.New(ctx, *cfg,
@@ -113,25 +117,31 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 				return err
 			}
 
-			storage, err = database.Connect(ctx, database.NewConfig(flags[dbHost], flags[dbUser], flags[dbPassword], flags[dbPort], flags[dbName], flags[dbSSLMode]))
+			dbConfig := database.NewConfig(flags[dbHost], flags[dbUser], flags[dbPassword], flags[dbPort], flags[dbName], flags[dbSSLMode])
+			conn, err := database.GetConnection(ctx, dbConfig)
+
 			if err != nil {
 				return err
 			}
 
-			var f *os.File
-			f, err = os.Open(flags[functionsFilePath])
+			ruleStorage = rules.Connect(conn)
+			ruleRepository := repository.New(ruleStorage)
+
+			funcStorage = database.Connect(conn)
+
+			f, _ := os.Open(flags[functionsFilePath])
+			if f != nil {
+				defer f.Close()
+			}
+
+			funcRegistry, err = functions.NewFuncRegistry(ctx, f, funcStorage)
 			if err != nil {
 				return err
 			}
 
-			defer f.Close()
+			ruleEngine := engines.New(ruleRepository)
 
-			registry, err = functions.NewRegistry(ctx, f, storage)
-			if err != nil {
-				return err
-			}
-
-			app = application.New(dmClient, mClient, registry, msgCtx)
+			app = application.New(dmClient, mClient, funcRegistry, ruleEngine, msgCtx)
 
 			return nil
 		}),
@@ -145,7 +155,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 			msgCtx.RegisterTopicMessageHandler("message.accepted", newMessageAcceptedHandler(app))
 			msgCtx.RegisterTopicMessageHandler("function.updated", newFunctionUpdatedTopicMessageHandler(app))
 
-			err = storage.Initialize(ctx)
+			err = funcStorage.Initialize(ctx)
 			if err != nil {
 				return err
 			}

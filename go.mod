@@ -6,7 +6,7 @@ require (
 	github.com/diwise/iot-agent v0.0.0-20250930131659-f594103fd33a
 	github.com/diwise/iot-device-mgmt v0.0.0-20251002111003-f850b71139da
 	github.com/diwise/messaging-golang v0.0.0-20250628135946-f23f34d06003
-	github.com/diwise/senml v0.0.0-20250930091756-4b5cca508535
+	github.com/diwise/senml v0.0.0-20251022134045-d0045d1dd610
 	github.com/go-chi/chi/v5 v5.2.3
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0
 	go.opentelemetry.io/otel v1.38.0

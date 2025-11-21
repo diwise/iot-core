@@ -13,6 +13,7 @@ import (
 	"github.com/diwise/iot-agent/pkg/lwm2m"
 	"github.com/diwise/iot-core/internal/pkg/application/decorators"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
+	"github.com/diwise/iot-core/internal/pkg/application/functions/engines"
 	"github.com/diwise/iot-core/internal/pkg/application/measurements"
 
 	"github.com/diwise/iot-core/pkg/messaging/events"
@@ -30,16 +31,18 @@ type App interface {
 type app struct {
 	deviceManagement   client.DeviceManagementClient
 	measurementsClient measurements.MeasurementsClient
-	registry           functions.Registry
+	funcRegistry       functions.FuncRegistry
+	ruleEngine         engines.RuleEngine
 	mu                 sync.Mutex
 	messenger          messaging.MsgContext
 }
 
-func New(client client.DeviceManagementClient, measurementsClient measurements.MeasurementsClient, functionRegistry functions.Registry, msgCtx messaging.MsgContext) App {
+func New(client client.DeviceManagementClient, measurementsClient measurements.MeasurementsClient, functionRegistry functions.FuncRegistry, ruleEngine engines.RuleEngine, msgCtx messaging.MsgContext) App {
 	return &app{
 		deviceManagement:   client,
-		registry:           functionRegistry,
+		funcRegistry:       functionRegistry,
 		measurementsClient: measurementsClient,
+		ruleEngine:         ruleEngine,
 		messenger:          msgCtx,
 	}
 }
@@ -76,6 +79,23 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 		decs = append(decs, decorators.DigitalInput(ctx, decorators.GetNumberOfTrueValues(ctx, a.measurementsClient, device.ID())))
 	}
 
+	validated, err := a.ruleEngine.ValidationResults(ctx, msg)
+
+	for _, validation := range validated {
+		if !validation.IsValid {
+			log.Debug("message did not validate by it's rule", "device_id", device.ID())
+
+			if validation.ShouldAbort {
+				abortMessage := events.NewMessageAborted(clone, validation.ValidationMessages)
+				err = a.messenger.PublishOnTopic(ctx, abortMessage)
+				return nil, fmt.Errorf("message did not validate and is set to abort")
+			}
+
+			notValidatedMessage := events.NewMessageNotValidated(clone, validation.ValidationMessages)
+			err = a.messenger.PublishOnTopic(ctx, notValidatedMessage)
+		}
+	}
+
 	ma := events.NewMessageAccepted(clone, decs...)
 
 	return ma, nil
@@ -89,7 +109,7 @@ func (a *app) MessageAccepted(ctx context.Context, evt events.MessageAccepted) e
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	matchingFunctions, _ := a.registry.Find(ctx, functions.MatchSensor(evt.DeviceID()))
+	matchingFunctions, _ := a.funcRegistry.Find(ctx, functions.MatchSensor(evt.DeviceID()))
 
 	if len(matchingFunctions) == 0 {
 		return nil
