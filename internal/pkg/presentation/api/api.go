@@ -13,6 +13,7 @@ import (
 
 	"github.com/diwise/iot-core/internal/pkg/application"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/service-chassis/pkg/infrastructure/net/http/router"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
@@ -32,7 +33,22 @@ func RegisterHandlers(ctx context.Context, rootMux *http.ServeMux, app applicati
 	logger := logging.GetFromContext(ctx)
 	r.Use(loggerMiddleware(logger))
 
-	r.Post("/functions/messagereceived", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/functions/messagereceived", NewMessageReceivedHandler(app))
+	//r.Get("/functions", NewQueryFunctionsHandler(ctx, app.))
+	//r.Get("/functions/{id}/history", NewQueryFunctionHistoryHandler(ctx, app.registry))
+
+	// Rule endpoints
+	r.Post("/rules", NewCreateRuleHandler(ctx, app))
+	r.Get("/rules/{deviceId}", NewGetRulesByDeviceHandler(ctx, app))
+	r.Get("/rules/{ruleId}", NewGetRuleHandler(ctx, app))
+	r.Put("/rules/{ruleId}", NewUpdateRuleHandler(ctx, app))
+	r.Delete("/rules/{ruleId}", NewDeleteRuleHandler(ctx, app))
+
+	return nil
+}
+
+func NewMessageReceivedHandler(app application.App) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
 		var err error
@@ -67,12 +83,197 @@ func RegisterHandlers(ctx context.Context, rootMux *http.ServeMux, app applicati
 
 		w.WriteHeader(http.StatusOK)
 		w.Write(b)
-	})
+	}
+}
 
-	//r.Get("/functions", NewQueryFunctionsHandler(ctx, app.))
-	//r.Get("/functions/{id}/history", NewQueryFunctionHistoryHandler(ctx, app.registry))
+func NewCreateRuleHandler(ctx context.Context, app application.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
 
-	return nil
+		var err error
+		ctx, endSpan := tracing.Start(r.Context(), tracerName, "create-rule", func() error { return err })
+		defer endSpan()
+
+		b, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "could not read body", http.StatusBadRequest)
+			return
+		}
+
+		rule := rules.Rule{}
+		err = json.Unmarshal(b, &rule)
+		if err != nil {
+			http.Error(w, "could not unmarshal body", http.StatusBadRequest)
+			return
+		}
+
+		err = app.CreateRule(ctx, &rule)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("could not create rule: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+
+		response := map[string]string{
+			"id":      rule.ID,
+			"message": "Rule created successfully",
+		}
+
+		b, err = json.Marshal(response)
+		if err != nil {
+			http.Error(w, "could not marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
+	}
+}
+
+func NewGetRulesByDeviceHandler(ctx context.Context, app application.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		var err error
+		ctx, endSpan := tracing.Start(r.Context(), tracerName, "get-rules-by-device", func() error { return err })
+		defer endSpan()
+
+		deviceID, _ := url.QueryUnescape(chi.URLParam(r, "deviceId"))
+		if deviceID == "" {
+			http.Error(w, "no device id is supplied", http.StatusBadRequest)
+			return
+		}
+
+		deviceRules, err := app.GetRulesByDevice(ctx, deviceID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("could not get rules: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+
+		b, err := json.Marshal(deviceRules)
+		if err != nil {
+			http.Error(w, "could not marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
+	}
+}
+
+func NewGetRuleHandler(ctx context.Context, app application.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		var err error
+		ctx, endSpan := tracing.Start(r.Context(), tracerName, "get-rule", func() error { return err })
+		defer endSpan()
+
+		ruleID, _ := url.QueryUnescape(chi.URLParam(r, "ruleId"))
+		if ruleID == "" {
+			http.Error(w, "no rule id is supplied", http.StatusBadRequest)
+			return
+		}
+
+		rule, err := app.GetRule(ctx, ruleID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("could not get rule: %s", err.Error()), http.StatusNotFound)
+			return
+		}
+
+		b, err := json.Marshal(rule)
+		if err != nil {
+			http.Error(w, "could not marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
+	}
+}
+
+func NewUpdateRuleHandler(ctx context.Context, app application.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		var err error
+		ctx, endSpan := tracing.Start(r.Context(), tracerName, "update-rule", func() error { return err })
+		defer endSpan()
+
+		logger := logging.GetFromContext(ctx)
+
+		ruleID, _ := url.QueryUnescape(chi.URLParam(r, "ruleId"))
+		if ruleID == "" {
+			logger.Error("no rule id is supplied in query")
+			http.Error(w, "no rule id is supplied", http.StatusBadRequest)
+			return
+		}
+
+		b, err := io.ReadAll(r.Body)
+		if err != nil {
+			logger.Error("could not read body", "err", err.Error())
+			http.Error(w, "could not read body", http.StatusBadRequest)
+			return
+		}
+
+		rule := rules.Rule{}
+		err = json.Unmarshal(b, &rule)
+		if err != nil {
+			logger.Error("could not unmarshal body", "err", err.Error())
+			http.Error(w, "could not unmarshal body", http.StatusBadRequest)
+			return
+		}
+
+		rule.ID = ruleID
+
+		err = app.UpdateRule(ctx, &rule)
+		if err != nil {
+			logger.Error("could not update rule", "err", err.Error())
+			http.Error(w, fmt.Sprintf("could not update rule: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+
+		response := map[string]string{
+			"message": "Rule updated successfully",
+		}
+
+		b, err = json.Marshal(response)
+		if err != nil {
+			logger.Error("could not marshal response", "err", err.Error())
+			http.Error(w, "could not marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
+	}
+}
+
+func NewDeleteRuleHandler(ctx context.Context, app application.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		var err error
+		ctx, endSpan := tracing.Start(r.Context(), tracerName, "delete-rule", func() error { return err })
+		defer endSpan()
+
+		ruleID, _ := url.QueryUnescape(chi.URLParam(r, "ruleId"))
+		if ruleID == "" {
+			http.Error(w, "no rule id is supplied", http.StatusBadRequest)
+			return
+		}
+
+		err = app.DeleteRule(ctx, ruleID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("could not delete rule: %s", err.Error()), http.StatusNotFound)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
 
 func NewQueryFunctionsHandler(ctx context.Context, funcRegistry functions.FuncRegistry) http.HandlerFunc {
