@@ -11,7 +11,7 @@ import (
 	"github.com/matryer/is"
 )
 
-func TestRuleClient_CRUD_WithHTTptestServer(t *testing.T) {
+func TestRuleClient_CRUD_WithHTTPtestServer(t *testing.T) {
 	t.Run("GetRulesByDevice returns list", func(t *testing.T) {
 		is := is.New(t)
 
@@ -39,13 +39,13 @@ func TestRuleClient_CRUD_WithHTTptestServer(t *testing.T) {
 		body, err := json.Marshal(expected)
 		is.NoErr(err)
 
-			client := newRuleClientForTest(t, func(w http.ResponseWriter, r *http.Request) {
-				is.Equal(r.Method, http.MethodGet)
-				is.Equal(r.URL.Path, "/api/v0/rules/device/dev-1")
-				is.Equal(r.Header.Get("Authorization"), "Bearer test-token")
+		client := newRuleClientForTest(t, func(w http.ResponseWriter, r *http.Request) {
+			is.Equal(r.Method, http.MethodGet)
+			is.Equal(r.URL.Path, "/api/v0/rules/device/dev-1")
+			is.Equal(r.Header.Get("Authorization"), "Bearer test-token")
 
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write(body)
 		})
 

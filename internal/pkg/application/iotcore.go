@@ -22,6 +22,7 @@ import (
 	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
+	"github.com/google/uuid"
 )
 
 type App interface {
@@ -231,6 +232,10 @@ func (a *app) FunctionUpdated(ctx context.Context, body []byte) error {
 
 func (a *app) CreateRule(ctx context.Context, rule *rules.Rule) error {
 	log := logging.GetFromContext(ctx)
+
+	if rule != nil && strings.TrimSpace(rule.ID) == "" {
+		rule.ID = uuid.NewString()
+	}
 
 	err := a.ruleRepository.Add(ctx, *rule)
 	if err != nil {

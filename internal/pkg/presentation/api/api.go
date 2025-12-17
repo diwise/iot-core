@@ -19,7 +19,6 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
-	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -138,7 +137,7 @@ func NewGetRulesByDeviceHandler(ctx context.Context, app application.App) http.H
 		ctx, endSpan := tracing.Start(r.Context(), tracerName, "get-rules-by-device", func() error { return err })
 		defer endSpan()
 
-		deviceID, _ := url.QueryUnescape(chi.URLParam(r, "deviceId"))
+		deviceID, _ := url.QueryUnescape(r.PathValue("deviceId"))
 		if deviceID == "" {
 			http.Error(w, "no device id is supplied", http.StatusBadRequest)
 			return
@@ -170,7 +169,7 @@ func NewGetRuleHandler(ctx context.Context, app application.App) http.HandlerFun
 		ctx, endSpan := tracing.Start(r.Context(), tracerName, "get-rule", func() error { return err })
 		defer endSpan()
 
-		ruleID, _ := url.QueryUnescape(chi.URLParam(r, "ruleId"))
+		ruleID, _ := url.QueryUnescape(r.PathValue("ruleId"))
 		if ruleID == "" {
 			http.Error(w, "no rule id is supplied", http.StatusBadRequest)
 			return
@@ -204,7 +203,7 @@ func NewUpdateRuleHandler(ctx context.Context, app application.App) http.Handler
 
 		logger := logging.GetFromContext(ctx)
 
-		ruleID, _ := url.QueryUnescape(chi.URLParam(r, "ruleId"))
+		ruleID, _ := url.QueryUnescape(r.PathValue("ruleId"))
 		if ruleID == "" {
 			logger.Error("no rule id is supplied in query")
 			http.Error(w, "no rule id is supplied", http.StatusBadRequest)
@@ -260,7 +259,7 @@ func NewDeleteRuleHandler(ctx context.Context, app application.App) http.Handler
 		ctx, endSpan := tracing.Start(r.Context(), tracerName, "delete-rule", func() error { return err })
 		defer endSpan()
 
-		ruleID, _ := url.QueryUnescape(chi.URLParam(r, "ruleId"))
+		ruleID, _ := url.QueryUnescape(r.PathValue("ruleId"))
 		if ruleID == "" {
 			http.Error(w, "no rule id is supplied", http.StatusBadRequest)
 			return
@@ -304,7 +303,7 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, funcRegistry functions.
 
 		logger := logging.GetFromContext(ctx)
 
-		functionID, _ := url.QueryUnescape(chi.URLParam(r, "id"))
+		functionID, _ := url.QueryUnescape(r.PathValue("id"))
 		if functionID == "" {
 			err = fmt.Errorf("no function id is supplied in query")
 			logger.Error("bad request", "err", err.Error())
