@@ -119,13 +119,9 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 
 			dbConfig := database.NewConfig(flags[dbHost], flags[dbUser], flags[dbPassword], flags[dbPort], flags[dbName], flags[dbSSLMode])
 			conn, err := database.GetConnection(ctx, dbConfig)
-
 			if err != nil {
 				return err
 			}
-
-			ruleStorage = rules.Connect(conn)
-			ruleRepository := repository.New(ruleStorage)
 
 			funcStorage = database.Connect(conn)
 
@@ -139,6 +135,8 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 				return err
 			}
 
+			ruleStorage = rules.Connect(conn)
+			ruleRepository := repository.New(ruleStorage)
 			ruleEngine := engines.New(ruleRepository)
 
 			app = application.New(dmClient, mClient, funcRegistry, ruleEngine, ruleRepository, msgCtx)

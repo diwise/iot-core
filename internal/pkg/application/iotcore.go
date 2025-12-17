@@ -83,13 +83,14 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 		events.Tenant(device.Tenant()))
 
 	switch msg.ObjectID() {
-	case "3":
-		decs = append(decs, decorators.Device(ctx, decorators.GetMaxPowerSourceVoltage(ctx, a.measurementsClient, device.ID())))
 	case "3200":
 		decs = append(decs, decorators.DigitalInput(ctx, decorators.GetNumberOfTrueValues(ctx, a.measurementsClient, device.ID())))
 	}
 
 	validated, err := a.ruleEngine.ValidationResults(ctx, msg)
+	if err != nil {	
+		return nil, err
+	}
 
 	for _, validation := range validated {
 		if !validation.IsValid {
@@ -98,11 +99,18 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 			if validation.ShouldAbort {
 				abortMessage := events.NewMessageAborted(clone, validation.ValidationMessages)
 				err = a.messenger.PublishOnTopic(ctx, abortMessage)
+				if err != nil {
+					return nil, err
+				}
+
 				return nil, fmt.Errorf("message did not validate and is set to abort")
 			}
 
 			notValidatedMessage := events.NewMessageNotValidated(clone, validation.ValidationMessages)
 			err = a.messenger.PublishOnTopic(ctx, notValidatedMessage)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
