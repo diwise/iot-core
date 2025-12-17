@@ -15,17 +15,25 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
 	"github.com/diwise/iot-core/internal/pkg/application/functions/engines"
 	"github.com/diwise/iot-core/internal/pkg/application/measurements"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/repository"
 
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
+	"github.com/google/uuid"
 )
 
 type App interface {
 	MessageAccepted(ctx context.Context, evt events.MessageAccepted) error
 	MessageReceived(ctx context.Context, msg events.MessageReceived) (*events.MessageAccepted, error)
 	FunctionUpdated(ctx context.Context, body []byte) error
+	CreateRule(ctx context.Context, rule *rules.Rule) error
+	GetRulesByDevice(ctx context.Context, deviceID string) ([]*rules.Rule, error)
+	GetRule(ctx context.Context, ruleID string) (*rules.Rule, error)
+	UpdateRule(ctx context.Context, rule *rules.Rule) error
+	DeleteRule(ctx context.Context, ruleID string) error
 }
 
 type app struct {
@@ -33,16 +41,18 @@ type app struct {
 	measurementsClient measurements.MeasurementsClient
 	funcRegistry       functions.FuncRegistry
 	ruleEngine         engines.RuleEngine
+	ruleRepository     repository.RuleRepository
 	mu                 sync.Mutex
 	messenger          messaging.MsgContext
 }
 
-func New(client client.DeviceManagementClient, measurementsClient measurements.MeasurementsClient, functionRegistry functions.FuncRegistry, ruleEngine engines.RuleEngine, msgCtx messaging.MsgContext) App {
+func New(client client.DeviceManagementClient, measurementsClient measurements.MeasurementsClient, functionRegistry functions.FuncRegistry, ruleEngine engines.RuleEngine, ruleRepository repository.RuleRepository, msgCtx messaging.MsgContext) App {
 	return &app{
 		deviceManagement:   client,
 		funcRegistry:       functionRegistry,
 		measurementsClient: measurementsClient,
 		ruleEngine:         ruleEngine,
+		ruleRepository:     ruleRepository,
 		messenger:          msgCtx,
 	}
 }
@@ -225,5 +235,81 @@ func (a *app) FunctionUpdated(ctx context.Context, body []byte) error {
 		log.Debug("sent message.received from function update", slog.String("deviceID", fn.DeviceID), slog.String("function_type", fn.Type))
 	}
 
+	return nil
+}
+
+func (a *app) CreateRule(ctx context.Context, rule *rules.Rule) error {
+	log := logging.GetFromContext(ctx)
+
+	if rule != nil && strings.TrimSpace(rule.ID) == "" {
+		rule.ID = uuid.NewString()
+	}
+
+	err := a.ruleRepository.Add(ctx, *rule)
+	if err != nil {
+		log.Error("could not create rule", "rule_id", rule.ID, "err", err.Error())
+		return err
+	}
+
+	log.Debug("rule created successfully", "rule_id", rule.ID)
+	return nil
+}
+
+func (a *app) GetRulesByDevice(ctx context.Context, deviceID string) ([]*rules.Rule, error) {
+	log := logging.GetFromContext(ctx)
+
+	deviceRules, err := a.ruleRepository.Get(ctx, deviceID)
+	if err != nil {
+		log.Error("could not get rules for device", "device_id", deviceID, "err", err.Error())
+		return nil, err
+	}
+
+	log.Debug("retrieved rules for device", "device_id", deviceID, "count", len(deviceRules))
+
+	// Convert []rules.Rule to []*rules.Rule
+	result := make([]*rules.Rule, len(deviceRules))
+	for i := range deviceRules {
+		result[i] = &deviceRules[i]
+	}
+
+	return result, nil
+}
+
+func (a *app) GetRule(ctx context.Context, ruleID string) (*rules.Rule, error) {
+	log := logging.GetFromContext(ctx)
+
+	rule, err := a.ruleRepository.GetByID(ctx, ruleID)
+	if err != nil {
+		log.Error("could not get rule", "rule_id", ruleID, "err", err.Error())
+		return nil, err
+	}
+
+	log.Debug("retrieved rule", "rule_id", ruleID)
+	return rule, nil
+}
+
+func (a *app) UpdateRule(ctx context.Context, rule *rules.Rule) error {
+	log := logging.GetFromContext(ctx)
+
+	err := a.ruleRepository.Update(ctx, *rule)
+	if err != nil {
+		log.Error("could not update rule", "rule_id", rule.ID, "err", err.Error())
+		return err
+	}
+
+	log.Debug("rule updated successfully", "rule_id", rule.ID)
+	return nil
+}
+
+func (a *app) DeleteRule(ctx context.Context, ruleID string) error {
+	log := logging.GetFromContext(ctx)
+
+	err := a.ruleRepository.Delete(ctx, ruleID)
+	if err != nil {
+		log.Error("could not delete rule", "rule_id", ruleID, "err", err.Error())
+		return err
+	}
+
+	log.Debug("rule deleted successfully", "rule_id", ruleID)
 	return nil
 }

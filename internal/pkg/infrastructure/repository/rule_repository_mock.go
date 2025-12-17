@@ -28,6 +28,9 @@ var _ RuleRepository = &RuleRepositoryMock{}
 //			GetFunc: func(ctx context.Context, id string) ([]rules.Rule, error) {
 //				panic("mock out the Get method")
 //			},
+//			GetByIDFunc: func(ctx context.Context, id string) (*rules.Rule, error) {
+//				panic("mock out the GetByID method")
+//			},
 //			UpdateFunc: func(ctx context.Context, rule rules.Rule) error {
 //				panic("mock out the Update method")
 //			},
@@ -46,6 +49,9 @@ type RuleRepositoryMock struct {
 
 	// GetFunc mocks the Get method.
 	GetFunc func(ctx context.Context, id string) ([]rules.Rule, error)
+
+	// GetByIDFunc mocks the GetByID method.
+	GetByIDFunc func(ctx context.Context, id string) (*rules.Rule, error)
 
 	// UpdateFunc mocks the Update method.
 	UpdateFunc func(ctx context.Context, rule rules.Rule) error
@@ -73,6 +79,13 @@ type RuleRepositoryMock struct {
 			// ID is the id argument value.
 			ID string
 		}
+		// GetByID holds details about calls to the GetByID method.
+		GetByID []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ID is the id argument value.
+			ID string
+		}
 		// Update holds details about calls to the Update method.
 		Update []struct {
 			// Ctx is the ctx argument value.
@@ -81,10 +94,11 @@ type RuleRepositoryMock struct {
 			Rule rules.Rule
 		}
 	}
-	lockAdd    sync.RWMutex
-	lockDelete sync.RWMutex
-	lockGet    sync.RWMutex
-	lockUpdate sync.RWMutex
+	lockAdd     sync.RWMutex
+	lockDelete  sync.RWMutex
+	lockGet     sync.RWMutex
+	lockGetByID sync.RWMutex
+	lockUpdate  sync.RWMutex
 }
 
 // Add calls AddFunc.
@@ -192,6 +206,42 @@ func (mock *RuleRepositoryMock) GetCalls() []struct {
 	mock.lockGet.RLock()
 	calls = mock.calls.Get
 	mock.lockGet.RUnlock()
+	return calls
+}
+
+// GetByID calls GetByIDFunc.
+func (mock *RuleRepositoryMock) GetByID(ctx context.Context, id string) (*rules.Rule, error) {
+	if mock.GetByIDFunc == nil {
+		panic("RuleRepositoryMock.GetByIDFunc: method is nil but RuleRepository.GetByID was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		ID  string
+	}{
+		Ctx: ctx,
+		ID:  id,
+	}
+	mock.lockGetByID.Lock()
+	mock.calls.GetByID = append(mock.calls.GetByID, callInfo)
+	mock.lockGetByID.Unlock()
+	return mock.GetByIDFunc(ctx, id)
+}
+
+// GetByIDCalls gets all the calls that were made to GetByID.
+// Check the length with:
+//
+//	len(mockedRuleRepository.GetByIDCalls())
+func (mock *RuleRepositoryMock) GetByIDCalls() []struct {
+	Ctx context.Context
+	ID  string
+} {
+	var calls []struct {
+		Ctx context.Context
+		ID  string
+	}
+	mock.lockGetByID.RLock()
+	calls = mock.calls.GetByID
+	mock.lockGetByID.RUnlock()
 	return calls
 }
 

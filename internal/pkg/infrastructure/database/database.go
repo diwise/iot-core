@@ -100,7 +100,7 @@ func (i *impl) createTables(ctx context.Context) error {
 			source 	  TEXT NULL,
 			latitude  NUMERIC(7, 5),
 			longitude NUMERIC(7, 5)
-	  	);
+		);
 
 		CREATE TABLE IF NOT EXISTS fnct_history (
 			row_id 	bigserial,
@@ -109,7 +109,7 @@ func (i *impl) createTables(ctx context.Context) error {
 			label 	TEXT NOT NULL,
 			value 	DOUBLE PRECISION NOT NULL,
 			FOREIGN KEY (fnct_id) REFERENCES fnct (id)
-	  	);
+		);
 
 		CREATE INDEX IF NOT EXISTS fnct_history_fnct_id_label_idx ON fnct_history (fnct_id, label);`
 
