@@ -155,8 +155,17 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 			msgCtx.RegisterTopicMessageHandler("message.accepted", newMessageAcceptedHandler(app))
 			msgCtx.RegisterTopicMessageHandler("function.updated", newFunctionUpdatedTopicMessageHandler(app))
 
+			log := logging.GetFromContext(ctx)
+
+			err = ruleStorage.Initialize(ctx)
+			if err != nil {
+				log.Error("failed to initialize rule storage", "err", err.Error())
+				return err
+			}
+
 			err = funcStorage.Initialize(ctx)
 			if err != nil {
+				log.Error("failed to initialize function storage", "err", err.Error())
 				return err
 			}
 

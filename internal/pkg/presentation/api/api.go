@@ -39,7 +39,7 @@ func RegisterHandlers(ctx context.Context, rootMux *http.ServeMux, app applicati
 
 	// Rule endpoints
 	r.Post("/rules", NewCreateRuleHandler(ctx, app))
-	r.Get("/rules/{deviceId}", NewGetRulesByDeviceHandler(ctx, app))
+	r.Get("/rules/device/{deviceId}", NewGetRulesByDeviceHandler(ctx, app))
 	r.Get("/rules/{ruleId}", NewGetRuleHandler(ctx, app))
 	r.Put("/rules/{ruleId}", NewUpdateRuleHandler(ctx, app))
 	r.Delete("/rules/{ruleId}", NewDeleteRuleHandler(ctx, app))
