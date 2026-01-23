@@ -90,7 +90,7 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 		events.Source(device.Source()),
 		events.Tenant(device.Tenant()))
 
-	switch msg.ObjectID() {			
+	switch msg.ObjectID() {
 	case "3200":
 		decs = append(decs, decorators.DigitalInput(ctx, decorators.GetNumberOfTrueValues(ctx, a.measurementsClient, device.ID())))
 	}
