@@ -263,7 +263,7 @@ func (l *level) handleDistance(ctx context.Context, e *events.MessageAccepted, o
 	distance, ok := sensorValue.GetValue()
 	if !ok {
 		return false, fmt.Errorf("could not find distance value in distance pack")
-	}	
+	}
 
 	distance += l.offsetLevel
 

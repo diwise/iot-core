@@ -103,7 +103,7 @@ func (m MessageReceived) Error() error {
 		return errors.New("device id is missing")
 	}
 	if m.Timestamp.IsZero() {
-		return errors.New("timestamp is mising")
+		return errors.New("timestamp is missing")
 	}
 
 	return nil
@@ -156,7 +156,7 @@ func (m MessageAccepted) Error() error {
 		return errors.New("device id is missing")
 	}
 	if m.Timestamp.IsZero() {
-		return errors.New("timestamp is mising")
+		return errors.New("timestamp is missing")
 	}
 
 	return nil
@@ -209,7 +209,7 @@ func (m MessageTransformed) Error() error {
 		return errors.New("device id is missing")
 	}
 	if m.Timestamp.IsZero() {
-		return errors.New("timestamp is mising")
+		return errors.New("timestamp is missing")
 	}
 
 	return nil
