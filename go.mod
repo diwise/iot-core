@@ -1,10 +1,10 @@
 module github.com/diwise/iot-core
 
-go 1.25.0
+go 1.26
 
 require (
 	github.com/diwise/iot-agent v0.0.0-20260223155339-eaa890618969
-	github.com/diwise/iot-device-mgmt v0.0.0-20260213133520-ecaddd3b0548
+	github.com/diwise/iot-device-mgmt v0.0.0-20260223155642-452bb00fe486
 	github.com/diwise/messaging-golang v0.0.0-20250628135946-f23f34d06003
 	github.com/diwise/senml v0.0.0-20251022134045-d0045d1dd610
 	github.com/go-chi/chi/v5 v5.2.5
@@ -39,12 +39,12 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260217215200-42d3e9bedb6d // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260217215200-42d3e9bedb6d // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260223185530-2f722ef697dc // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260223185530-2f722ef697dc // indirect
 )
 
 require (
-	github.com/diwise/service-chassis v0.0.0-20260223135725-6d7d041046a6
+	github.com/diwise/service-chassis v0.0.0-20260224075452-111d1a12718e
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
