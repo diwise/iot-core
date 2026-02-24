@@ -14,6 +14,7 @@ import (
 	"github.com/diwise/iot-core/internal/pkg/application/measurements"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/repository"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/diwise/iot-device-mgmt/pkg/test"
@@ -178,6 +179,8 @@ func testSetup(t *testing.T) (*is.I, context.Context, App, client.DeviceManageme
 	}
 	r, _ := functions.NewFuncRegistry(ctx, io.NopCloser(strings.NewReader(functionsFileContent)), s)
 
+	rm := &repository.RuleRepositoryMock{}
+
 	engine := &engines.RuleEngineMock{
 		ValidationResultsFunc: func(ctx context.Context, msg events.MessageReceived) ([]engines.RuleValidation, error) {
 			return nil, nil
@@ -187,7 +190,7 @@ func testSetup(t *testing.T) (*is.I, context.Context, App, client.DeviceManageme
 		},
 	}
 
-	a := New(d, m, r, engine, mctx)
+	a := New(d, m, r, engine, rm, mctx)
 
 	return is, ctx, a, d, m, r, mctx
 }
