@@ -37,9 +37,9 @@ func TestMultipleTemperatures(t *testing.T) {
 	is := testSetup(t)
 
 	temp0 := lwm2m.NewTemperature("aaa-bbb-ccc/0", 10.0, time.Now())
-	
+
 	evt := NewMessageAccepted(lwm2m.ToPack(temp0))
-	
+
 	is.Equal("aaa-bbb-ccc", evt.DeviceID())
 	is.Equal("3303", evt.ObjectID())
 }
