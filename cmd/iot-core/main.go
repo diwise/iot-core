@@ -96,8 +96,9 @@ func createMeasurementsClientOrDie(ctx context.Context) measurements.Measurement
 	tokenURL := env.GetVariableOrDie(ctx, "OAUTH2_TOKEN_URL", "a valid oauth2 token URL")
 	clientID := env.GetVariableOrDie(ctx, "OAUTH2_CLIENT_ID", "a valid oauth2 client id")
 	clientSecret := env.GetVariableOrDie(ctx, "OAUTH2_CLIENT_SECRET", "a valid oauth2 client secret")
+	insecureURL := env.GetVariableOrDefault(ctx, "OAUTH2_REALM_INSECURE", "false") == "true"
 
-	measurementsClient, err := measurements.NewMeasurementsClient(ctx, dmURL, tokenURL, clientID, clientSecret)
+	measurementsClient, err := measurements.NewMeasurementsClient(ctx, dmURL, tokenURL, clientID, clientSecret, insecureURL)
 	if err != nil {
 		fatal(ctx, "failed to create measurements client", err)
 	}
