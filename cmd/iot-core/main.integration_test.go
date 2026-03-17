@@ -124,7 +124,7 @@ func testSetup(t *testing.T) (*is.I, *dmctest.DeviceManagementClientMock, *messa
 }
 
 func newStateJSON(sensorID string, on bool) []byte {
-	return []byte(fmt.Sprintf(messageJSONFormat, sensorID, on))
+	return fmt.Appendf(nil, messageJSONFormat, sensorID, on)
 }
 
 const messageJSONFormat string = `{	

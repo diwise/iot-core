@@ -47,7 +47,7 @@ type fnct struct {
 	Tenant    string    `json:"tenant,omitempty"`
 	Source    string    `json:"source,omitempty"`
 	OnUpdate  bool      `json:"onupdate"`
-	Timestamp time.Time `json:"timestamp,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
 
 	Counter      counters.Counter            `json:"counter,omitempty"`
 	Level        levels.Level                `json:"level,omitempty"`

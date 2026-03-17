@@ -13,7 +13,7 @@ func TestRecReplacesCorrectRecord(t *testing.T) {
 
 	// pack with two records: one tenant record and one other
 	p := senml.Pack{
-		senml.Record{Name: "deviceA/0/0", Value: floatPtr(1.0)},
+		senml.Record{Name: "deviceA/0/0", Value: new(1.0)},
 		senml.Record{Name: "tenant", StringValue: "old"},
 	}
 
@@ -39,7 +39,7 @@ func TestLatAndLonReplaceAndAppend(t *testing.T) {
 
 	// start with no lat/lon
 	p := senml.Pack{
-		senml.Record{Name: "deviceA/0/0", Value: floatPtr(1.0), Time: now},
+		senml.Record{Name: "deviceA/0/0", Value: new(1.0), Time: now},
 	}
 	m := NewMessageAccepted(p)
 
@@ -75,4 +75,5 @@ func TestLatAndLonReplaceAndAppend(t *testing.T) {
 	}
 }
 
-func floatPtr(f float64) *float64 { return &f }
+//go:fix inline
+func floatPtr(f float64) *float64 { return new(f) }

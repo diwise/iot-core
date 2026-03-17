@@ -24,9 +24,8 @@ func TestAirQuality(t *testing.T) {
 
 func newAirQuality(t float64, timestamp string) *events.MessageAccepted {
 	e := &events.MessageAccepted{}
-	json.Unmarshal([]byte(
-		fmt.Sprintf(messageJSONFormat, t, t, t, t, t, t, t, timestamp),
-	), e)
+	json.Unmarshal(
+		fmt.Appendf(nil, messageJSONFormat, t, t, t, t, t, t, t, timestamp), e)
 	return e
 }
 
