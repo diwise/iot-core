@@ -44,7 +44,7 @@ require (
 )
 
 require (
-	github.com/diwise/service-chassis v0.0.0-20260225100433-17249bf8df02
+	github.com/diwise/service-chassis v0.0.0-20260318124017-7db8d1ddf926
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -58,6 +58,6 @@ require (
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
-	google.golang.org/grpc v1.79.2 // indirect
+	google.golang.org/grpc v1.79.3 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
