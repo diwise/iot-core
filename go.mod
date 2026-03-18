@@ -44,7 +44,7 @@ require (
 )
 
 require (
-	github.com/diwise/service-chassis v0.0.0-20260318124017-7db8d1ddf926
+	github.com/diwise/service-chassis v0.0.0-20260318134535-fa183be51aed
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
