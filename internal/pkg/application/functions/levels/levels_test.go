@@ -98,17 +98,15 @@ func TestLevelWithMaxDAndMaxL(t *testing.T) {
 func newDistance(distance float64) *events.MessageAccepted {
 	e := &events.MessageAccepted{}
 
-	json.Unmarshal([]byte(
-		fmt.Sprintf(distanceJSONFormat, distance),
-	), e)
+	json.Unmarshal(
+		fmt.Appendf(nil, distanceJSONFormat, distance), e)
 	return e
 }
 
 func newFillingLevel(actualFillingPercentage, actualFillingLevel, highThreshold float64, containerFull, containerEmpty bool) *events.MessageAccepted {
 	e := &events.MessageAccepted{}
-	json.Unmarshal([]byte(
-		fmt.Sprintf(fillingLevelJSONFormat, actualFillingPercentage, actualFillingLevel, highThreshold, containerFull, containerEmpty),
-	), e)
+	json.Unmarshal(
+		fmt.Appendf(nil, fillingLevelJSONFormat, actualFillingPercentage, actualFillingLevel, highThreshold, containerFull, containerEmpty), e)
 
 	return e
 }

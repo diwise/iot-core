@@ -41,9 +41,8 @@ func newState(on bool, timestamp string) *events.MessageAccepted {
 	ts, _ := time.Parse(time.RFC3339Nano, timestamp)
 
 	e := &events.MessageAccepted{}
-	json.Unmarshal([]byte(
-		fmt.Sprintf(messageJSONFormat, ts.Unix(), on, timestamp),
-	), e)
+	json.Unmarshal(
+		fmt.Appendf(nil, messageJSONFormat, ts.Unix(), on, timestamp), e)
 	return e
 }
 

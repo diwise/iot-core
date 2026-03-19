@@ -32,9 +32,8 @@ func TestBuildingEnergy(t *testing.T) {
 
 func newValue(baseName string, value float64) *events.MessageAccepted {
 	e := &events.MessageAccepted{}
-	json.Unmarshal([]byte(
-		fmt.Sprintf(messageJSONFormat, baseName, value),
-	), e)
+	json.Unmarshal(
+		fmt.Appendf(nil, messageJSONFormat, baseName, value), e)
 	return e
 }
 
