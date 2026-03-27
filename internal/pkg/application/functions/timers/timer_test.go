@@ -20,7 +20,7 @@ func TestTimer(t *testing.T) {
 	tmr.Handle(context.Background(), newState(false, "2023-02-07T23:32:59.682607Z"), func(string, float64, time.Time) error { return nil })
 	is.True(tmr.State() == false)
 
-		is.Equal(tmr.(*timer).TotalDuration, 2*time.Hour)
+	is.Equal(tmr.(*timer).TotalDuration, 2*time.Hour)
 }
 
 func newState(on bool, timestamp string) *events.MessageAccepted {
