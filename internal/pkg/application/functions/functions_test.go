@@ -27,8 +27,8 @@ func TestCounter(t *testing.T) {
 	config := "functionID;name;counter;overflow;" + sensorId + ";false"
 	input := bytes.NewBufferString(config)
 
-	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
-		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+	reg, _ := NewFuncRegistry(ctx, input, &database.FuncStorageMock{
+		AddFnctFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
@@ -60,8 +60,8 @@ func TestLevel(t *testing.T) {
 
 	input := bytes.NewBufferString("functionID;name;level;sand;" + sensorId + ";false;maxd=3.5,maxl=2.5")
 
-	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
-		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+	reg, _ := NewFuncRegistry(ctx, input, &database.FuncStorageMock{
+		AddFnctFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
@@ -96,8 +96,8 @@ func TestLevelFromAnAngle(t *testing.T) {
 
 	sensorId := "testId"
 	input := bytes.NewBufferString("functionID;name;level;sand;" + sensorId + ";false;maxd=3.5,maxl=2.5,angle=30")
-	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
-		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+	reg, _ := NewFuncRegistry(ctx, input, &database.FuncStorageMock{
+		AddFnctFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
@@ -135,8 +135,8 @@ func TestTimer(t *testing.T) {
 	config := "functionID;name;timer;overflow;" + sensorId + ";false"
 	input := bytes.NewBufferString(config)
 
-	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
-		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+	reg, _ := NewFuncRegistry(ctx, input, &database.FuncStorageMock{
+		AddFnctFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
@@ -167,8 +167,8 @@ func TestWaterQuality(t *testing.T) {
 
 	input := bytes.NewBufferString("functionID;name;waterquality;beach;" + sensorId + ";false")
 
-	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
-		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+	reg, _ := NewFuncRegistry(ctx, input, &database.FuncStorageMock{
+		AddFnctFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
@@ -199,8 +199,8 @@ func TestAddToHistory(t *testing.T) {
 	sensorId := "testId"
 	input := bytes.NewBufferString("functionID;name;waterquality;beach;" + sensorId + ";false")
 	store := make([]database.LogValue, 0)
-	reg, _ := NewRegistry(ctx, input, &database.StorageMock{
-		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+	reg, _ := NewFuncRegistry(ctx, input, &database.FuncStorageMock{
+		AddFnctFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
@@ -244,8 +244,8 @@ func TestStopwatch(t *testing.T) {
 
 	now := time.Now()
 
-	reg, err := NewRegistry(ctx, bytes.NewBufferString(`xyz123;Förrådet BPN;stopwatch;overflow;abc123;true`), &database.StorageMock{
-		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+	reg, err := NewFuncRegistry(ctx, bytes.NewBufferString(`xyz123;Förrådet BPN;stopwatch;overflow;abc123;true`), &database.FuncStorageMock{
+		AddFnctFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
 		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error { return nil },
