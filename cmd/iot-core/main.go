@@ -28,7 +28,6 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
-
 	"github.com/diwise/service-chassis/pkg/infrastructure/servicerunner"
 	"go.opentelemetry.io/otel"
 )
@@ -112,7 +111,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 				return err
 			}
 
-			mClient, err = measurements.NewMeasurementsClient(ctx, flags[measurementsUrl], flags[oauth2TokenUrl], flags[oauth2ClientId], flags[oauth2ClientSecret])
+			mClient, err = measurements.NewMeasurementsClient(ctx, flags[measurementsUrl], flags[oauth2TokenUrl], flags[oauth2ClientId], flags[oauth2ClientSecret], flags[oauth2InsecureURL] == "true")
 			if err != nil {
 				return err
 			}
@@ -158,6 +157,11 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 				return err
 			}
 
+			err = ruleStorage.Initialize(ctx)
+			if err != nil {
+				return err
+			}
+
 			return nil
 		}),
 		onshutdown(func(ctx context.Context, svcCfg *appConfig) error {
@@ -171,13 +175,13 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 }
 
 func parseExternalConfig(ctx context.Context, flags flagMap) (context.Context, flagMap) {
-	// Allow environment variables to override certain defaults
 	envOrDef := env.GetVariableOrDefault
 
 	flags[servicePort] = envOrDef(ctx, "SERVICE_PORT", flags[servicePort])
 	flags[controlPort] = envOrDef(ctx, "CONTROL_PORT", flags[controlPort])
 
 	flags[deviceManagementUrl] = envOrDef(ctx, "DEV_MGMT_URL", flags[deviceManagementUrl])
+	flags[measurementsUrl] = envOrDef(ctx, "MEASUREMENTS_URL", flags[measurementsUrl])
 
 	flags[oauth2TokenUrl] = envOrDef(ctx, "OAUTH2_TOKEN_URL", flags[oauth2TokenUrl])
 	flags[oauth2ClientId] = envOrDef(ctx, "OAUTH2_CLIENT_ID", flags[oauth2ClientId])

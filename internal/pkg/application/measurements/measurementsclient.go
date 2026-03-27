@@ -2,6 +2,7 @@ package measurements
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,8 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
+
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
@@ -61,14 +64,51 @@ type AggrResult struct {
 	Count   *uint64  `json:"count,omitempty"`
 }
 
-func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oauthClientSecret string) (MeasurementsClient, error) {
+func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientID, oauthClientSecret string, oauthInsecureURL bool) (MeasurementsClient, error) {
+
+	// configure transport
+	baseTransport := http.DefaultTransport.(*http.Transport).Clone()
+	baseTransport.MaxIdleConns = 100
+	baseTransport.MaxIdleConnsPerHost = 20
+	baseTransport.IdleConnTimeout = 90 * time.Second
+
+	// skip TLS verification if configured (e.g. for local testing with self-signed certs)
+	if oauthInsecureURL {
+		baseTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	// client for OAuth tokens
+	oauthClient := &http.Client{
+		Transport: otelhttp.NewTransport(baseTransport),
+		Timeout:   10 * time.Second,
+	}
+
+	// Create OAuth context that will be reused for all token operations
+	oauthCtx := context.WithValue(context.Background(), oauth2.HTTPClient, oauthClient)
+
 	oauthConfig := &clientcredentials.Config{
 		ClientID:     oauthClientID,
 		ClientSecret: oauthClientSecret,
 		TokenURL:     oauthTokenURL,
 	}
 
-	token, err := oauthConfig.Token(ctx)
+	// maby we should use oauthConfig.Client(oauthCtx) instead of creating our own transport?
+	ts := oauthConfig.TokenSource(oauthCtx)
+
+	// ts only to be able to wrap the transport with otelhttp
+	apiTransport := &oauth2.Transport{
+		Source: ts,
+		Base:   otelhttp.NewTransport(baseTransport),
+	}
+
+	// client for API requests, using the OAuth transport to automatically add tokens and refresh them as needed
+	apiClient := &http.Client{
+		Transport: apiTransport,
+		Timeout:   30 * time.Second,
+	}
+
+	// fail fast if token cannot be retrieved with the provided credentials
+	token, err := ts.Token()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get client credentials from %s: %w", oauthConfig.TokenURL, err)
 	}
@@ -83,10 +123,8 @@ func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientI
 	return &measurementsClient{
 		url:               strings.TrimSuffix(url, "/"),
 		clientCredentials: oauthConfig,
-		httpClient: http.Client{
-			Transport: otelhttp.NewTransport(http.DefaultTransport),
-		},
-		c: c,
+		httpClient:        *apiClient,
+		c:                 c,
 	}, nil
 }
 

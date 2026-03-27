@@ -46,9 +46,8 @@ func TestCounterOnOffOn(t *testing.T) {
 
 func newState(on bool) *events.MessageAccepted {
 	e := &events.MessageAccepted{}
-	json.Unmarshal([]byte(
-		fmt.Sprintf(messageJSONFormat, on),
-	), e)
+	json.Unmarshal(
+		fmt.Appendf(nil, messageJSONFormat, on), e)
 	return e
 }
 

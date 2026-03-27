@@ -28,9 +28,8 @@ func TestDigitalInputWithStateChange(t *testing.T) {
 
 func newState(on bool, timestamp string) *events.MessageAccepted {
 	e := &events.MessageAccepted{}
-	json.Unmarshal([]byte(
-		fmt.Sprintf(messageJSONFormat, on, timestamp),
-	), e)
+	json.Unmarshal(
+		fmt.Appendf(nil, messageJSONFormat, on, timestamp), e)
 	return e
 }
 

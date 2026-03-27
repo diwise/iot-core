@@ -21,7 +21,8 @@ func Rec(n, vs string, v *float64, vb *bool, t float64, sum *float64) EventDecor
 
 		for _, r := range m.Pack() {
 			if strings.EqualFold(r.Name, n) {
-				m.Replace(rec, func(senml.Record) bool { return strings.EqualFold(r.Name, n) })
+				// use the record passed into the predicate (rr) instead of closing over loop var r
+				m.Replace(rec, func(rr senml.Record) bool { return strings.EqualFold(rr.Name, n) })
 				return
 			}
 		}
@@ -39,7 +40,8 @@ func Lat(t float64) EventDecoratorFunc {
 
 		for _, r := range m.Pack() {
 			if r.Unit == senml.UnitLat {
-				m.Replace(lat, func(senml.Record) bool { return r.Unit == senml.UnitLat })
+				// use the record passed into the predicate (rr) instead of closing over loop var r
+				m.Replace(lat, func(rr senml.Record) bool { return rr.Unit == senml.UnitLat })
 				return
 			}
 		}
@@ -50,19 +52,20 @@ func Lat(t float64) EventDecoratorFunc {
 
 func Lon(t float64) EventDecoratorFunc {
 	return func(m Message) {
-		lat := senml.Record{
+		lon := senml.Record{
 			Unit:  senml.UnitLon,
 			Value: &t,
 		}
 
 		for _, r := range m.Pack() {
 			if r.Unit == senml.UnitLon {
-				m.Replace(lat, func(senml.Record) bool { return r.Unit == senml.UnitLon })
+				// use the record passed into the predicate (rr) instead of closing over loop var r
+				m.Replace(lon, func(rr senml.Record) bool { return rr.Unit == senml.UnitLon })
 				return
 			}
 		}
 
-		m.Append(lat)
+		m.Append(lon)
 	}
 }
 

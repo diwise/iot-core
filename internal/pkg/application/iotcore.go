@@ -78,7 +78,7 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 	}
 
 	validated, err := a.ruleEngine.ValidationResults(ctx, msg)
-	if err != nil {	
+	if err != nil {
 		return nil, err
 	}
 
