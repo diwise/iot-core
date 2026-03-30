@@ -47,6 +47,9 @@ type RuleRepositoryMock struct {
 	// GetFunc mocks the Get method.
 	GetFunc func(ctx context.Context, id string) ([]rules.Rule, error)
 
+	// GetRuleByIdFunc mocks the GetRuleById method.
+	GetRuleByIdFunc func(ctx context.Context, id string) (rules.Rule, error)
+
 	// UpdateFunc mocks the Update method.
 	UpdateFunc func(ctx context.Context, rule rules.Rule) error
 
@@ -73,6 +76,13 @@ type RuleRepositoryMock struct {
 			// ID is the id argument value.
 			ID string
 		}
+		// GetRuleById holds details about calls to the GetRuleById method.
+		GetRuleById []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ID is the id argument value.
+			ID string
+		}
 		// Update holds details about calls to the Update method.
 		Update []struct {
 			// Ctx is the ctx argument value.
@@ -81,10 +91,11 @@ type RuleRepositoryMock struct {
 			Rule rules.Rule
 		}
 	}
-	lockAdd    sync.RWMutex
-	lockDelete sync.RWMutex
-	lockGet    sync.RWMutex
-	lockUpdate sync.RWMutex
+	lockAdd         sync.RWMutex
+	lockDelete      sync.RWMutex
+	lockGet         sync.RWMutex
+	lockGetRuleById sync.RWMutex
+	lockUpdate      sync.RWMutex
 }
 
 // Add calls AddFunc.
@@ -192,6 +203,42 @@ func (mock *RuleRepositoryMock) GetCalls() []struct {
 	mock.lockGet.RLock()
 	calls = mock.calls.Get
 	mock.lockGet.RUnlock()
+	return calls
+}
+
+// GetRuleById calls GetRuleByIdFunc.
+func (mock *RuleRepositoryMock) GetRuleById(ctx context.Context, id string) (rules.Rule, error) {
+	if mock.GetRuleByIdFunc == nil {
+		panic("RuleRepositoryMock.GetRuleByIdFunc: method is nil but RuleRepository.GetRuleById was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		ID  string
+	}{
+		Ctx: ctx,
+		ID:  id,
+	}
+	mock.lockGetRuleById.Lock()
+	mock.calls.GetRuleById = append(mock.calls.GetRuleById, callInfo)
+	mock.lockGetRuleById.Unlock()
+	return mock.GetRuleByIdFunc(ctx, id)
+}
+
+// GetRuleByIdCalls gets all the calls that were made to GetRuleById.
+// Check the length with:
+//
+//	len(mockedRuleRepository.GetRuleByIdCalls())
+func (mock *RuleRepositoryMock) GetRuleByIdCalls() []struct {
+	Ctx context.Context
+	ID  string
+} {
+	var calls []struct {
+		Ctx context.Context
+		ID  string
+	}
+	mock.lockGetRuleById.RLock()
+	calls = mock.calls.GetRuleById
+	mock.lockGetRuleById.RUnlock()
 	return calls
 }
 
