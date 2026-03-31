@@ -140,7 +140,18 @@ func (e *engine) ValidationResults(ctx context.Context, msg events.MessageReceiv
 		if record, ok := pack.GetRecord(recordFinder); ok {
 			validatedRecord := e.ValidateRecord(record, rule)
 			result = append(result, validatedRecord)
+			continue
 		}
+
+		result = append(result, RuleValidation{
+			MeasurementId: rule.MeasurementID,
+			DeviceId:      rule.DeviceID,
+			ShouldAbort:   rule.ShouldAbort,
+			IsValid:       false,
+			ValidationMessages: []string{
+				fmt.Sprintf("measurement %q was not found in message", rule.MeasurementID),
+			},
+		})
 	}
 
 	return result, nil

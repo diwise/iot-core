@@ -117,3 +117,20 @@ func TestInvalidRule_VB_ReturnsNonValid(t *testing.T) {
 		is.True(validation.IsValid == false)
 	}
 }
+
+func TestValidationResults_ReturnsNonValid_WhenMeasurementIsMissingFromMessage(t *testing.T) {
+	is := is.New(t)
+	r, e := resetDbAndStorage(t)
+
+	msg := newMessageReceivedWithPacks(measurementId)
+	in := rules_test.MakeRuleVS(t, measurementId+"missing-measurement", deviceId, rules_test.S("w1e"))
+
+	err := r.Add(t.Context(), in)
+	is.NoErr(err)
+
+	validations, err := e.ValidationResults(t.Context(), msg)
+	is.NoErr(err)
+	is.Equal(len(validations), 1)
+	is.True(validations[0].IsValid == false)
+	is.Equal(validations[0].MeasurementId, measurementId+"missing-measurement")
+}
