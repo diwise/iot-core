@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,12 +14,13 @@ import (
 
 	"github.com/diwise/iot-core/internal/pkg/application"
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
+	"github.com/diwise/iot-core/internal/pkg/infrastructure/database/rules"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/service-chassis/pkg/infrastructure/net/http/router"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
-	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -32,7 +34,22 @@ func RegisterHandlers(ctx context.Context, rootMux *http.ServeMux, app applicati
 	logger := logging.GetFromContext(ctx)
 	r.Use(loggerMiddleware(logger))
 
-	r.Post("/functions/messagereceived", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/functions/messagereceived", NewMessageReceivedHandler(app))
+	//r.Get("/functions", NewQueryFunctionsHandler(ctx, app.))
+	//r.Get("/functions/{id}/history", NewQueryFunctionHistoryHandler(ctx, app.registry))
+
+	// Rule endpoints
+	r.Post("/rules", NewCreateRuleHandler(ctx, app))
+	r.Get("/rules/device/{deviceId}", NewGetRulesByDeviceHandler(ctx, app))
+	r.Get("/rules/{ruleId}", NewGetRuleHandler(ctx, app))
+	r.Put("/rules/{ruleId}", NewUpdateRuleHandler(ctx, app))
+	r.Delete("/rules/{ruleId}", NewDeleteRuleHandler(ctx, app))
+
+	return nil
+}
+
+func NewMessageReceivedHandler(app application.App) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
 		var err error
@@ -67,12 +84,221 @@ func RegisterHandlers(ctx context.Context, rootMux *http.ServeMux, app applicati
 
 		w.WriteHeader(http.StatusOK)
 		w.Write(b)
-	})
+	}
+}
 
-	//r.Get("/functions", NewQueryFunctionsHandler(ctx, app.))
-	//r.Get("/functions/{id}/history", NewQueryFunctionHistoryHandler(ctx, app.registry))
+func NewCreateRuleHandler(ctx context.Context, app application.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
 
-	return nil
+		var err error
+		ctx, endSpan := tracing.Start(r.Context(), tracerName, "create-rule", func() error { return err })
+		defer endSpan()
+
+		b, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "could not read body", http.StatusBadRequest)
+			return
+		}
+
+		rule := rules.Rule{}
+		err = json.Unmarshal(b, &rule)
+		if err != nil {
+			http.Error(w, "could not unmarshal body", http.StatusBadRequest)
+			return
+		}
+
+		err = app.CreateRule(ctx, &rule)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("could not create rule: %s", err.Error()), statusCodeForRuleError(err, http.StatusInternalServerError))
+			return
+		}
+
+		response := map[string]string{
+			"id":      rule.ID,
+			"message": "Rule created successfully",
+		}
+
+		b, err = json.Marshal(response)
+		if err != nil {
+			http.Error(w, "could not marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write(b)
+	}
+}
+
+func NewGetRulesByDeviceHandler(ctx context.Context, app application.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		var err error
+		ctx, endSpan := tracing.Start(r.Context(), tracerName, "get-rules-by-device", func() error { return err })
+		defer endSpan()
+
+		deviceID := r.PathValue("deviceId")
+		if deviceID == "" {
+			http.Error(w, "no device id is supplied in path", http.StatusBadRequest)
+			return
+		}
+
+		deviceRules, err := app.GetRulesByDevice(ctx, deviceID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("could not get rules: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+
+		b, err := json.Marshal(deviceRules)
+		if err != nil {
+			http.Error(w, "could not marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(b)
+	}
+}
+
+func NewGetRuleHandler(ctx context.Context, app application.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		var err error
+		ctx, endSpan := tracing.Start(r.Context(), tracerName, "get-rule", func() error { return err })
+		defer endSpan()
+
+		ruleID := r.PathValue("ruleId")
+		if ruleID == "" {
+			http.Error(w, "no rule id is supplied in path", http.StatusBadRequest)
+			return
+		}
+
+		rule, err := app.GetRule(ctx, ruleID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("could not get rule: %s", err.Error()), statusCodeForRuleError(err, http.StatusInternalServerError))
+			return
+		}
+
+		b, err := json.Marshal(rule)
+		if err != nil {
+			http.Error(w, "could not marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(b)
+	}
+}
+
+func NewUpdateRuleHandler(ctx context.Context, app application.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		var err error
+		ctx, endSpan := tracing.Start(r.Context(), tracerName, "update-rule", func() error { return err })
+		defer endSpan()
+
+		logger := logging.GetFromContext(ctx)
+
+		ruleID := r.PathValue("ruleId")
+		if ruleID == "" {
+			logger.Error("no rule id is supplied in path")
+			http.Error(w, "no rule id is supplied in path", http.StatusBadRequest)
+			return
+		}
+
+		b, err := io.ReadAll(r.Body)
+		if err != nil {
+			logger.Error("could not read body", "err", err.Error())
+			http.Error(w, "could not read body", http.StatusBadRequest)
+			return
+		}
+
+		rule := rules.Rule{}
+		err = json.Unmarshal(b, &rule)
+		if err != nil {
+			logger.Error("could not unmarshal body", "err", err.Error())
+			http.Error(w, "could not unmarshal body", http.StatusBadRequest)
+			return
+		}
+
+		rule.ID = ruleID
+
+		err = app.UpdateRule(ctx, &rule)
+		if err != nil {
+			logger.Error("could not update rule", "err", err.Error())
+			http.Error(w, fmt.Sprintf("could not update rule: %s", err.Error()), statusCodeForRuleError(err, http.StatusInternalServerError))
+			return
+		}
+
+		response := map[string]string{
+			"message": "Rule updated successfully",
+		}
+
+		b, err = json.Marshal(response)
+		if err != nil {
+			logger.Error("could not marshal response", "err", err.Error())
+			http.Error(w, "could not marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(b)
+	}
+}
+
+func NewDeleteRuleHandler(ctx context.Context, app application.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		var err error
+		ctx, endSpan := tracing.Start(r.Context(), tracerName, "delete-rule", func() error { return err })
+		defer endSpan()
+
+		ruleID := r.PathValue("ruleId")
+		if ruleID == "" {
+			http.Error(w, "no rule id is supplied in path", http.StatusBadRequest)
+			return
+		}
+
+		err = app.DeleteRule(ctx, ruleID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("could not delete rule: %s", err.Error()), statusCodeForRuleError(err, http.StatusInternalServerError))
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func statusCodeForRuleError(err error, fallback int) int {
+	if err == nil {
+		return fallback
+	}
+
+	if errors.Is(err, rules.ErrNotFound) {
+		return http.StatusNotFound
+	}
+
+	if errors.Is(err, rules.ErrorNoKindSet) ||
+		errors.Is(err, rules.ErrorMultipleKindSet) ||
+		errors.Is(err, rules.ErrorNotFloatValue) ||
+		errors.Is(err, rules.ErrorVHasWrongOrder) {
+		return http.StatusBadRequest
+	}
+
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return http.StatusConflict
+	}
+
+	return fallback
 }
 
 func NewQueryFunctionsHandler(ctx context.Context, funcRegistry functions.FuncRegistry) http.HandlerFunc {
@@ -103,7 +329,7 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, funcRegistry functions.
 
 		logger := logging.GetFromContext(ctx)
 
-		functionID, _ := url.QueryUnescape(chi.URLParam(r, "id"))
+		functionID, _ := url.QueryUnescape(r.PathValue("id"))
 		if functionID == "" {
 			err = fmt.Errorf("no function id is supplied in query")
 			logger.Error("bad request", "err", err.Error())

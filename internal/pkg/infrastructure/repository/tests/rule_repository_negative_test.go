@@ -44,3 +44,31 @@ func TestAdd_Fails_WhenNoKindsSet(t *testing.T) {
 
 	is.True(errors.Is(err, rules.ErrorNoKindSet))
 }
+
+func TestGetRuleById_ReturnsErrNotFound_WhenMissing(t *testing.T) {
+	is := is.New(t)
+	requireDB(t)
+	cleanDB(t)
+
+	r := newTestRepository()
+
+	_, err := r.GetRuleById(t.Context(), "missing-rule-id")
+
+	is.True(errors.Is(err, rules.ErrNotFound))
+}
+
+func TestAdd_Fails_WhenRuleIDAlreadyExists(t *testing.T) {
+	is := is.New(t)
+	requireDB(t)
+	cleanDB(t)
+
+	r := newTestRepository()
+	in := rules_test.MakeRuleVS(t, "existing-rule-id", "device-1", rules_test.S("value"))
+
+	err := r.Add(t.Context(), in)
+	is.NoErr(err)
+
+	err = r.Add(t.Context(), in)
+
+	is.True(err != nil)
+}

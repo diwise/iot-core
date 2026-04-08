@@ -138,7 +138,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *appConfig) (servicerunn
 			ruleRepository := repository.New(ruleStorage)
 			ruleEngine := engines.New(ruleRepository)
 
-			app = application.New(dmClient, mClient, funcRegistry, ruleEngine, msgCtx)
+			app = application.New(dmClient, mClient, funcRegistry, ruleEngine, ruleRepository, msgCtx)
 
 			return nil
 		}),

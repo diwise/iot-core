@@ -12,6 +12,7 @@ import (
 type RuleRepository interface {
 	Add(ctx context.Context, rule rules.Rule) error
 	Get(ctx context.Context, id string) ([]rules.Rule, error)
+	GetRuleById(ctx context.Context, id string) (rules.Rule, error)
 	Update(ctx context.Context, rule rules.Rule) error
 	Delete(ctx context.Context, id string) error
 }
@@ -40,6 +41,12 @@ func (e *repository) Get(ctx context.Context, id string) ([]rules.Rule, error) {
 	return result, err
 }
 
+func (e *repository) GetRuleById(ctx context.Context, id string) (rules.Rule, error) {
+	result, err := e.storage.GetRuleById(ctx, id)
+
+	return result, err
+}
+
 func (e *repository) Update(ctx context.Context, rule rules.Rule) error {
 	validateRuleErr := validateRule(rule)
 	if validateRuleErr != nil {
@@ -64,11 +71,26 @@ func validateRule(r rules.Rule) error {
 		return err
 	}
 
-	if r.RuleValues.V == nil && r.RuleValues.Vs == nil && r.RuleValues.Vb == nil {
-		return rules.ErrorNoKindSet
+	kindsSet := 0
+
+	if r.RuleValues.V != nil && (r.RuleValues.V.MinValue != nil || r.RuleValues.V.MaxValue != nil) {
+		kindsSet++
+	}
+	if r.RuleValues.Vs != nil && r.RuleValues.Vs.Value != nil {
+		kindsSet++
+	}
+	if r.RuleValues.Vb != nil && r.RuleValues.Vb.Value != nil {
+		kindsSet++
 	}
 
-	return nil
+	switch kindsSet {
+	case 0:
+		return rules.ErrorNoKindSet
+	case 1:
+		return nil
+	default:
+		return rules.ErrorMultipleKindSet
+	}
 }
 
 func validateRuleValues(r rules.Rule) error {

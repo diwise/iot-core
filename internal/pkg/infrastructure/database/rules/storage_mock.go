@@ -49,6 +49,9 @@ type StorageMock struct {
 	// GetFunc mocks the Get method.
 	GetFunc func(ctx context.Context, id string) ([]Rule, []error, error)
 
+	// GetRuleByIdFunc mocks the GetRuleById method.
+	GetRuleByIdFunc func(ctx context.Context, id string) (Rule, error)
+
 	// InitializeFunc mocks the Initialize method.
 	InitializeFunc func(contextMoqParam context.Context) error
 
@@ -78,6 +81,13 @@ type StorageMock struct {
 			// ID is the id argument value.
 			ID string
 		}
+		// GetRuleById holds details about calls to the GetRuleById method.
+		GetRuleById []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ID is the id argument value.
+			ID string
+		}
 		// Initialize holds details about calls to the Initialize method.
 		Initialize []struct {
 			// ContextMoqParam is the contextMoqParam argument value.
@@ -91,11 +101,12 @@ type StorageMock struct {
 			Rule Rule
 		}
 	}
-	lockAdd        sync.RWMutex
-	lockDelete     sync.RWMutex
-	lockGet        sync.RWMutex
-	lockInitialize sync.RWMutex
-	lockUpdate     sync.RWMutex
+	lockAdd         sync.RWMutex
+	lockDelete      sync.RWMutex
+	lockGet         sync.RWMutex
+	lockGetRuleById sync.RWMutex
+	lockInitialize  sync.RWMutex
+	lockUpdate      sync.RWMutex
 }
 
 // Add calls AddFunc.
@@ -203,6 +214,42 @@ func (mock *StorageMock) GetCalls() []struct {
 	mock.lockGet.RLock()
 	calls = mock.calls.Get
 	mock.lockGet.RUnlock()
+	return calls
+}
+
+// GetRuleById calls GetRuleByIdFunc.
+func (mock *StorageMock) GetRuleById(ctx context.Context, id string) (Rule, error) {
+	if mock.GetRuleByIdFunc == nil {
+		panic("StorageMock.GetRuleByIdFunc: method is nil but Storage.GetRuleById was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		ID  string
+	}{
+		Ctx: ctx,
+		ID:  id,
+	}
+	mock.lockGetRuleById.Lock()
+	mock.calls.GetRuleById = append(mock.calls.GetRuleById, callInfo)
+	mock.lockGetRuleById.Unlock()
+	return mock.GetRuleByIdFunc(ctx, id)
+}
+
+// GetRuleByIdCalls gets all the calls that were made to GetRuleById.
+// Check the length with:
+//
+//	len(mockedStorage.GetRuleByIdCalls())
+func (mock *StorageMock) GetRuleByIdCalls() []struct {
+	Ctx context.Context
+	ID  string
+} {
+	var calls []struct {
+		Ctx context.Context
+		ID  string
+	}
+	mock.lockGetRuleById.RLock()
+	calls = mock.calls.GetRuleById
+	mock.lockGetRuleById.RUnlock()
 	return calls
 }
 

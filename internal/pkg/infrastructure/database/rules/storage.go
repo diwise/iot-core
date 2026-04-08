@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -20,6 +21,7 @@ type Storage interface {
 	database.Storage
 	Add(ctx context.Context, rule Rule) error
 	Get(ctx context.Context, id string) ([]Rule, []error, error)
+	GetRuleById(ctx context.Context, id string) (Rule, error)
 	Update(ctx context.Context, rule Rule) error
 	Delete(ctx context.Context, id string) error
 }
@@ -37,16 +39,7 @@ func (i *impl) Add(ctx context.Context, r Rule) error {
 			INSERT INTO rules (
 				id, measurement_id, device_id, measurement_type, should_abort,
 				v_min_value, v_max_value, vs_value, vb_value
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-			ON CONFLICT (id) DO UPDATE SET
-				measurement_id   = EXCLUDED.measurement_id,
-				device_id        = EXCLUDED.device_id,
-				measurement_type = EXCLUDED.measurement_type,
-				should_abort     = EXCLUDED.should_abort,
-				v_min_value      = EXCLUDED.v_min_value,
-				v_max_value      = EXCLUDED.v_max_value,
-				vs_value         = EXCLUDED.vs_value,
-				vb_value         = EXCLUDED.vb_value;`
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9);`
 
 	_, err = i.db.Exec(ctx, q,
 		r.ID, r.MeasurementID, r.DeviceID, r.MeasurementType, r.ShouldAbort,
@@ -122,6 +115,58 @@ func (i *impl) Get(ctx context.Context, id string) ([]Rule, []error, error) {
 	}
 
 	return rules, rowErrors, nil
+}
+
+func (i *impl) GetRuleById(ctx context.Context, id string) (Rule, error) {
+	const q = `
+		SELECT
+			id, measurement_id, device_id, measurement_type, should_abort,
+			v_min_value, v_max_value, vs_value, vb_value
+		FROM rules
+		WHERE id = $1;`
+
+	var (
+		r    Rule
+		vmin sql.NullFloat64
+		vmax sql.NullFloat64
+		vs   sql.NullString
+		vb   sql.NullBool
+	)
+
+	err := i.db.QueryRow(ctx, q, id).Scan(
+		&r.ID, &r.MeasurementID, &r.DeviceID, &r.MeasurementType, &r.ShouldAbort,
+		&vmin, &vmax, &vs, &vb,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Rule{}, ErrNotFound
+		}
+		return Rule{}, err
+	}
+
+	if vmin.Valid || vmax.Valid {
+		r.RuleValues.V = &RuleV{}
+		if vmin.Valid {
+			min := vmin.Float64
+			r.RuleValues.V.MinValue = &min
+		}
+		if vmax.Valid {
+			max := vmax.Float64
+			r.RuleValues.V.MaxValue = &max
+		}
+	}
+
+	if vs.Valid {
+		s := vs.String
+		r.RuleValues.Vs = &RuleVs{Value: &s}
+	}
+
+	if vb.Valid {
+		b := vb.Bool
+		r.RuleValues.Vb = &RuleVb{Value: &b}
+	}
+
+	return r, nil
 }
 
 func (i *impl) Update(ctx context.Context, r Rule) error {
