@@ -52,18 +52,32 @@ func LoadConfiguration(ctx context.Context) Config {
 }
 
 func Connect(ctx context.Context, cfg Config) (Storage, error) {
-	conn, err := pgxpool.New(ctx, cfg.ConnStr())
+	poolConfig, err := pgxpool.ParseConfig(cfg.ConnStr())
 	if err != nil {
 		return nil, err
 	}
 
-	err = conn.Ping(ctx)
+	poolConfig.MaxConns = env.GetVariableOrDefaultAs(ctx, "POSTGRES_MAX_CONNS", int32(10))
+	poolConfig.MinConns = env.GetVariableOrDefaultAs(ctx, "POSTGRES_MIN_CONNS", int32(2))
+	poolConfig.MaxConnLifetime = env.GetVariableOrDefaultAs(ctx, "POSTGRES_MAX_CONN_LIFETIME", 30*time.Minute)
+	poolConfig.MaxConnIdleTime = env.GetVariableOrDefaultAs(ctx, "POSTGRES_MAX_CONN_IDLE_TIME", 5*time.Minute)
+	poolConfig.HealthCheckPeriod = env.GetVariableOrDefaultAs(ctx, "POSTGRES_HEALTH_CHECK_PERIOD", 30*time.Second)
+
+	poolConfig.ConnConfig.RuntimeParams["application_name"] = "iot-core"
+
+	p, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
+		return nil, err
+	}
+
+	err = p.Ping(ctx)
+	if err != nil {
+		p.Close()
 		return nil, err
 	}
 
 	return &impl{
-		db: conn,
+		db: p,
 	}, nil
 }
 
