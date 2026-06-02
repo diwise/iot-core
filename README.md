@@ -1,4 +1,5 @@
 # iot-core
+
 A service for handling core functionality in the IoT platform. Enriches messages with metadata such as position and environment.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://github.com/diwise/iot-agent/blob/main/LICENSE)
