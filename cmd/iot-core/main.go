@@ -43,15 +43,29 @@ func main() {
 
 	var err error
 
-	dmClient := createDeviceManagementClientOrDie(ctx)
+	dmClient, err := createDeviceManagementClient(ctx)
+	if err != nil {
+		fatal(ctx, "failed to create device management client", err)
+	}
 	defer dmClient.Close(ctx)
 
-	measurementsClient := createMeasurementsClientOrDie(ctx)
+	measurementsClient, err := createMeasurementsClient(ctx)
+	if err != nil {
+		fatal(ctx, "failed to create measurements client", err)
+	}
+	defer measurementsClient.Close()
 
-	msgCtx := createMessagingContextOrDie(ctx)
+	msgCtx, err := createMessagingContext(ctx)
+	if err != nil {
+		fatal(ctx, "failed to init messaging", err)
+	}
 	defer msgCtx.Close()
 
-	storage := createDatabaseConnectionOrDie(ctx)
+	storage, err := createDatabaseConnection(ctx)
+	if err != nil {
+		fatal(ctx, "failed to connect to database", err)
+	}
+	defer storage.Close()
 
 	var configFile *os.File
 
@@ -75,60 +89,84 @@ func main() {
 	}
 }
 
-func createDeviceManagementClientOrDie(ctx context.Context) client.DeviceManagementClient {
-	dmURL := env.GetVariableOrDie(ctx, "DEV_MGMT_URL", "url to iot-device-mgmt")
-	tokenURL := env.GetVariableOrDie(ctx, "OAUTH2_TOKEN_URL", "a valid oauth2 token URL")
-	clientID := env.GetVariableOrDie(ctx, "OAUTH2_CLIENT_ID", "a valid oauth2 client id")
-	clientSecret := env.GetVariableOrDie(ctx, "OAUTH2_CLIENT_SECRET", "a valid oauth2 client secret")
+func requireEnv(ctx context.Context, key, description string) (string, error) {
+	value := env.GetVariableOrDefault(ctx, key, "")
+	if value == "" {
+		return "", fmt.Errorf("missing required environment variable %s (%s)", key, description)
+	}
+
+	return value, nil
+}
+
+func createDeviceManagementClient(ctx context.Context) (client.DeviceManagementClient, error) {
+	dmURL, err := requireEnv(ctx, "DEV_MGMT_URL", "url to iot-device-mgmt")
+	if err != nil {
+		return nil, err
+	}
+	tokenURL, err := requireEnv(ctx, "OAUTH2_TOKEN_URL", "a valid oauth2 token URL")
+	if err != nil {
+		return nil, err
+	}
+	clientID, err := requireEnv(ctx, "OAUTH2_CLIENT_ID", "a valid oauth2 client id")
+	if err != nil {
+		return nil, err
+	}
+	clientSecret, err := requireEnv(ctx, "OAUTH2_CLIENT_SECRET", "a valid oauth2 client secret")
+	if err != nil {
+		return nil, err
+	}
 
 	insecureURL := env.GetVariableOrDefault(ctx, "OAUTH2_REALM_INSECURE", "false") == "true"
 
-	dmClient, err := client.New(ctx, dmURL, tokenURL, insecureURL, clientID, clientSecret)
-	if err != nil {
-		fatal(ctx, "failed to create device managagement client", err)
-	}
-
-	return dmClient
+	return client.New(ctx, dmURL, tokenURL, insecureURL, clientID, clientSecret)
 }
 
-func createMeasurementsClientOrDie(ctx context.Context) measurements.MeasurementsClient {
-	dmURL := env.GetVariableOrDie(ctx, "MEASUREMENTS_URL", "url to measurements service")
-	tokenURL := env.GetVariableOrDie(ctx, "OAUTH2_TOKEN_URL", "a valid oauth2 token URL")
-	clientID := env.GetVariableOrDie(ctx, "OAUTH2_CLIENT_ID", "a valid oauth2 client id")
-	clientSecret := env.GetVariableOrDie(ctx, "OAUTH2_CLIENT_SECRET", "a valid oauth2 client secret")
+func createMeasurementsClient(ctx context.Context) (measurements.MeasurementsClient, error) {
+	measurementsURL, err := requireEnv(ctx, "MEASUREMENTS_URL", "url to measurements service")
+	if err != nil {
+		return nil, err
+	}
+	tokenURL, err := requireEnv(ctx, "OAUTH2_TOKEN_URL", "a valid oauth2 token URL")
+	if err != nil {
+		return nil, err
+	}
+	clientID, err := requireEnv(ctx, "OAUTH2_CLIENT_ID", "a valid oauth2 client id")
+	if err != nil {
+		return nil, err
+	}
+	clientSecret, err := requireEnv(ctx, "OAUTH2_CLIENT_SECRET", "a valid oauth2 client secret")
+	if err != nil {
+		return nil, err
+	}
 	insecureURL := env.GetVariableOrDefault(ctx, "OAUTH2_REALM_INSECURE", "false") == "true"
 
-	measurementsClient, err := measurements.NewMeasurementsClient(ctx, dmURL, tokenURL, clientID, clientSecret, insecureURL)
-	if err != nil {
-		fatal(ctx, "failed to create measurements client", err)
-	}
-
-	return measurementsClient
+	return measurements.NewMeasurementsClient(ctx, measurementsURL, tokenURL, clientID, clientSecret, insecureURL)
 }
 
-func createMessagingContextOrDie(ctx context.Context) messaging.MsgContext {
+func createMessagingContext(ctx context.Context) (messaging.MsgContext, error) {
 	logger := logging.GetFromContext(ctx)
 
 	config := messaging.LoadConfiguration(ctx, serviceName, logger)
 	messenger, err := messaging.Initialize(ctx, config)
 	if err != nil {
-		fatal(ctx, "failed to init messaging", err)
+		return nil, err
 	}
 	messenger.Start()
 
-	return messenger
+	return messenger, nil
 }
 
-func createDatabaseConnectionOrDie(ctx context.Context) database.Storage {
+func createDatabaseConnection(ctx context.Context) (database.Storage, error) {
 	storage, err := database.Connect(ctx, database.LoadConfiguration(ctx))
 	if err != nil {
-		fatal(ctx, "database connect failed", err)
+		return nil, fmt.Errorf("database connect failed: %w", err)
 	}
-	err = storage.Initialize(ctx)
-	if err != nil {
-		fatal(ctx, "database initialize failed", err)
+	if err := storage.Initialize(ctx); err != nil {
+		storage.Close()
+		return nil, fmt.Errorf("database initialize failed: %w", err)
 	}
-	return storage
+
+	return storage, nil
 }
 
 func initialize(ctx context.Context, dmClient client.DeviceManagementClient, mClient measurements.MeasurementsClient, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {

@@ -28,11 +28,13 @@ type measurementsClient struct {
 	clientCredentials *clientcredentials.Config
 	httpClient        http.Client
 	c                 *cache.Cache
+	stopCacheCleanup  func()
 }
 
 type MeasurementsClient interface {
 	MaxValueFinder
 	CountBoolValueFinder
+	Close()
 }
 
 type MaxValueFinder interface {
@@ -117,14 +119,24 @@ func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientI
 	}
 
 	c := cache.NewCache()
-	c.Cleanup(5 * time.Minute)
+	stopCacheCleanup := c.Cleanup(5 * time.Minute)
 
 	return &measurementsClient{
 		url:               strings.TrimSuffix(url, "/"),
 		clientCredentials: oauthConfig,
 		httpClient:        *apiClient,
 		c:                 c,
+		stopCacheCleanup:  stopCacheCleanup,
 	}, nil
+}
+
+// Close stops the cache cleanup goroutine and closes idle HTTP
+// connections. Safe to call more than once.
+func (c *measurementsClient) Close() {
+	if c.stopCacheCleanup != nil {
+		c.stopCacheCleanup()
+	}
+	c.httpClient.CloseIdleConnections()
 }
 
 func (c measurementsClient) GetMaxValue(ctx context.Context, measurmentID string) (float64, error) {

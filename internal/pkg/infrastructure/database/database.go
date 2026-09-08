@@ -16,6 +16,7 @@ type Storage interface {
 	Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
 	AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error
 	History(ctx context.Context, id, label string, lastN int) ([]LogValue, error)
+	Close()
 }
 
 type impl struct {
@@ -83,6 +84,12 @@ func Connect(ctx context.Context, cfg Config) (Storage, error) {
 
 func (i *impl) Initialize(ctx context.Context) error {
 	return i.createTables(ctx)
+}
+
+func (i *impl) Close() {
+	if i.db != nil {
+		i.db.Close()
+	}
 }
 
 func (i *impl) createTables(ctx context.Context) error {

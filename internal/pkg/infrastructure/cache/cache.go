@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -43,19 +44,32 @@ func (c *Cache) Get(key string) (any, bool) {
 	return item.Value, true
 }
 
-func (c *Cache) Cleanup(interval time.Duration) {
+// Cleanup starts a background goroutine that removes expired items every
+// interval. It returns a stop func that terminates the goroutine; calling
+// it is required for deterministic shutdown. Calling the stop func more
+// than once is safe.
+func (c *Cache) Cleanup(interval time.Duration) func() {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	ticker := time.NewTicker(interval)
 	go func() {
+		defer ticker.Stop()
 		for {
-			<-ticker.C
-			now := time.Now()
-			c.mutex.Lock()
-			for key, item := range c.items {
-				if item.ExpiryTime.Before(now) {
-					delete(c.items, key)
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				now := time.Now()
+				c.mutex.Lock()
+				for key, item := range c.items {
+					if item.ExpiryTime.Before(now) {
+						delete(c.items, key)
+					}
 				}
+				c.mutex.Unlock()
 			}
-			c.mutex.Unlock()
 		}
 	}()
+
+	return cancel
 }

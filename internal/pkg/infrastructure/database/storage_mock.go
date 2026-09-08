@@ -25,6 +25,9 @@ var _ Storage = &StorageMock{}
 //			AddFnFunc: func(ctx context.Context, id string, fnType string, subType string, tenant string, source string, lat float64, lon float64) error {
 //				panic("mock out the AddFn method")
 //			},
+//			CloseFunc: func() {
+//				panic("mock out the Close method")
+//			},
 //			HistoryFunc: func(ctx context.Context, id string, label string, lastN int) ([]LogValue, error) {
 //				panic("mock out the History method")
 //			},
@@ -43,6 +46,9 @@ type StorageMock struct {
 
 	// AddFnFunc mocks the AddFn method.
 	AddFnFunc func(ctx context.Context, id string, fnType string, subType string, tenant string, source string, lat float64, lon float64) error
+
+	// CloseFunc mocks the Close method.
+	CloseFunc func()
 
 	// HistoryFunc mocks the History method.
 	HistoryFunc func(ctx context.Context, id string, label string, lastN int) ([]LogValue, error)
@@ -84,6 +90,9 @@ type StorageMock struct {
 			// Lon is the lon argument value.
 			Lon float64
 		}
+		// Close holds details about calls to the Close method.
+		Close []struct {
+		}
 		// History holds details about calls to the History method.
 		History []struct {
 			// Ctx is the ctx argument value.
@@ -103,6 +112,7 @@ type StorageMock struct {
 	}
 	lockAdd        sync.RWMutex
 	lockAddFn      sync.RWMutex
+	lockClose      sync.RWMutex
 	lockHistory    sync.RWMutex
 	lockInitialize sync.RWMutex
 }
@@ -212,6 +222,33 @@ func (mock *StorageMock) AddFnCalls() []struct {
 	mock.lockAddFn.RLock()
 	calls = mock.calls.AddFn
 	mock.lockAddFn.RUnlock()
+	return calls
+}
+
+// Close calls CloseFunc.
+func (mock *StorageMock) Close() {
+	if mock.CloseFunc == nil {
+		panic("StorageMock.CloseFunc: method is nil but Storage.Close was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockClose.Lock()
+	mock.calls.Close = append(mock.calls.Close, callInfo)
+	mock.lockClose.Unlock()
+	mock.CloseFunc()
+}
+
+// CloseCalls gets all the calls that were made to Close.
+// Check the length with:
+//
+//	len(mockedStorage.CloseCalls())
+func (mock *StorageMock) CloseCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockClose.RLock()
+	calls = mock.calls.Close
+	mock.lockClose.RUnlock()
 	return calls
 }
 
