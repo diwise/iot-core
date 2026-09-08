@@ -2,17 +2,22 @@ package database
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 )
 
 func TestSQL(t *testing.T) {
 	// start TimescaleDB using 'docker compose -f deployments/docker-compose.yaml up'
-	// test will PASS if no DB is running
+	// Without IOT_TEST_DATABASE=1 the test skips explicitly instead of
+	// passing silently; with it, a missing database fails the test.
+	if os.Getenv("IOT_TEST_DATABASE") == "" {
+		t.Skip("skipping database integration test; set IOT_TEST_DATABASE=1 with a running TimescaleDB to run it")
+	}
 
 	s, ctx, err := testSetup()
 	if err != nil {
-		return
+		t.Fatalf("IOT_TEST_DATABASE=1 requires a running database: %v", err)
 	}
 
 	err = s.AddFnct(ctx, "fnct-01", "waterquality", "beach", "", "", 0, 0)

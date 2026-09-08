@@ -28,7 +28,9 @@ flowchart LR
 docker build -f deployments/Dockerfile . -t diwise/iot-core:latest
 ```
 ## Test
-Testing is best done using unit tests. For integration testing the preferred way is to use `docker-compose.yaml` found in repository [diwise](https://github.com/diwise/diwise) 
+Testing is best done using unit tests. For integration testing the preferred way is to use `docker-compose.yaml` found in repository [diwise](https://github.com/diwise/diwise)
+
+Database integration tests skip by default. Set `IOT_TEST_DATABASE=1` with a running TimescaleDB (see `deployments/` or the diwise repository) to run them; without a reachable database the opt-in run fails instead of passing silently. Never point test runs at a production database.
 
 # Configuration
 ## Environment variables
