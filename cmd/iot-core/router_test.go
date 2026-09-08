@@ -18,7 +18,7 @@ import (
 func TestAPIRoutesAfterRouterMigration(t *testing.T) {
 	is, dmClient, msgCtx := testSetup(t)
 
-	fconf := bytes.NewBufferString("fid1;name;counter;overflow;internalID;false")
+	fconf := bytes.NewBufferString("fid1;name;counter;overflow;sensor1;false\na+b;plusname;counter;overflow;sensor2;false\n100%;percentname;counter;overflow;sensor3;false")
 	_, api, err := initialize(context.Background(), dmClient, nil, msgCtx, fconf, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
@@ -47,4 +47,44 @@ func TestAPIRoutesAfterRouterMigration(t *testing.T) {
 
 	resp, _ = testRequest(server, http.MethodGet, "/health", nil)
 	is.Equal(resp.StatusCode, http.StatusOK)
+}
+
+// REV-003: the stdlib router hands over an already-decoded path segment,
+// so no second QueryUnescape may be applied. Encoded plus (%2B) and
+// percent (%25) must resolve exactly once, and a literal plus in the
+// path must be preserved (chi+QueryUnescape used to mangle it to space).
+func TestHistoryRouteDecodesIDExactlyOnce(t *testing.T) {
+	is, dmClient, msgCtx := testSetup(t)
+
+	fconf := bytes.NewBufferString("fid1;name;counter;overflow;sensor1;false\na+b;plusname;counter;overflow;sensor2;false\n100%;percentname;counter;overflow;sensor3;false")
+	_, api, err := initialize(context.Background(), dmClient, nil, msgCtx, fconf, &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+		InitializeFunc: func(contextMoqParam context.Context) error {
+			return nil
+		},
+		HistoryFunc: func(ctx context.Context, id, label string, lastN int) ([]database.LogValue, error) {
+			return []database.LogValue{}, nil
+		},
+	})
+	is.NoErr(err)
+
+	server := httptest.NewServer(api.Router())
+	defer server.Close()
+
+	resp, body := testRequest(server, http.MethodGet, "/api/functions/a%2Bb/history", nil)
+	is.Equal(resp.StatusCode, http.StatusOK)
+	is.True(strings.Contains(body, `"id": "a+b"`))
+
+	resp, body = testRequest(server, http.MethodGet, "/api/functions/a+b/history", nil)
+	is.Equal(resp.StatusCode, http.StatusOK)
+	is.True(strings.Contains(body, `"id": "a+b"`))
+
+	resp, body = testRequest(server, http.MethodGet, "/api/functions/100%25/history", nil)
+	is.Equal(resp.StatusCode, http.StatusOK)
+	is.True(strings.Contains(body, `"id": "100%"`))
 }

@@ -52,7 +52,11 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 
 		_, ctx, log := o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
-		functionID, _ := url.QueryUnescape(r.PathValue("id"))
+		// r.PathValue returns the already-decoded segment. chi.URLParam
+		// used to return the still-escaped segment, which is why this
+		// handler previously applied url.QueryUnescape. Applying it
+		// again would double-decode (e.g. %2B -> + -> space).
+		functionID := r.PathValue("id")
 		if functionID == "" {
 			err = fmt.Errorf("no function id is supplied in query")
 			log.Error("bad request", "err", err.Error())
