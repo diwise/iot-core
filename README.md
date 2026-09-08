@@ -41,10 +41,14 @@ Database integration tests skip by default. Set `IOT_TEST_DATABASE=1` with a run
 "RABBITMQ_USER": "user"
 "RABBITMQ_PASS": "bitnami"
 "RABBITMQ_DISABLED": "false"
-"DEV_MGMT_URL": "http://iot-device-mgmt:8080", 
+"DEV_MGMT_URL": "http://iot-device-mgmt:8080",
+"MEASUREMENTS_URL": "http://iot-events:8080",
 "OAUTH2_TOKEN_URL": "http://keycloak:8080/realms/diwise-local/protocol/openid-connect/token",
 "OAUTH2_CLIENT_ID": "diwise-devmgmt-api",
 "OAUTH2_CLIENT_SECRET": "<client secret>",
+"OAUTH2_REALM_INSECURE": "false",
+"SERVICE_PORT": "8080",
+"POSTGRES_HOST": "url to postgresql database"
 ```
 ## CLI flags
  - `functions` - Configuration file for functions (default `/opt/diwise/config/functions.csv`)
@@ -58,16 +62,34 @@ Precedens: default < miljovariabel < CLI-flagga.
 | Variabel | Default | Notering |
 | --- | --- | --- |
 | `SERVICE_PORT` | `8080` | Enda HTTP-servern binds mot `:SERVICE_PORT`; ingen separat `LISTEN_ADDRESS` eller kontrollserver i nulaget |
-| `DEV_MGMT_URL` | (kravs) | Las med `GetVariableOrDie` |
-| `MEASUREMENTS_URL` | (kravs) | Las med `GetVariableOrDie` |
-| `OAUTH2_TOKEN_URL` | (kravs) | Las med `GetVariableOrDie` |
-| `OAUTH2_CLIENT_ID` | (kravs) | Las med `GetVariableOrDie` |
-| `OAUTH2_CLIENT_SECRET` | (kravs) | Las med `GetVariableOrDie` |
-| `OAUTH2_REALM_INSECURE` | `false` | `true` stanger av TLS-verifiering for klienterna |
-| `POSTGRES_*` | se `database.LoadConfiguration` | `POSTGRES_HOST`, `POSTGRES_PORT` (5432), `POSTGRES_DBNAME` (`diwise`), `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_SSLMODE` (`disable`) |
-| `RABBITMQ_*` | se `messaging.LoadConfiguration` | T.ex. `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_DISABLED` |
+| `DEV_MGMT_URL` | (kravs vid startup) |  |
+| `MEASUREMENTS_URL` | (kravs vid startup) |  |
+| `OAUTH2_TOKEN_URL` | (kravs vid startup) |  |
+| `OAUTH2_CLIENT_ID` | (kravs vid startup) |  |
+| `OAUTH2_CLIENT_SECRET` | (kravs vid startup) |  |
+| `OAUTH2_REALM_INSECURE` | `false` | Endast exakt `true` stanger av TLS-verifiering for klienterna |
+| `POSTGRES_HOST` | (tom) |  |
+| `POSTGRES_PORT` | `5432` |  |
+| `POSTGRES_DBNAME` | `diwise` |  |
+| `POSTGRES_USER` | (tom) |  |
+| `POSTGRES_PASSWORD` | (tom) |  |
+| `POSTGRES_SSLMODE` | `disable` |  |
+| `POSTGRES_MAX_CONNS` | `10` |  |
+| `POSTGRES_MIN_CONNS` | `2` |  |
+| `POSTGRES_MAX_CONN_LIFETIME` | `30m` |  |
+| `POSTGRES_MAX_CONN_IDLE_TIME` | `5m` |  |
+| `POSTGRES_HEALTH_CHECK_PERIOD` | `30s` |  |
+| `RABBITMQ_HOST` | (tom, kravs om inte avstangd) |  |
+| `RABBITMQ_PORT` | `5672` |  |
+| `RABBITMQ_VHOST` | `/` |  |
+| `RABBITMQ_USER` | `user` |  |
+| `RABBITMQ_PASS` | `bitnami` |  |
+| `RABBITMQ_DISABLED` | `false` |  |
+| `RABBITMQ_INIT_TIMEOUT` | `10` | Sekunder |
 
 Halsa: `GET /health` pa samma port som API:t, svarar alltid 200. Ingen liveness/readiness-prob mot beroenden och ingen `LOG_LEVEL`-styrning i nulaget.
+
+Externa Kubernetes- och Compose-definitioner finns inte i detta repo och ar darfor inte inventerade har.
 
 Routern ar `github.com/diwise/service-chassis/pkg/infrastructure/net/http/router` (samma som ovriga API-tjanster). Det tidigare CORS-middlewaren (`rs/cors`) ar borttaget; tjansten satter inga `Access-Control-*`-headers i nulaget.
 
