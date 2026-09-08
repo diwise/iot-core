@@ -45,11 +45,27 @@ Testing is best done using unit tests. For integration testing the preferred way
 "OAUTH2_CLIENT_SECRET": "<client secret>",
 ```
 ## CLI flags
-none
--
+ - `functions` - Configuration file for functions (default `/opt/diwise/config/functions.csv`)
 
 ## Configuration files
-none
+ - `functions.csv` (default `/opt/diwise/config/functions.csv`) - Required at startup, defines the function registry.
+
+## Faktisk konfiguration (kod ar facit, HARM-002)
+Precedens: default < miljovariabel < CLI-flagga.
+
+| Variabel | Default | Notering |
+| --- | --- | --- |
+| `SERVICE_PORT` | `8080` | Enda HTTP-servern binds mot `:SERVICE_PORT`; ingen separat `LISTEN_ADDRESS` eller kontrollserver i nulaget |
+| `DEV_MGMT_URL` | (kravs) | Las med `GetVariableOrDie` |
+| `MEASUREMENTS_URL` | (kravs) | Las med `GetVariableOrDie` |
+| `OAUTH2_TOKEN_URL` | (kravs) | Las med `GetVariableOrDie` |
+| `OAUTH2_CLIENT_ID` | (kravs) | Las med `GetVariableOrDie` |
+| `OAUTH2_CLIENT_SECRET` | (kravs) | Las med `GetVariableOrDie` |
+| `OAUTH2_REALM_INSECURE` | `false` | `true` stanger av TLS-verifiering for klienterna |
+| `POSTGRES_*` | se `database.LoadConfiguration` | `POSTGRES_HOST`, `POSTGRES_PORT` (5432), `POSTGRES_DBNAME` (`diwise`), `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_SSLMODE` (`disable`) |
+| `RABBITMQ_*` | se `messaging.LoadConfiguration` | T.ex. `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_DISABLED` |
+
+Halsa: `GET /health` pa samma port som API:t, svarar alltid 200. Ingen liveness/readiness-prob mot beroenden och ingen `LOG_LEVEL`-styrning i nulaget.
 
 # Links
 [iot-core](https://diwise.github.io/) on diwise.github.io
