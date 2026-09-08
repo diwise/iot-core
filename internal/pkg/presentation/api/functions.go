@@ -13,7 +13,6 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
-	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/otel"
 )
 
@@ -53,7 +52,7 @@ func NewQueryFunctionHistoryHandler(ctx context.Context, registry functions.Regi
 
 		_, ctx, log := o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
-		functionID, _ := url.QueryUnescape(chi.URLParam(r, "id"))
+		functionID, _ := url.QueryUnescape(r.PathValue("id"))
 		if functionID == "" {
 			err = fmt.Errorf("no function id is supplied in query")
 			log.Error("bad request", "err", err.Error())

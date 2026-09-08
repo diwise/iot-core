@@ -7,8 +7,6 @@ require (
 	github.com/diwise/iot-device-mgmt v0.0.0-20260504091030-a34ced3a3fcc
 	github.com/diwise/messaging-golang v0.0.0-20250628135946-f23f34d06003
 	github.com/diwise/senml v0.0.0-20251022134045-d0045d1dd610
-	github.com/go-chi/chi/v5 v5.3.0
-	github.com/rs/cors v1.11.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0
 	go.opentelemetry.io/otel v1.44.0
 	golang.org/x/oauth2 v0.36.0

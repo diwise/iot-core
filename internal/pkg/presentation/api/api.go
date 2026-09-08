@@ -5,41 +5,33 @@ import (
 	"net/http"
 
 	"github.com/diwise/iot-core/internal/pkg/application/functions"
-	"github.com/go-chi/chi/v5"
-	"github.com/rs/cors"
+	"github.com/diwise/service-chassis/pkg/infrastructure/net/http/router"
 )
 
 type API interface {
-	Router() *chi.Mux
+	Router() *http.ServeMux
 }
 
 func New(ctx context.Context, registry functions.Registry) API {
-	api_ := &api{
-		router: chi.NewRouter(),
-	}
-
-	api_.router.Use(cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowCredentials: true,
-		Debug:            false,
-	}).Handler)
+	mux := http.NewServeMux()
+	r := router.New(mux)
 
 	// TODO: Introduce an authenticator to manage tenant access
-	api_.router.Get("/api/functions", NewQueryFunctionsHandler(ctx, registry))
-	api_.router.Get("/api/functions/{id}/history", NewQueryFunctionHistoryHandler(ctx, registry))
+	r.Get("/api/functions", NewQueryFunctionsHandler(ctx, registry))
+	r.Get("/api/functions/{id}/history", NewQueryFunctionHistoryHandler(ctx, registry))
 
-	api_.router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		w.WriteHeader(http.StatusOK)
 	})
 
-	return api_
+	return &api{mux: mux}
 }
 
 type api struct {
-	router *chi.Mux
+	mux *http.ServeMux
 }
 
-func (a *api) Router() *chi.Mux {
-	return a.router
+func (a *api) Router() *http.ServeMux {
+	return a.mux
 }

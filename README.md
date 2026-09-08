@@ -67,6 +67,8 @@ Precedens: default < miljovariabel < CLI-flagga.
 
 Halsa: `GET /health` pa samma port som API:t, svarar alltid 200. Ingen liveness/readiness-prob mot beroenden och ingen `LOG_LEVEL`-styrning i nulaget.
 
+Routern ar `github.com/diwise/service-chassis/pkg/infrastructure/net/http/router` (samma som ovriga API-tjanster). Det tidigare CORS-middlewaren (`rs/cors`) ar borttaget; tjansten satter inga `Access-Control-*`-headers i nulaget.
+
 # Links
 [iot-core](https://diwise.github.io/) on diwise.github.io
 
