@@ -24,11 +24,11 @@ import (
 var tracer = otel.Tracer("measurements-client")
 
 type measurementsClient struct {
-	url               string
-	clientCredentials *clientcredentials.Config
-	httpClient        http.Client
-	c                 *cache.Cache
-	stopCacheCleanup  func()
+	url              string
+	httpClient       http.Client
+	baseTransport    *http.Transport
+	c                *cache.Cache
+	stopCacheCleanup func()
 }
 
 type MeasurementsClient interface {
@@ -111,10 +111,12 @@ func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientI
 	// fail fast if token cannot be retrieved with the provided credentials
 	token, err := ts.Token()
 	if err != nil {
+		baseTransport.CloseIdleConnections()
 		return nil, fmt.Errorf("failed to get client credentials from %s: %w", oauthConfig.TokenURL, err)
 	}
 
 	if !token.Valid() {
+		baseTransport.CloseIdleConnections()
 		return nil, fmt.Errorf("an invalid token was returned from %s", oauthTokenURL)
 	}
 
@@ -122,21 +124,27 @@ func NewMeasurementsClient(ctx context.Context, url, oauthTokenURL, oauthClientI
 	stopCacheCleanup := c.Cleanup(5 * time.Minute)
 
 	return &measurementsClient{
-		url:               strings.TrimSuffix(url, "/"),
-		clientCredentials: oauthConfig,
-		httpClient:        *apiClient,
-		c:                 c,
-		stopCacheCleanup:  stopCacheCleanup,
+		url:              strings.TrimSuffix(url, "/"),
+		httpClient:       *apiClient,
+		baseTransport:    baseTransport,
+		c:                c,
+		stopCacheCleanup: stopCacheCleanup,
 	}, nil
 }
 
 // Close stops the cache cleanup goroutine and closes idle HTTP
-// connections. Safe to call more than once.
+// connections on the owned base transport. Calling CloseIdleConnections
+// on the api client alone is not enough: its immediate transport is the
+// oauth2 transport, which does not implement the method, so the shared
+// base transport would stay open. Safe to call more than once.
 func (c *measurementsClient) Close() {
 	if c.stopCacheCleanup != nil {
 		c.stopCacheCleanup()
 	}
 	c.httpClient.CloseIdleConnections()
+	if c.baseTransport != nil {
+		c.baseTransport.CloseIdleConnections()
+	}
 }
 
 func (c measurementsClient) GetMaxValue(ctx context.Context, measurmentID string) (float64, error) {
@@ -223,16 +231,9 @@ func (c measurementsClient) getApiResponse(ctx context.Context, params url.Value
 
 	req.Header.Add("Accept", "application/vnd.api+json")
 
-	if c.clientCredentials != nil {
-		token, err := c.clientCredentials.Token(ctx)
-		if err != nil {
-			err = fmt.Errorf("failed to get client credentials from %s: %w", c.clientCredentials.TokenURL, err)
-			return nil, err
-		}
-
-		req.Header.Add("Authorization", fmt.Sprintf("%s %s", token.TokenType, token.AccessToken))
-	}
-
+	// Authorization is attached by the oauth2 transport wrapping
+	// httpClient. Fetching a token here as well would only add a
+	// redundant token request on the global default transport.
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
