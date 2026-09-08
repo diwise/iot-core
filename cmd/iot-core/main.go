@@ -31,6 +31,9 @@ import (
 const serviceName string = "iot-core"
 
 var tracer = otel.Tracer(serviceName)
+
+const defaultFunctionsConfigPath = "/opt/diwise/config/functions.csv"
+
 var functionsConfigPath string
 
 func main() {
@@ -38,7 +41,7 @@ func main() {
 	ctx, _, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion, "json")
 	defer cleanup()
 
-	flag.StringVar(&functionsConfigPath, "functions", "/opt/diwise/config/functions.csv", "configuration file for functions")
+	flag.StringVar(&functionsConfigPath, "functions", defaultFunctionsConfigPath, "configuration file for functions")
 	flag.Parse()
 
 	if err := run(ctx); err != nil {
@@ -91,8 +94,7 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("initialization failed: %w", err)
 	}
 
-	servicePort := env.GetVariableOrDefault(ctx, "SERVICE_PORT", "8080")
-	if err := http.ListenAndServe(":"+servicePort, api_.Router()); err != nil {
+	if err := http.ListenAndServe(":"+servicePort(ctx), api_.Router()); err != nil {
 		return fmt.Errorf("failed to start request router: %w", err)
 	}
 
@@ -126,9 +128,21 @@ func createDeviceManagementClient(ctx context.Context) (client.DeviceManagementC
 		return nil, err
 	}
 
-	insecureURL := env.GetVariableOrDefault(ctx, "OAUTH2_REALM_INSECURE", "false") == "true"
+	return client.New(ctx, dmURL, tokenURL, oauthRealmInsecure(ctx), clientID, clientSecret)
+}
 
-	return client.New(ctx, dmURL, tokenURL, insecureURL, clientID, clientSecret)
+// servicePort is the minimal production seam for the public server
+// port: tests target this function, not the env library, so a changed
+// default or lookup breaks them.
+func servicePort(ctx context.Context) string {
+	return env.GetVariableOrDefault(ctx, "SERVICE_PORT", "8080")
+}
+
+// oauthRealmInsecure is the minimal production seam for the shared
+// TLS-verification toggle. Only the exact string "true" disables
+// verification; every other value (including "TRUE" or "1") keeps it.
+func oauthRealmInsecure(ctx context.Context) bool {
+	return env.GetVariableOrDefault(ctx, "OAUTH2_REALM_INSECURE", "false") == "true"
 }
 
 func createMeasurementsClient(ctx context.Context) (measurements.MeasurementsClient, error) {
@@ -148,9 +162,8 @@ func createMeasurementsClient(ctx context.Context) (measurements.MeasurementsCli
 	if err != nil {
 		return nil, err
 	}
-	insecureURL := env.GetVariableOrDefault(ctx, "OAUTH2_REALM_INSECURE", "false") == "true"
 
-	return measurements.NewMeasurementsClient(ctx, measurementsURL, tokenURL, clientID, clientSecret, insecureURL)
+	return measurements.NewMeasurementsClient(ctx, measurementsURL, tokenURL, clientID, clientSecret, oauthRealmInsecure(ctx))
 }
 
 func createMessagingContext(ctx context.Context) (messaging.MsgContext, error) {

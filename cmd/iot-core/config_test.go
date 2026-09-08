@@ -2,49 +2,80 @@ package main
 
 import (
 	"context"
+	"os"
 	"testing"
 
-	"github.com/diwise/service-chassis/pkg/infrastructure/env"
 	"github.com/matryer/is"
 )
 
-// HARM-004: locks the configuration surface as implemented in main.go.
-// iot-core has no typed flag map; env is read inline. Defaults and
-// required variables below must not change without updating README and
-// external deployment definitions.
-func TestServicePortDefault(t *testing.T) {
-	is := is.New(t)
+// withUnsetEnv removes a variable for the test duration, restoring any
+// ambient value afterwards. Ambient developer/CI environments must not
+// leak into default assertions.
+func withUnsetEnv(t *testing.T, key string) {
+	t.Helper()
 
-	ctx := context.Background()
-	is.Equal(env.GetVariableOrDefault(ctx, "SERVICE_PORT", "8080"), "8080")
+	v, ok := os.LookupEnv(key)
+	os.Unsetenv(key)
+	t.Cleanup(func() {
+		if ok {
+			os.Setenv(key, v)
+		}
+	})
 }
 
-func TestServicePortEnvOverride(t *testing.T) {
+// REV-015: tests target the production seam functions, not the env
+// library, so a changed default or lookup breaks them.
+func TestServicePortSeam(t *testing.T) {
 	is := is.New(t)
+	ctx := context.Background()
+
+	withUnsetEnv(t, "SERVICE_PORT")
+	is.Equal(servicePort(ctx), "8080")
 
 	t.Setenv("SERVICE_PORT", "9090")
+	is.Equal(servicePort(ctx), "9090")
 
-	ctx := context.Background()
-	is.Equal(env.GetVariableOrDefault(ctx, "SERVICE_PORT", "8080"), "9090")
+	// The env library maps both unset and empty to the default.
+	t.Setenv("SERVICE_PORT", "")
+	is.Equal(servicePort(ctx), "8080")
 }
 
-// HARM-004: locks the OAUTH2_REALM_INSECURE parsing used for both the
-// device management and measurements clients. Any other value than the
-// exact string "true" means secure mode.
-func TestOAuthInsecureParsing(t *testing.T) {
+// REV-015: only the exact string "true" disables TLS verification.
+// ParseBool-style spellings ("TRUE", "1", ...) intentionally do not.
+func TestOAuthRealmInsecureSeam(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		value *string
+		want  bool
+	}{
+		{"unset uses secure default", nil, false},
+		{"empty uses secure default", strptr(""), false},
+		{"exact true disables verification", strptr("true"), true},
+		{"uppercase TRUE keeps verification", strptr("TRUE"), false},
+		{"numeric 1 keeps verification", strptr("1"), false},
+		{"false keeps verification", strptr("false"), false},
+		{"invalid keeps verification", strptr("bogus"), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			is := is.New(t)
+
+			if tc.value == nil {
+				withUnsetEnv(t, "OAUTH2_REALM_INSECURE")
+			} else {
+				t.Setenv("OAUTH2_REALM_INSECURE", *tc.value)
+			}
+
+			is.Equal(oauthRealmInsecure(context.Background()), tc.want)
+		})
+	}
+}
+
+func strptr(s string) *string { return &s }
+
+// REV-015: the functions file default lives in one constant used by
+// flag registration; changing it breaks this test.
+func TestDefaultFunctionsConfigPath(t *testing.T) {
 	is := is.New(t)
 
-	ctx := context.Background()
-
-	is.Equal(env.GetVariableOrDefault(ctx, "OAUTH2_REALM_INSECURE", "false") == "true", false)
-
-	t.Setenv("OAUTH2_REALM_INSECURE", "true")
-	is.Equal(env.GetVariableOrDefault(ctx, "OAUTH2_REALM_INSECURE", "false") == "true", true)
+	is.Equal(defaultFunctionsConfigPath, "/opt/diwise/config/functions.csv")
 }
-
-// Note (HARM-004): DEV_MGMT_URL, MEASUREMENTS_URL, OAUTH2_TOKEN_URL,
-// OAUTH2_CLIENT_ID and OAUTH2_CLIENT_SECRET are required at startup via
-// GetVariableOrDie and abort the process when missing, so they are
-// verified against README instead of executed here. The -functions flag
-// default (/opt/diwise/config/functions.csv) is registered in main and
-// likewise documented in README.
