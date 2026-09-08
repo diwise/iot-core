@@ -23,9 +23,21 @@ const (
 
 var c *cache.Cache
 
+var stopCacheCleanup func()
+
 func init() {
 	c = cache.NewCache()
-	c.Cleanup(1 * time.Hour)
+	stopCacheCleanup = c.Cleanup(1 * time.Hour)
+}
+
+// StopCacheCleanup terminates the cache sweeper. It is safe to call
+// more than once. Wired to service shutdown at the earliest runner
+// migration that owns shutdown (CORE-004); until then the process
+// lifetime bounds it.
+func StopCacheCleanup() {
+	if stopCacheCleanup != nil {
+		stopCacheCleanup()
+	}
 }
 
 func GetMaxPowerSourceVoltage(ctx context.Context, maxValueFinder measurements.MaxValueFinder, deviceID string) ValueFinder {

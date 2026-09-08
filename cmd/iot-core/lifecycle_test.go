@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/matryer/is"
@@ -19,6 +20,17 @@ func unsetRequiredEnv(t *testing.T) {
 	} {
 		t.Setenv(key, "")
 	}
+}
+
+// REV-010: run returns startup errors to main so deferred cleanup of
+// acquired resources executes before the exit code is decided.
+func TestRunFailsWithoutRequiredEnv(t *testing.T) {
+	is := is.New(t)
+	unsetRequiredEnv(t)
+
+	err := run(context.Background())
+	is.True(err != nil)
+	is.True(strings.Contains(err.Error(), "DEV_MGMT_URL"))
 }
 
 // BASE-012: startup helpers must return errors to main instead of

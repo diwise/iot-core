@@ -15,11 +15,21 @@ type Timer interface {
 	Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error)
 
 	State() bool
+
+	// Stop terminates the value-updater ticker, if started. Safe to
+	// call before activation and more than once. An in-flight update
+	// completes; no further ticks fire afterwards.
+	Stop()
 }
 
 func New() Timer {
+	return NewWithInterval(time.Minute)
+}
+
+func NewWithInterval(interval time.Duration) Timer {
 	return &timer{
 		StartTime: time.Time{},
+		interval:  interval,
 	}
 }
 
@@ -31,6 +41,7 @@ type timer struct {
 
 	TotalDuration time.Duration `json:"totalDuration"`
 	valueUpdater  *time.Ticker
+	interval      time.Duration
 }
 
 func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange func(prop string, value float64, ts time.Time) error) (bool, error) {
@@ -76,7 +87,11 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 				}
 
 				if t.valueUpdater == nil {
-					t.valueUpdater = time.NewTicker(1 * time.Minute)
+					interval := t.interval
+					if interval <= 0 {
+						interval = time.Minute
+					}
+					t.valueUpdater = time.NewTicker(interval)
 					go func() error {
 						for range t.valueUpdater.C {
 							if t.State_ {
@@ -123,4 +138,10 @@ func (t *timer) Handle(ctx context.Context, e *events.MessageAccepted, onchange 
 
 func (t *timer) State() bool {
 	return t.State_
+}
+
+func (t *timer) Stop() {
+	if t.valueUpdater != nil {
+		t.valueUpdater.Stop()
+	}
 }

@@ -41,29 +41,38 @@ func main() {
 	flag.StringVar(&functionsConfigPath, "functions", "/opt/diwise/config/functions.csv", "configuration file for functions")
 	flag.Parse()
 
+	if err := run(ctx); err != nil {
+		fatal(ctx, "iot-core failed", err)
+	}
+}
+
+// run performs startup and serving, returning errors to main so that
+// deferred cleanup of already-acquired resources runs before the
+// process exit code is decided. Only main decides the exit code.
+func run(ctx context.Context) error {
 	var err error
 
 	dmClient, err := createDeviceManagementClient(ctx)
 	if err != nil {
-		fatal(ctx, "failed to create device management client", err)
+		return fmt.Errorf("failed to create device management client: %w", err)
 	}
 	defer dmClient.Close(ctx)
 
 	measurementsClient, err := createMeasurementsClient(ctx)
 	if err != nil {
-		fatal(ctx, "failed to create measurements client", err)
+		return fmt.Errorf("failed to create measurements client: %w", err)
 	}
 	defer measurementsClient.Close()
 
 	msgCtx, err := createMessagingContext(ctx)
 	if err != nil {
-		fatal(ctx, "failed to init messaging", err)
+		return fmt.Errorf("failed to init messaging: %w", err)
 	}
 	defer msgCtx.Close()
 
 	storage, err := createDatabaseConnection(ctx)
 	if err != nil {
-		fatal(ctx, "failed to connect to database", err)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 	defer storage.Close()
 
@@ -72,21 +81,22 @@ func main() {
 	if functionsConfigPath != "" {
 		configFile, err = os.Open(functionsConfigPath)
 		if err != nil {
-			fatal(ctx, "failed to open functions config file", err)
+			return fmt.Errorf("failed to open functions config file: %w", err)
 		}
 		defer configFile.Close()
 	}
 
 	_, api_, err := initialize(ctx, dmClient, measurementsClient, msgCtx, configFile, storage)
 	if err != nil {
-		fatal(ctx, "initialization failed", err)
+		return fmt.Errorf("initialization failed: %w", err)
 	}
 
 	servicePort := env.GetVariableOrDefault(ctx, "SERVICE_PORT", "8080")
-	err = http.ListenAndServe(":"+servicePort, api_.Router())
-	if err != nil {
-		fatal(ctx, "failed to start request router", err)
+	if err := http.ListenAndServe(":"+servicePort, api_.Router()); err != nil {
+		return fmt.Errorf("failed to start request router: %w", err)
 	}
+
+	return nil
 }
 
 func requireEnv(ctx context.Context, key, description string) (string, error) {
