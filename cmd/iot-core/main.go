@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/diwise/iot-core/internal/application"
 	"github.com/diwise/iot-core/internal/application/functions"
@@ -24,6 +25,7 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
+	"github.com/diwise/service-chassis/pkg/infrastructure/servicerunner"
 	"go.opentelemetry.io/otel"
 )
 
@@ -33,71 +35,172 @@ var tracer = otel.Tracer(serviceName)
 
 const defaultFunctionsConfigPath = "/opt/diwise/config/functions.csv"
 
-var functionsConfigPath string
-
 func main() {
 	ctx, flags := parseExternalConfig(context.Background(), defaultFlags())
-	functionsConfigPath = flags[flagFunctionsPath]
 
 	serviceVersion := buildinfo.SourceVersion()
-	ctx, _, cleanup := o11y.Init(ctx, serviceName, serviceVersion, "json")
+	ctx, logger, cleanup := o11y.Init(ctx, serviceName, serviceVersion, "json")
 	defer cleanup()
 
-	if err := run(ctx); err != nil {
-		fatal(ctx, "iot-core failed", err)
-	}
-}
-
-// run performs startup and serving, returning errors to main so that
-// deferred cleanup of already-acquired resources runs before the
-// process exit code is decided. Only main decides the exit code.
-func run(ctx context.Context) error {
-	var err error
-
-	dmClient, err := createDeviceManagementClient(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to create device management client: %w", err)
-	}
-	defer dmClient.Close(ctx)
-
-	measurementsClient, err := createMeasurementsClient(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to create measurements client: %w", err)
-	}
-	defer measurementsClient.Close()
-
-	msgCtx, err := createMessagingContext(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to init messaging: %w", err)
-	}
-	defer msgCtx.Close()
-
-	storage, err := createDatabaseConnection(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-	defer storage.Close()
-
+	// functions.csv öppnas i main och ägs av initialize: OnInit bygger
+	// registret ur den och stänger den därefter. Tom sökväg betyder
+	// inget filinnehåll, samma semantik som tidigare run().
 	var configFile *os.File
 
-	if functionsConfigPath != "" {
-		configFile, err = os.Open(functionsConfigPath)
-		if err != nil {
-			return fmt.Errorf("failed to open functions config file: %w", err)
-		}
-		defer configFile.Close()
+	if path := flags[flagFunctionsPath]; path != "" {
+		f, err := os.Open(path)
+		exitIf(err, logger, "failed to open functions config file")
+		configFile = f
 	}
 
-	_, api_, err := initialize(ctx, dmClient, measurementsClient, msgCtx, configFile, storage)
-	if err != nil {
-		return fmt.Errorf("initialization failed: %w", err)
-	}
+	cfg := loadServiceConfig(flags)
 
-	if err := http.ListenAndServe(":"+servicePort(ctx), api_.Router()); err != nil {
-		return fmt.Errorf("failed to start request router: %w", err)
-	}
+	runner, err := initialize(ctx, flags, &cfg, configFile)
+	exitIf(err, logger, "failed to initialize service runner")
 
+	err = runner.Run(ctx)
+	exitIf(err, logger, "failed to start service runner")
+}
+
+// initialize bygger servicerunnern: konstruktion i OnInit,
+// messaging-start och handlerregistrering i OnStarting, deterministisk
+// stängning i OnShutdown. Kontrollservern bär endast liveness här;
+// readiness-stubbar införs i CORE-005. Den publika servern behåller
+// befintliga routes via registerPublicRoutes.
+func initialize(ctx context.Context, flags flagMap, cfg *serviceConfig, fconfig io.Reader) (servicerunner.Runner[serviceConfig], error) {
+	logger := logging.GetFromContext(ctx)
+
+	var dmClient client.DeviceManagementClient
+	var measurementsClient measurements.MeasurementsClient
+	var messenger messaging.MsgContext
+	var storage database.Storage
+	var app application.App
+	var api_ api.API
+
+	owned := &ownedResources{}
+
+	_, runner := servicerunner.New(ctx, *cfg,
+		webserver("control", listen(flags[flagListenAddress]), port(flags[flagControlPort]),
+			pprof(), liveness(func() error { return nil }),
+		),
+		webserver("public", listen(flags[flagListenAddress]), port(flags[flagServicePort]), withTracing(tracingEnabled(flags)),
+			muxinit(func(ctx context.Context, identifier string, port string, cfg *serviceConfig, handler *http.ServeMux) error {
+				return registerPublicRoutes(handler, &api_)
+			}),
+		),
+		oninit(func(ctx context.Context, cfg *serviceConfig) error {
+			logger.Debug("initializing servicerunner")
+
+			if c, ok := fconfig.(io.Closer); ok {
+				defer c.Close()
+			}
+
+			var err error
+
+			dmClient, err = createDeviceManagementClient(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create device management client: %w", err)
+			}
+			owned.dmClient = dmClient
+
+			measurementsClient, err = createMeasurementsClient(ctx)
+			if err != nil {
+				owned.close(ctx)
+				return fmt.Errorf("failed to create measurements client: %w", err)
+			}
+			owned.measurementsClient = measurementsClient
+
+			messenger, err = createMessagingContext(ctx)
+			if err != nil {
+				owned.close(ctx)
+				return fmt.Errorf("failed to init messaging: %w", err)
+			}
+			owned.messenger = messenger
+
+			storage, err = createDatabaseConnection(ctx)
+			if err != nil {
+				owned.close(ctx)
+				return fmt.Errorf("failed to connect to database: %w", err)
+			}
+			owned.storage = storage
+
+			app, api_, err = buildApplication(ctx, dmClient, measurementsClient, fconfig, storage)
+			if err != nil {
+				owned.close(ctx)
+				return fmt.Errorf("initialization failed: %w", err)
+			}
+
+			return nil
+		}),
+		onstarting(func(ctx context.Context, cfg *serviceConfig) (err error) {
+			logger.Debug("starting servicerunner")
+
+			// OnStarting failures bypass OnShutdown in the runner, so
+			// clean up acquired resources on error below.
+			defer func() {
+				if err != nil {
+					owned.close(ctx)
+				}
+			}()
+
+			messenger.Start()
+
+			if err := registerHandlers(messenger, app); err != nil {
+				return err
+			}
+
+			return nil
+		}),
+		onshutdown(func(ctx context.Context, cfg *serviceConfig) error {
+			logger.Debug("shutting down servicerunner")
+
+			owned.close(ctx)
+
+			return nil
+		}),
+	)
+
+	return runner, nil
+}
+
+// registerPublicRoutes monterar funktions-API:t på runnerns publika mux
+// utan att ändra någon route. Monteringen är lat: runnern bygger muxar
+// redan vid konstruktion, före OnInit, så vidarebefordran slås upp per
+// request när api_ är byggt.
+func registerPublicRoutes(handler *http.ServeMux, api_ *api.API) error {
+	handler.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		(*api_).Router().ServeHTTP(w, r)
+	})
 	return nil
+}
+
+// ownedResources tracks the resources created during OnInit so shutdown
+// stops inflow before clients and storage, exactly once. Shutdown is
+// nil-safe (partial OnInit) and idempotent: the underlying messenger
+// Close is not safe to call twice, hence the sync.Once guard.
+type ownedResources struct {
+	once               sync.Once
+	messenger          messaging.MsgContext
+	measurementsClient measurements.MeasurementsClient
+	dmClient           client.DeviceManagementClient
+	storage            database.Storage
+}
+
+func (o *ownedResources) close(ctx context.Context) {
+	o.once.Do(func() {
+		if o.messenger != nil {
+			o.messenger.Close()
+		}
+		if o.measurementsClient != nil {
+			o.measurementsClient.Close()
+		}
+		if o.dmClient != nil {
+			o.dmClient.Close(ctx)
+		}
+		if o.storage != nil {
+			o.storage.Close()
+		}
+	})
 }
 
 func requireEnv(ctx context.Context, key, description string) (string, error) {
@@ -132,7 +235,9 @@ func createDeviceManagementClient(ctx context.Context) (client.DeviceManagementC
 
 // servicePort is the minimal production seam for the public server
 // port: tests target this function, not the env library, so a changed
-// default or lookup breaks them.
+// default or lookup breaks them. Since CORE-004 the runner reads the
+// port from flags (same env name and default); this seam remains as the
+// env-contract lock.
 func servicePort(ctx context.Context) string {
 	return env.GetVariableOrDefault(ctx, "SERVICE_PORT", "8080")
 }
@@ -173,8 +278,9 @@ func createMessagingContext(ctx context.Context) (messaging.MsgContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	messenger.Start()
 
+	// Start sker i OnStarting, efter att handlerregistrering kan
+	// felkontrolleras; tidigare startade fabriken loopen direkt.
 	return messenger, nil
 }
 
@@ -191,7 +297,10 @@ func createDatabaseConnection(ctx context.Context) (database.Storage, error) {
 	return storage, nil
 }
 
-func initialize(ctx context.Context, dmClient client.DeviceManagementClient, mClient measurements.MeasurementsClient, msgctx messaging.MsgContext, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
+// buildApplication constructs the function registry, application and API
+// without touching the network. Messaging start and handler registration
+// live in OnStarting via registerHandlers so failures surface with context.
+func buildApplication(ctx context.Context, dmClient client.DeviceManagementClient, mClient measurements.MeasurementsClient, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
 	functionsRegistry, err := functions.NewRegistry(ctx, fconfig, storage)
 	if err != nil {
 		return nil, nil, err
@@ -199,14 +308,28 @@ func initialize(ctx context.Context, dmClient client.DeviceManagementClient, mCl
 
 	app := application.New(dmClient, mClient, functionsRegistry)
 
-	msgctx.RegisterCommandHandler(func(m messaging.Message) bool {
-		return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m")
-	}, newCommandHandler(msgctx, app))
-
-	msgctx.RegisterTopicMessageHandler("message.accepted", newTopicMessageHandler(msgctx, app))
-	msgctx.RegisterTopicMessageHandler("function.updated", newFunctionUpdatedTopicMessageHandler(msgctx))
-
 	return app, api.New(ctx, functionsRegistry), nil
+}
+
+// registerHandlers registers the agent command handler and the topic
+// handlers with unchanged filters, routing keys and payload handling.
+// Every registration error aborts startup.
+func registerHandlers(msgctx messaging.MsgContext, app application.App) error {
+	if err := msgctx.RegisterCommandHandler(func(m messaging.Message) bool {
+		return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m")
+	}, newCommandHandler(msgctx, app)); err != nil {
+		return fmt.Errorf("failed to register command handler: %w", err)
+	}
+
+	if err := msgctx.RegisterTopicMessageHandler("message.accepted", newTopicMessageHandler(msgctx, app)); err != nil {
+		return fmt.Errorf("failed to register message.accepted handler: %w", err)
+	}
+
+	if err := msgctx.RegisterTopicMessageHandler("function.updated", newFunctionUpdatedTopicMessageHandler(msgctx)); err != nil {
+		return fmt.Errorf("failed to register function.updated handler: %w", err)
+	}
+
+	return nil
 }
 
 func newCommandHandler(messenger messaging.MsgContext, app application.App) messaging.CommandHandler {
@@ -301,8 +424,9 @@ func newFunctionUpdatedTopicMessageHandler(messenger messaging.MsgContext) messa
 	}
 }
 
-func fatal(ctx context.Context, msg string, err error) {
-	logger := logging.GetFromContext(ctx)
-	logger.Error(msg, "err", err.Error())
-	os.Exit(1)
+func exitIf(err error, logger *slog.Logger, msg string, args ...any) {
+	if err != nil {
+		logger.With(args...).Error(msg, "err", err.Error())
+		os.Exit(1)
+	}
 }

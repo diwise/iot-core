@@ -5,6 +5,7 @@ import (
 	"flag"
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
+	"github.com/diwise/service-chassis/pkg/infrastructure/servicerunner"
 )
 
 // CORE-003: privat typad config ägd av cmd. FlagMap bär de externa
@@ -25,6 +26,10 @@ const (
 	flagOAuthClientSecret
 	flagOAuthInsecure
 	flagFunctionsPath
+
+	flagListenAddress
+	flagControlPort
+	flagEnableTracing
 )
 
 // serverConfig grupperar den publika serverns inställningar.
@@ -71,7 +76,33 @@ func defaultFlags() flagMap {
 		flagOAuthClientSecret: "",
 		flagOAuthInsecure:     "false",
 		flagFunctionsPath:     defaultFunctionsConfigPath,
+
+		flagListenAddress: "0.0.0.0",
+		flagControlPort:   "8000",
+		flagEnableTracing: "true",
 	}
+}
+
+var oninit = servicerunner.OnInit[serviceConfig]
+var onstarting = servicerunner.OnStarting[serviceConfig]
+var onshutdown = servicerunner.OnShutdown[serviceConfig]
+var webserver = servicerunner.WithHTTPServeMux[serviceConfig]
+var muxinit = servicerunner.OnMuxInit[serviceConfig]
+var listen = servicerunner.WithListenAddr[serviceConfig]
+var port = servicerunner.WithPort[serviceConfig]
+var pprof = servicerunner.WithPPROF[serviceConfig]
+var liveness = servicerunner.WithK8SLivenessProbe[serviceConfig]
+
+// withTracing bär servicerunners tracing-wrapper. Namnet avviker från
+// syskontjänsternas `tracing` eftersom main även importerar
+// o11y/tracing för handlerspans.
+var withTracing = servicerunner.WithTracing[serviceConfig]
+
+// tracingEnabled is the minimal production seam for the tracing toggle.
+// Only the exact string "true" enables tracing; ParseBool spellings
+// such as "TRUE" or "1" intentionally do not.
+func tracingEnabled(flags flagMap) bool {
+	return flags[flagEnableTracing] == "true"
 }
 
 func parseExternalConfig(ctx context.Context, flags flagMap) (context.Context, flagMap) {
@@ -87,6 +118,12 @@ func parseExternalConfig(ctx context.Context, flags flagMap) (context.Context, f
 	// functions.csv-sökvägen styrs idag endast av CLI-flaggan
 	// -functions (defaults i defaultFunctionsConfigPath); inget
 	// env-namn läses för den i denna uppgift.
+
+	// CORE-004: nya externa ytor för servicerunner. Dokumenteras som
+	// extern påverkan i CORE-007.
+	flags[flagListenAddress] = envOrDef(ctx, "LISTEN_ADDRESS", flags[flagListenAddress])
+	flags[flagControlPort] = envOrDef(ctx, "CONTROL_PORT", flags[flagControlPort])
+	flags[flagEnableTracing] = envOrDef(ctx, "ENABLE_TRACING", flags[flagEnableTracing])
 
 	apply := func(f flagType) func(string) error {
 		return func(value string) error {

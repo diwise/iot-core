@@ -16,10 +16,10 @@ import (
 // routes resolve, including the {id} path parameter previously read via
 // chi.URLParam.
 func TestAPIRoutesAfterRouterMigration(t *testing.T) {
-	is, dmClient, msgCtx := testSetup(t)
+	is, dmClient, _ := testSetup(t)
 
 	fconf := bytes.NewBufferString("fid1;name;counter;overflow;sensor1;false\na+b;plusname;counter;overflow;sensor2;false\n100%;percentname;counter;overflow;sensor3;false")
-	_, api, err := initialize(context.Background(), dmClient, nil, msgCtx, fconf, &database.StorageMock{
+	_, api, err := buildApplication(context.Background(), dmClient, nil, fconf, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},
@@ -54,10 +54,10 @@ func TestAPIRoutesAfterRouterMigration(t *testing.T) {
 // percent (%25) must resolve exactly once, and a literal plus in the
 // path must be preserved (chi+QueryUnescape used to mangle it to space).
 func TestHistoryRouteDecodesIDExactlyOnce(t *testing.T) {
-	is, dmClient, msgCtx := testSetup(t)
+	is, dmClient, _ := testSetup(t)
 
 	fconf := bytes.NewBufferString("fid1;name;counter;overflow;sensor1;false\na+b;plusname;counter;overflow;sensor2;false\n100%;percentname;counter;overflow;sensor3;false")
-	_, api, err := initialize(context.Background(), dmClient, nil, msgCtx, fconf, &database.StorageMock{
+	_, api, err := buildApplication(context.Background(), dmClient, nil, fconf, &database.StorageMock{
 		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
 			return nil
 		},

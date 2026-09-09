@@ -1,10 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"context"
-	"strings"
+	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/diwise/iot-core/internal/application/measurements"
+	"github.com/diwise/iot-core/internal/infrastructure/database"
+	dmctest "github.com/diwise/iot-device-mgmt/pkg/test"
+	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/matryer/is"
 )
 
@@ -22,15 +31,22 @@ func unsetRequiredEnv(t *testing.T) {
 	}
 }
 
-// REV-010: run returns startup errors to main so deferred cleanup of
-// acquired resources executes before the exit code is decided.
-func TestRunFailsWithoutRequiredEnv(t *testing.T) {
+// CORE-004: runner construction touches no network. OnInit runs at
+// Run-time, so initialize must succeed even without required env;
+// missing env fails first inside OnInit via the unchanged factories
+// (covered by TestCreateClientsRequireEnv).
+func TestInitializeBuildsRunnerWithoutNetwork(t *testing.T) {
 	is := is.New(t)
 	unsetRequiredEnv(t)
 
-	err := run(context.Background())
-	is.True(err != nil)
-	is.True(strings.Contains(err.Error(), "DEV_MGMT_URL"))
+	t.Setenv("RABBITMQ_DISABLED", "true")
+
+	flags := defaultFlags()
+	cfg := loadServiceConfig(flags)
+
+	runner, err := initialize(context.Background(), flags, &cfg, nil)
+	is.NoErr(err)
+	is.True(runner != nil)
 }
 
 // BASE-012: startup helpers must return errors to main instead of
@@ -86,4 +102,154 @@ func TestCreateMessagingContextDisabled(t *testing.T) {
 	is.NoErr(err)
 	is.True(msgCtx != nil)
 	msgCtx.Close()
+}
+
+type fakeMeasurementsClient struct {
+	closes  int
+	onClose func()
+}
+
+func (f *fakeMeasurementsClient) GetMaxValue(ctx context.Context, measurementID string) (float64, error) {
+	return 0, nil
+}
+
+func (f *fakeMeasurementsClient) GetCountTrueValues(ctx context.Context, measurementID string, timeAt, endTimeAt time.Time) (float64, error) {
+	return 0, nil
+}
+
+func (f *fakeMeasurementsClient) Close() {
+	f.closes++
+	if f.onClose != nil {
+		f.onClose()
+	}
+}
+
+var _ measurements.MeasurementsClient = &fakeMeasurementsClient{}
+
+type fakeStorage struct {
+	closes  int
+	onClose func()
+}
+
+func (f *fakeStorage) Initialize(ctx context.Context) error { return nil }
+
+func (f *fakeStorage) Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+	return nil
+}
+
+func (f *fakeStorage) AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+	return nil
+}
+
+func (f *fakeStorage) History(ctx context.Context, id, label string, lastN int) ([]database.LogValue, error) {
+	return nil, nil
+}
+
+func (f *fakeStorage) Close() {
+	f.closes++
+	if f.onClose != nil {
+		f.onClose()
+	}
+}
+
+var _ database.Storage = &fakeStorage{}
+
+// bytesReader builds the functions.csv content used across lifecycle tests.
+func bytesReader(s string) io.Reader { return bytes.NewBufferString(s) }
+
+// CORE-004: shutdown stops inflow before clients and storage, exactly
+// once per owned resource, even when invoked twice.
+func TestShutdownIsOrderedAndIdempotent(t *testing.T) {
+	is := is.New(t)
+
+	var order []string
+	messenger := &messaging.MsgContextMock{
+		CloseFunc: func() { order = append(order, "messenger") },
+	}
+	mClient := &fakeMeasurementsClient{onClose: func() { order = append(order, "measurements") }}
+	dmClient := &dmctest.DeviceManagementClientMock{
+		CloseFunc: func(context.Context) { order = append(order, "dm") },
+	}
+	store := &fakeStorage{onClose: func() { order = append(order, "storage") }}
+
+	owned := &ownedResources{
+		messenger:          messenger,
+		measurementsClient: mClient,
+		dmClient:           dmClient,
+		storage:            store,
+	}
+
+	ctx := context.Background()
+	owned.close(ctx)
+	owned.close(ctx)
+
+	is.Equal(order, []string{"messenger", "measurements", "dm", "storage"})
+	is.Equal(mClient.closes, 1)
+	is.Equal(store.closes, 1)
+	is.Equal(len(messenger.CloseCalls()), 1)
+	is.Equal(len(dmClient.CloseCalls()), 1)
+}
+
+// CORE-004: shutdown with no initialized resources (e.g. failed OnInit)
+// must be a safe no-op.
+func TestShutdownWithoutResourcesIsSafe(t *testing.T) {
+	owned := &ownedResources{}
+
+	owned.close(context.Background())
+	owned.close(context.Background())
+}
+
+// CORE-004: handler registration keeps the command target and both
+// topics, and every registration error aborts startup.
+func TestRegisterHandlersRegistersAllHandlers(t *testing.T) {
+	is := is.New(t)
+	_, dmClient, msgCtx := testSetup(t)
+
+	fconf := bytesReader("fid1;name;counter;overflow;internalID;false")
+	app, _, err := buildApplication(context.Background(), dmClient, nil, fconf, &fakeStorage{})
+	is.NoErr(err)
+
+	is.NoErr(registerHandlers(msgCtx, app))
+	is.Equal(len(msgCtx.RegisterCommandHandlerCalls()), 1)
+	is.Equal(len(msgCtx.RegisterTopicMessageHandlerCalls()), 2)
+}
+
+func TestRegisterHandlersPropagatesError(t *testing.T) {
+	is := is.New(t)
+	_, dmClient, _ := testSetup(t)
+
+	fconf := bytesReader("fid1;name;counter;overflow;internalID;false")
+	app, _, err := buildApplication(context.Background(), dmClient, nil, fconf, &fakeStorage{})
+	is.NoErr(err)
+
+	failing := &messaging.MsgContextMock{
+		RegisterCommandHandlerFunc: func(messaging.MessageFilter, messaging.CommandHandler) error {
+			return errors.New("broker unavailable")
+		},
+	}
+
+	err = registerHandlers(failing, app)
+	is.True(err != nil)
+}
+
+// CORE-004: the runner-owned public mux serves the unchanged API routes.
+func TestPublicMountPreservesRoutes(t *testing.T) {
+	is := is.New(t)
+	_, dmClient, _ := testSetup(t)
+
+	fconf := bytesReader("fid1;name;counter;overflow;internalID;false")
+	_, api_, err := buildApplication(context.Background(), dmClient, nil, fconf, &fakeStorage{})
+	is.NoErr(err)
+
+	mux := http.NewServeMux()
+	is.NoErr(registerPublicRoutes(mux, &api_))
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	resp, _ := testRequest(server, http.MethodGet, "/api/functions", nil)
+	is.Equal(resp.StatusCode, http.StatusOK)
+
+	resp, _ = testRequest(server, http.MethodGet, "/health", nil)
+	is.Equal(resp.StatusCode, http.StatusOK)
 }

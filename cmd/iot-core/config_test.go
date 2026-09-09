@@ -109,6 +109,9 @@ func TestDefaultFlags(t *testing.T) {
 		"OAUTH2_CLIENT_ID",
 		"OAUTH2_CLIENT_SECRET",
 		"OAUTH2_REALM_INSECURE",
+		"LISTEN_ADDRESS",
+		"CONTROL_PORT",
+		"ENABLE_TRACING",
 	} {
 		withUnsetEnv(t, key)
 	}
@@ -123,6 +126,11 @@ func TestDefaultFlags(t *testing.T) {
 	is.Equal(flags[flagOAuthClientSecret], "")
 	is.Equal(flags[flagOAuthInsecure], "false")
 	is.Equal(flags[flagFunctionsPath], defaultFunctionsConfigPath)
+
+	// CORE-004: nya externa ytor för servicerunner.
+	is.Equal(flags[flagListenAddress], "0.0.0.0")
+	is.Equal(flags[flagControlPort], "8000")
+	is.Equal(flags[flagEnableTracing], "true")
 }
 
 // CORE-003: env vinner över defaults med oförändrade env-namn.
@@ -201,4 +209,36 @@ func TestLoadServiceConfig(t *testing.T) {
 
 	flags[flagOAuthInsecure] = "TRUE"
 	is.True(!loadServiceConfig(flags).oauth.insecure)
+}
+
+// CORE-004: de nya externa ytorna för servicerunner följer
+// default < env-precedens med oförändrade beteenden i övrigt.
+func TestRunnerExternalKeysEnvOverrides(t *testing.T) {
+	is := is.New(t)
+	withCleanFlags(t, []string{"iot-core"})
+
+	t.Setenv("LISTEN_ADDRESS", "127.0.0.1")
+	t.Setenv("CONTROL_PORT", "9001")
+	t.Setenv("ENABLE_TRACING", "false")
+
+	_, flags := parseExternalConfig(context.Background(), defaultFlags())
+
+	is.Equal(flags[flagListenAddress], "127.0.0.1")
+	is.Equal(flags[flagControlPort], "9001")
+	is.Equal(flags[flagEnableTracing], "false")
+}
+
+// CORE-004: tracing-toggeln använder exakt "true"-jämförelse, samma
+// semantik som referenstjänsterna.
+func TestTracingEnabledSeam(t *testing.T) {
+	is := is.New(t)
+
+	flags := defaultFlags()
+	flags[flagEnableTracing] = "true"
+	is.True(tracingEnabled(flags))
+
+	for _, v := range []string{"TRUE", "1", "false", "", "bogus"} {
+		flags[flagEnableTracing] = v
+		is.True(!tracingEnabled(flags))
+	}
 }
