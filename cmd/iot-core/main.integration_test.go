@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
+	"github.com/diwise/iot-core/internal/infrastructure/database"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
 	dmctest "github.com/diwise/iot-device-mgmt/pkg/test"
 	"github.com/diwise/messaging-golang/pkg/messaging"

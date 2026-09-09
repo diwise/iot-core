@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/diwise/iot-core/internal/application/measurements"
-	"github.com/diwise/iot-core/internal/pkg/infrastructure/cache"
+	"github.com/diwise/iot-core/internal/infrastructure/cache"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/senml"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"

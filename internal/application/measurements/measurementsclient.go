@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/diwise/iot-core/internal/pkg/infrastructure/cache"
+	"github.com/diwise/iot-core/internal/infrastructure/cache"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"

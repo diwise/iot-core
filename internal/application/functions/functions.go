@@ -17,7 +17,7 @@ import (
 	"github.com/diwise/iot-core/internal/application/functions/stopwatch"
 	"github.com/diwise/iot-core/internal/application/functions/timers"
 	"github.com/diwise/iot-core/internal/application/functions/waterqualities"
-	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
+	"github.com/diwise/iot-core/internal/infrastructure/database"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/senml"

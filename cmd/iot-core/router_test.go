@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
+	"github.com/diwise/iot-core/internal/infrastructure/database"
 )
 
 // Router migration (chi -> service-chassis router): locks that the API
