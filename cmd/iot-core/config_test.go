@@ -65,12 +65,12 @@ func TestOAuthRealmInsecureSeam(t *testing.T) {
 		want  bool
 	}{
 		{"unset uses secure default", nil, false},
-		{"empty uses secure default", strptr(""), false},
-		{"exact true disables verification", strptr("true"), true},
-		{"uppercase TRUE keeps verification", strptr("TRUE"), false},
-		{"numeric 1 keeps verification", strptr("1"), false},
-		{"false keeps verification", strptr("false"), false},
-		{"invalid keeps verification", strptr("bogus"), false},
+		{"empty uses secure default", new(""), false},
+		{"exact true disables verification", new("true"), true},
+		{"uppercase TRUE keeps verification", new("TRUE"), false},
+		{"numeric 1 keeps verification", new("1"), false},
+		{"false keeps verification", new("false"), false},
+		{"invalid keeps verification", new("bogus"), false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			is := is.New(t)
@@ -86,7 +86,8 @@ func TestOAuthRealmInsecureSeam(t *testing.T) {
 	}
 }
 
-func strptr(s string) *string { return &s }
+//go:fix inline
+func strptr(s string) *string { return new(s) }
 
 // REV-015: the functions file default lives in one constant used by
 // flag registration; changing it breaks this test.
