@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"sync"
 
 	"github.com/diwise/iot-core/internal/application/decorators"
@@ -72,11 +71,11 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 	}
 
 	log := logging.GetFromContext(ctx)
-	log.Debug(fmt.Sprintf("received message of type %s for device %s", msg.ContentType(), msg.DeviceID()), slog.String("body", string(msg.Body())))
+	log.Debug("received message", "sensor_id", msg.DeviceID(), "content_type", msg.ContentType(), "object_id", msg.ObjectID())
 
 	device, err := a.client.FindDeviceFromInternalID(ctx, msg.DeviceID())
 	if err != nil {
-		log.Debug(fmt.Sprintf("could not find device with internalID %s", msg.DeviceID()), "err", err.Error())
+		log.Debug("could not find device", "sensor_id", msg.DeviceID(), "err", err.Error())
 		return nil, ErrCouldNotFindDevice
 	}
 
@@ -97,7 +96,7 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 
 	ma := events.NewMessageAccepted(clone, decs...)
 
-	log.Debug(fmt.Sprintf("message.accepted created for device %s with object type %s", ma.DeviceID(), ma.ObjectID()), slog.String("body", string(ma.Body())))
+	log.Debug("message.accepted created", "sensor_id", ma.DeviceID(), "object_id", ma.ObjectID())
 
 	return ma, nil
 }

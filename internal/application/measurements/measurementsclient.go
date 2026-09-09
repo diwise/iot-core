@@ -260,7 +260,7 @@ func (c measurementsClient) getApiResponse(ctx context.Context, params url.Value
 		return nil, err
 	}
 
-	log.Debug(fmt.Sprintf("response body: %s", string(body)))
+	log.Debug("received measurements response", "size", len(body))
 
 	jar := jsonApiResponse{}
 	err = json.Unmarshal(body, &jar)

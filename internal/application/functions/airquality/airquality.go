@@ -2,9 +2,7 @@ package airquality
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/diwise/iot-core/pkg/lwm2m"
@@ -136,8 +134,7 @@ func (aq *airquality) Handle(ctx context.Context, e *events.MessageAccepted, onc
 		aq.Timestamp_ = time.Now().UTC()
 	}
 
-	b, _ := json.Marshal(aq)
-	log.Debug(fmt.Sprintf("AirQuality changed: %t.\n%s", hasChanged, string(b)))
+	log.Debug("airquality handled", "changed", hasChanged)
 
 	return hasChanged, errors.Join(errs...)
 }

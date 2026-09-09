@@ -2,7 +2,6 @@ package stopwatch
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -66,8 +65,7 @@ func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, 
 		ts = time.Now().UTC()
 	}
 
-	storedState, _ := json.Marshal(sw)
-	log.Debug("handling stopwatch", slog.String("loaded_state", string(storedState)), slog.String("incoming_body", string(e.Body())))
+	log.Debug("handling stopwatch", slog.Bool("stored_state", sw.State), slog.Int("stored_count", int(sw.Count)))
 
 	currentState := sw.State
 	currentCount := sw.Count
@@ -172,8 +170,7 @@ func (sw *StopwatchImpl) Handle(ctx context.Context, e *events.MessageAccepted, 
 		return false, err
 	}
 
-	exitState, _ := json.Marshal(sw)
-	log.Debug("handling stopwatch", slog.String("new_state", string(exitState)))
+	log.Debug("handling stopwatch", slog.Bool("new_state", sw.State), slog.Int("new_count", int(sw.Count)))
 
 	return stateChanged, nil
 }

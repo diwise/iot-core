@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log/slog"
 	"os"
 	"testing"
 
@@ -112,6 +113,7 @@ func TestDefaultFlags(t *testing.T) {
 		"LISTEN_ADDRESS",
 		"CONTROL_PORT",
 		"ENABLE_TRACING",
+		"LOG_LEVEL",
 	} {
 		withUnsetEnv(t, key)
 	}
@@ -131,6 +133,9 @@ func TestDefaultFlags(t *testing.T) {
 	is.Equal(flags[flagListenAddress], "0.0.0.0")
 	is.Equal(flags[flagControlPort], "8000")
 	is.Equal(flags[flagEnableTracing], "true")
+
+	// CORE-006: gemensam LOG_LEVEL-tolkning med övriga tjänster.
+	is.Equal(flags[flagLogLevel], "debug")
 }
 
 // CORE-003: env vinner över defaults med oförändrade env-namn.
@@ -226,6 +231,40 @@ func TestRunnerExternalKeysEnvOverrides(t *testing.T) {
 	is.Equal(flags[flagListenAddress], "127.0.0.1")
 	is.Equal(flags[flagControlPort], "9001")
 	is.Equal(flags[flagEnableTracing], "false")
+}
+
+// CORE-006: LOG_LEVEL följer default < env < CLI-precedens.
+func TestLogLevelPrecedence(t *testing.T) {
+	is := is.New(t)
+	withCleanFlags(t, []string{"iot-core"})
+
+	t.Setenv("LOG_LEVEL", "info")
+
+	_, flags := parseExternalConfig(context.Background(), defaultFlags())
+	is.Equal(flags[flagLogLevel], "info")
+}
+
+func TestLogLevelCLIOverridesEnv(t *testing.T) {
+	is := is.New(t)
+	withCleanFlags(t, []string{"iot-core", "-loglevel=error"})
+
+	t.Setenv("LOG_LEVEL", "info")
+
+	_, flags := parseExternalConfig(context.Background(), defaultFlags())
+	is.Equal(flags[flagLogLevel], "error")
+}
+
+// CORE-006: låser LOG_LEVEL-tolkningen inklusive tyst debug-fallback.
+func TestParseLogLevel(t *testing.T) {
+	is := is.New(t)
+
+	is.Equal(parseLogLevel("debug"), slog.LevelDebug)
+	is.Equal(parseLogLevel("info"), slog.LevelInfo)
+	is.Equal(parseLogLevel("warn"), slog.LevelWarn)
+	is.Equal(parseLogLevel("warning"), slog.LevelWarn)
+	is.Equal(parseLogLevel("error"), slog.LevelError)
+	is.Equal(parseLogLevel("INFO"), slog.LevelInfo)
+	is.Equal(parseLogLevel("bogus"), slog.LevelDebug)
 }
 
 // CORE-004: tracing-toggeln använder exakt "true"-jämförelse, samma

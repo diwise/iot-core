@@ -43,6 +43,8 @@ func main() {
 	ctx, logger, cleanup := o11y.Init(ctx, serviceName, serviceVersion, "json")
 	defer cleanup()
 
+	logging.SetLogLevel(parseLogLevel(flags[flagLogLevel]))
+
 	// functions.csv öppnas i main och ägs av initialize: OnInit bygger
 	// registret ur den och stänger den därefter. Tom sökväg betyder
 	// inget filinnehåll, samma semantik som tidigare run().
@@ -359,10 +361,10 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 			return err
 		}
 
-		logger = logger.With(slog.String("device_id", evt.DeviceID()))
+		logger = logger.With(slog.String("sensor_id", evt.DeviceID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
-		logger.Debug("message.received", "device_id", evt.DeviceID(), "object_id", evt.ObjectID())
+		logger.Debug("message.received", "sensor_id", evt.DeviceID(), "object_id", evt.ObjectID())
 
 		m, err := app.MessageReceived(ctx, evt)
 		if err != nil {
@@ -375,7 +377,7 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 			return err
 		}
 
-		logger.Debug("publishing message", slog.String("device_id", m.DeviceID()), slog.String("object_id", m.ObjectID()), slog.String("topic", m.TopicName()))
+		logger.Debug("publishing message", slog.String("sensor_id", m.DeviceID()), slog.String("object_id", m.ObjectID()), slog.String("topic", m.TopicName()))
 
 		err = messenger.PublishOnTopic(ctx, m)
 		if err != nil {
@@ -411,7 +413,7 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 
 		logger.Debug(fmt.Sprintf("handling topic message for %s with type %s and content-type %s", evt.DeviceID(), evt.ObjectID(), evt.ContentType()))
 
-		logger = logger.With(slog.String("device_id", evt.DeviceID()), slog.String("object_id", evt.ObjectID()))
+		logger = logger.With(slog.String("sensor_id", evt.DeviceID()), slog.String("object_id", evt.ObjectID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
 		err = app.MessageAccepted(ctx, evt, messenger)
@@ -440,5 +442,20 @@ func exitIf(err error, logger *slog.Logger, msg string, args ...any) {
 	if err != nil {
 		logger.With(args...).Error(msg, "err", err.Error())
 		os.Exit(1)
+	}
+}
+
+func parseLogLevel(level string) slog.Level {
+	switch strings.ToLower(level) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelDebug
 	}
 }

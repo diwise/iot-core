@@ -30,6 +30,8 @@ const (
 	flagListenAddress
 	flagControlPort
 	flagEnableTracing
+
+	flagLogLevel
 )
 
 // serverConfig grupperar den publika serverns inställningar.
@@ -80,6 +82,8 @@ func defaultFlags() flagMap {
 		flagListenAddress: "0.0.0.0",
 		flagControlPort:   "8000",
 		flagEnableTracing: "true",
+
+		flagLogLevel: "debug",
 	}
 }
 
@@ -125,6 +129,7 @@ func parseExternalConfig(ctx context.Context, flags flagMap) (context.Context, f
 	flags[flagListenAddress] = envOrDef(ctx, "LISTEN_ADDRESS", flags[flagListenAddress])
 	flags[flagControlPort] = envOrDef(ctx, "CONTROL_PORT", flags[flagControlPort])
 	flags[flagEnableTracing] = envOrDef(ctx, "ENABLE_TRACING", flags[flagEnableTracing])
+	flags[flagLogLevel] = envOrDef(ctx, "LOG_LEVEL", flags[flagLogLevel])
 
 	apply := func(f flagType) func(string) error {
 		return func(value string) error {
@@ -134,6 +139,7 @@ func parseExternalConfig(ctx context.Context, flags flagMap) (context.Context, f
 	}
 
 	flag.Func("functions", "configuration file for functions", apply(flagFunctionsPath))
+	flag.Func("loglevel", "set the log level", apply(flagLogLevel))
 	flag.Parse()
 
 	return ctx, flags

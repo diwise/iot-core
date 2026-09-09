@@ -1,15 +1,19 @@
 package measurements
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/matryer/is"
 )
 
@@ -164,4 +168,39 @@ func TestMeasurementsClientTokenFailureReleasesTransport(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	is.Equal(idle(), 0)
+}
+
+// CORE-006: measurements-svar får aldrig loggas rutinmässigt. Klienten
+// loggar svarstorlek som metadata; en unik markörsträng i bodyn får
+// inte förekomma i loggarna.
+func TestMeasurementsResponseBodyIsNotLogged(t *testing.T) {
+	is := is.New(t)
+
+	const marker = "LOGPROBE-RESP-4c1e"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/api/v0/measurements" {
+			fmt.Fprintf(w, `{"data":{"max":2.5},"marker":%q}`, marker)
+			return
+		}
+		fmt.Fprint(w, `{"access_token":"test-token","token_type":"Bearer","expires_in":3600}`)
+	}))
+	defer srv.Close()
+
+	c, err := NewMeasurementsClient(context.Background(), srv.URL, srv.URL, "id", "secret", false)
+	is.NoErr(err)
+	defer c.Close()
+
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	ctx := logging.NewContextWithLogger(context.Background(), logger)
+
+	v, err := c.GetMaxValue(ctx, "m1")
+	is.NoErr(err)
+	is.Equal(v, 2.5)
+
+	out := buf.String()
+	is.True(!strings.Contains(out, marker))
+	is.True(strings.Contains(out, "size"))
 }
