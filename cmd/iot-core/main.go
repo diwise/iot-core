@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"log/slog"
@@ -37,12 +36,12 @@ const defaultFunctionsConfigPath = "/opt/diwise/config/functions.csv"
 var functionsConfigPath string
 
 func main() {
-	serviceVersion := buildinfo.SourceVersion()
-	ctx, _, cleanup := o11y.Init(context.Background(), serviceName, serviceVersion, "json")
-	defer cleanup()
+	ctx, flags := parseExternalConfig(context.Background(), defaultFlags())
+	functionsConfigPath = flags[flagFunctionsPath]
 
-	flag.StringVar(&functionsConfigPath, "functions", defaultFunctionsConfigPath, "configuration file for functions")
-	flag.Parse()
+	serviceVersion := buildinfo.SourceVersion()
+	ctx, _, cleanup := o11y.Init(ctx, serviceName, serviceVersion, "json")
+	defer cleanup()
 
 	if err := run(ctx); err != nil {
 		fatal(ctx, "iot-core failed", err)
