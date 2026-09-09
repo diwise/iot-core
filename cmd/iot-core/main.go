@@ -22,6 +22,7 @@ import (
 	"github.com/diwise/messaging-golang/pkg/messaging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/buildinfo"
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
+	k8shandlers "github.com/diwise/service-chassis/pkg/infrastructure/net/http/handlers"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"
@@ -81,7 +82,7 @@ func initialize(ctx context.Context, flags flagMap, cfg *serviceConfig, fconfig 
 
 	_, runner := servicerunner.New(ctx, *cfg,
 		webserver("control", listen(flags[flagListenAddress]), port(flags[flagControlPort]),
-			pprof(), liveness(func() error { return nil }),
+			pprof(), liveness(func() error { return nil }), readiness(readinessProbes()),
 		),
 		webserver("public", listen(flags[flagListenAddress]), port(flags[flagServicePort]), withTracing(tracingEnabled(flags)),
 			muxinit(func(ctx context.Context, identifier string, port string, cfg *serviceConfig, handler *http.ServeMux) error {
@@ -161,6 +162,17 @@ func initialize(ctx context.Context, flags flagMap, cfg *serviceConfig, fconfig 
 	)
 
 	return runner, nil
+}
+
+// readinessProbes returns the named readiness stubs. Per harmonization
+// standard they always report OK and never call RabbitMQ, PostgreSQL,
+// device management, measurements, OAuth or the function registry.
+// Probe names match the sibling services for external probe definitions.
+func readinessProbes() map[string]k8shandlers.ServiceProber {
+	return map[string]k8shandlers.ServiceProber{
+		"rabbitmq":  func(context.Context) (string, error) { return "ok", nil },
+		"timescale": func(context.Context) (string, error) { return "ok", nil },
+	}
 }
 
 // registerPublicRoutes monterar funktions-API:t på runnerns publika mux

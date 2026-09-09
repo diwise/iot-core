@@ -92,6 +92,7 @@ var listen = servicerunner.WithListenAddr[serviceConfig]
 var port = servicerunner.WithPort[serviceConfig]
 var pprof = servicerunner.WithPPROF[serviceConfig]
 var liveness = servicerunner.WithK8SLivenessProbe[serviceConfig]
+var readiness = servicerunner.WithK8SReadinessProbes[serviceConfig]
 
 // withTracing bär servicerunners tracing-wrapper. Namnet avviker från
 // syskontjänsternas `tracing` eftersom main även importerar

@@ -14,6 +14,7 @@ import (
 	"github.com/diwise/iot-core/internal/infrastructure/database"
 	dmctest "github.com/diwise/iot-device-mgmt/pkg/test"
 	"github.com/diwise/messaging-golang/pkg/messaging"
+	k8shandlers "github.com/diwise/service-chassis/pkg/infrastructure/net/http/handlers"
 	"github.com/matryer/is"
 )
 
@@ -232,6 +233,51 @@ func TestRegisterHandlersPropagatesError(t *testing.T) {
 	is.True(err != nil)
 }
 
+// CORE-005: readiness-stubbarna rapporterar alltid OK utan att röra
+// något beroende.
+func TestReadinessStubsAlwaysOK(t *testing.T) {
+	is := is.New(t)
+
+	probes := readinessProbes()
+	is.Equal(len(probes), 2)
+
+	for _, name := range []string{"rabbitmq", "timescale"} {
+		status, err := probes[name](context.Background())
+		is.NoErr(err)
+		is.Equal(status, "ok")
+	}
+}
+
+// CORE-005: kontrollserverns probe-handlers svarar OK för de namngivna
+// stubbarna. Sökvägarna (/readyz, /readyz/{check}) ägs av runnern;
+// här verifieras våra prober genom samma handlers.
+func TestControlProbeHandlersRespondOK(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+	probes := readinessProbes()
+
+	readyz := k8shandlers.NewReadinessHandler(ctx, probes)
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	rec := httptest.NewRecorder()
+	readyz(rec, req)
+	is.Equal(rec.Code, http.StatusNoContent)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /readyz/{check}", k8shandlers.NewSingleReadinessHandler(ctx, probes))
+
+	for _, name := range []string{"rabbitmq", "timescale"} {
+		req := httptest.NewRequest(http.MethodGet, "/readyz/"+name, nil)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		is.Equal(rec.Code, http.StatusNoContent)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/readyz/unknown", nil)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	is.Equal(rec.Code, http.StatusNotFound)
+}
+
 // CORE-004: the runner-owned public mux serves the unchanged API routes.
 func TestPublicMountPreservesRoutes(t *testing.T) {
 	is := is.New(t)
@@ -250,6 +296,7 @@ func TestPublicMountPreservesRoutes(t *testing.T) {
 	resp, _ := testRequest(server, http.MethodGet, "/api/functions", nil)
 	is.Equal(resp.StatusCode, http.StatusOK)
 
+	// CORE-005: publik /health är borttagen.
 	resp, _ = testRequest(server, http.MethodGet, "/health", nil)
-	is.Equal(resp.StatusCode, http.StatusOK)
+	is.Equal(resp.StatusCode, http.StatusNotFound)
 }

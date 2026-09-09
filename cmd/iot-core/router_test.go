@@ -45,8 +45,10 @@ func TestAPIRoutesAfterRouterMigration(t *testing.T) {
 	is.Equal(resp.StatusCode, http.StatusOK)
 	is.True(strings.Contains(body, `"id": "fid1"`))
 
+	// CORE-005: publik GET /health är borttagen; proberna bor på
+	// kontrollservern.
 	resp, _ = testRequest(server, http.MethodGet, "/health", nil)
-	is.Equal(resp.StatusCode, http.StatusOK)
+	is.Equal(resp.StatusCode, http.StatusNotFound)
 }
 
 // REV-003: the stdlib router hands over an already-decoded path segment,

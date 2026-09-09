@@ -61,7 +61,10 @@ Precedens: default < miljovariabel < CLI-flagga.
 
 | Variabel | Default | Notering |
 | --- | --- | --- |
-| `SERVICE_PORT` | `8080` | Enda HTTP-servern binds mot `:SERVICE_PORT`; ingen separat `LISTEN_ADDRESS` eller kontrollserver i nulaget |
+| `SERVICE_PORT` | `8080` | Publika API-servern binds mot `LISTEN_ADDRESS:SERVICE_PORT` |
+| `LISTEN_ADDRESS` | `0.0.0.0` | Bindadress for bade publik server och kontrollserver (CORE-004) |
+| `CONTROL_PORT` | `8000` | Kontrollservern binds mot `LISTEN_ADDRESS:CONTROL_PORT` (CORE-004) |
+| `ENABLE_TRACING` | `true` | Endast exakt `true` aktiverar tracing-wrappern pa publika servern (CORE-004) |
 | `DEV_MGMT_URL` | (kravs vid startup) |  |
 | `MEASUREMENTS_URL` | (kravs vid startup) |  |
 | `OAUTH2_TOKEN_URL` | (kravs vid startup) |  |
@@ -87,7 +90,7 @@ Precedens: default < miljovariabel < CLI-flagga.
 | `RABBITMQ_DISABLED` | `false` |  |
 | `RABBITMQ_INIT_TIMEOUT` | `10` | Sekunder |
 
-Halsa: `GET /health` pa samma port som API:t, svarar alltid 200. Ingen liveness/readiness-prob mot beroenden och ingen `LOG_LEVEL`-styrning i nulaget.
+Halsa (CORE-005): liveness och namngivna readiness-stubbar (`rabbitmq`, `timescale`) bor pa kontrollservern (`LISTEN_ADDRESS:CONTROL_PORT`) och returnerar alltid OK utan natverksanrop. Sökvägar (runner-standard): `GET /health`, `GET /healthz`, `GET /livez`, `GET /readyz`, `GET /readyz/{check}`. Den publika `GET /health` pa `SERVICE_PORT` ar borttagen. **Obligatorisk extern andring:** Kubernetes- och Compose-prober som anvander publik `/health` maste flytta till kontrollserverns sökvägar atomiskt med denna release. Ingen `LOG_LEVEL`-styrning i nulaget.
 
 Externa Kubernetes- och Compose-definitioner finns inte i detta repo och ar darfor inte inventerade har.
 
