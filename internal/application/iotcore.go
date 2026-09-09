@@ -71,11 +71,11 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 	}
 
 	log := logging.GetFromContext(ctx)
-	log.Debug("received message", "sensor_id", msg.DeviceID(), "content_type", msg.ContentType(), "object_id", msg.ObjectID())
+	log.Debug("received message", "device_id", msg.DeviceID(), "content_type", msg.ContentType(), "object_id", msg.ObjectID())
 
 	device, err := a.client.FindDeviceFromInternalID(ctx, msg.DeviceID())
 	if err != nil {
-		log.Debug("could not find device", "sensor_id", msg.DeviceID(), "err", err.Error())
+		log.Debug("could not find device", "device_id", msg.DeviceID(), "err", err.Error())
 		return nil, ErrCouldNotFindDevice
 	}
 
@@ -96,7 +96,7 @@ func (a *app) MessageReceived(ctx context.Context, msg events.MessageReceived) (
 
 	ma := events.NewMessageAccepted(clone, decs...)
 
-	log.Debug("message.accepted created", "sensor_id", ma.DeviceID(), "object_id", ma.ObjectID())
+	log.Debug("message.accepted created", "device_id", ma.DeviceID(), "object_id", ma.ObjectID())
 
 	return ma, nil
 }

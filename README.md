@@ -101,7 +101,7 @@ Precedens: default < miljovariabel < CLI-flagga.
 
 Halsa (CORE-005): liveness och namngivna readiness-stubbar (`rabbitmq`, `timescale`) bor pa kontrollservern (`LISTEN_ADDRESS:CONTROL_PORT`) och returnerar alltid OK utan natverksanrop. Sökvägar (runner-standard): `GET /health`, `GET /healthz`, `GET /livez`, `GET /readyz`, `GET /readyz/{check}`. Den publika `GET /health` pa `SERVICE_PORT` ar borttagen. **Obligatorisk extern andring:** Kubernetes- och Compose-prober som anvander publik `/health` maste flytta till kontrollserverns sökvägar atomiskt med denna release.
 
-Loggning (CORE-006): `LOG_LEVEL` (`debug` default; `info`, `warn`/`warning`, `error`; okand varde faller tillbaka till `debug`) styrs via env eller `-loglevel`. Strukturerade falt: `trace_id`, `sensor_id`, `object_id`, `topic`, `function_id`. Sensorpayloads och measurements-svar loggas aldrig rutinmässigt.
+Loggning (CORE-006): `LOG_LEVEL` (`debug` default; `info`, `warn`/`warning`, `error`; okand varde faller tillbaka till `debug`) styrs via env eller `-loglevel`. Strukturerade falt: `trace_id`, `device_id`, `object_id`, `topic`, `function_id`. `device_id` ar det interna ID:t som all data lagras mot; sensorns fysiska ID (`sensor_id`, t.ex. devEUI) finns inte i core och loggas darfor inte har. Sensorpayloads och measurements-svar loggas aldrig rutinmässigt.
 
 Externa Kubernetes- och Compose-definitioner finns inte i detta repo och ar darfor inte inventerade har.
 

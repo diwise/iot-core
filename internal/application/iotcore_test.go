@@ -23,7 +23,9 @@ func captureLoggerContext(buf *bytes.Buffer) context.Context {
 
 // CORE-006: sensorpayloads får aldrig loggas rutinmässigt. MessageReceived
 // loggar identitet och typ, aldrig body. Provet använder en unik
-// markörsträng som endast finns i bodyn.
+// markörsträng som endast finns i bodyn. Identiteten här är det interna
+// device-ID:t (sensor_id/devEUI finns inte i core); därför loggas
+// fältet device_id.
 func TestMessageReceivedDoesNotLogBody(t *testing.T) {
 	is := is.New(t)
 
@@ -31,7 +33,7 @@ func TestMessageReceivedDoesNotLogBody(t *testing.T) {
 
 	body := `{
 		"pack":[
-			{"bn":"sensor-log-probe-1/3200/","bt":1675805579,"n":"0","vs":"urn:oma:lwm2m:ext:3200"},
+			{"bn":"device-log-probe-1/3200/","bt":1675805579,"n":"0","vs":"urn:oma:lwm2m:ext:3200"},
 			{"n":"5500","vb":true},
 			{"n":"5850","vs":"` + marker + `"}
 		],
@@ -56,7 +58,6 @@ func TestMessageReceivedDoesNotLogBody(t *testing.T) {
 
 	out := buf.String()
 	is.True(!strings.Contains(out, marker))
-	is.True(strings.Contains(out, "sensor-log-probe-1"))
-	is.True(strings.Contains(out, "sensor_id"))
-	is.True(!strings.Contains(out, "device_id"))
+	is.True(strings.Contains(out, "device-log-probe-1"))
+	is.True(strings.Contains(out, "device_id"))
 }

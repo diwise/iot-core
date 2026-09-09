@@ -75,7 +75,7 @@ func (f *fnct) Name() string {
 
 func (f *fnct) Handle(ctx context.Context, e *events.MessageAccepted, msgctx messaging.MsgContext) error {
 	log := logging.GetFromContext(ctx)
-	log = log.With(slog.String("function_id", f.ID()), slog.String("sensor_id", e.DeviceID()))
+	log = log.With(slog.String("function_id", f.ID()), slog.String("device_id", e.DeviceID()))
 	ctx = logging.NewContextWithLogger(ctx, log)
 
 	if e.Timestamp.After(time.Now()) {
