@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/diwise/iot-core/internal/pkg/application/functions"
+	"github.com/diwise/iot-core/internal/application/functions"
 	"github.com/diwise/service-chassis/pkg/infrastructure/net/http/router"
 )
 

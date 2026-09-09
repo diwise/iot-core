@@ -6,7 +6,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/diwise/iot-core/internal/pkg/application/measurements"
+	"github.com/diwise/iot-core/internal/application/measurements"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/senml"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"

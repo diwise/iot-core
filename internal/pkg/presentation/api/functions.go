@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/diwise/iot-core/internal/pkg/application/functions"
+	"github.com/diwise/iot-core/internal/application/functions"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/tracing"

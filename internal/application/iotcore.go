@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/diwise/iot-core/internal/pkg/application/decorators"
-	"github.com/diwise/iot-core/internal/pkg/application/functions"
-	"github.com/diwise/iot-core/internal/pkg/application/measurements"
+	"github.com/diwise/iot-core/internal/application/decorators"
+	"github.com/diwise/iot-core/internal/application/functions"
+	"github.com/diwise/iot-core/internal/application/measurements"
 	"github.com/diwise/iot-core/pkg/messaging/events"
 	"github.com/diwise/iot-device-mgmt/pkg/client"
 	"github.com/diwise/messaging-golang/pkg/messaging"

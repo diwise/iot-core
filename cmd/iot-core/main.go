@@ -12,9 +12,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/diwise/iot-core/internal/pkg/application"
-	"github.com/diwise/iot-core/internal/pkg/application/functions"
-	"github.com/diwise/iot-core/internal/pkg/application/measurements"
+	"github.com/diwise/iot-core/internal/application"
+	"github.com/diwise/iot-core/internal/application/functions"
+	"github.com/diwise/iot-core/internal/application/measurements"
 	"github.com/diwise/iot-core/internal/pkg/infrastructure/database"
 	"github.com/diwise/iot-core/internal/pkg/presentation/api"
 	"github.com/diwise/iot-core/pkg/messaging/events"
