@@ -17,9 +17,12 @@ flowchart LR
     end 
 ```
 
-## Dependencies  
- - [iot-device-mgmt](https://github.com/diwise/iot-device-mgmt)
- - [RabbitMQ](https://www.rabbitmq.com/)
+## Dependencies
+ - [iot-device-mgmt](https://github.com/diwise/iot-device-mgmt) (`DEV_MGMT_URL`, enhetsslagning och berikning)
+ - Measurements-API via iot-events (`MEASUREMENTS_URL`, aggregerade matvarden)
+ - [RabbitMQ](https://www.rabbitmq.com/) (kommando fran agent, `message.accepted`, `function.updated`)
+ - PostgreSQL/TimescaleDB (funktionsregister och historik)
+ - OAuth2/OIDC-tokenutgivare (`OAUTH2_TOKEN_URL`, klientautentisering mot device management och measurements)
 
 # Build and test
 
@@ -48,10 +51,15 @@ Database integration tests skip by default. Set `IOT_TEST_DATABASE=1` with a run
 "OAUTH2_CLIENT_SECRET": "<client secret>",
 "OAUTH2_REALM_INSECURE": "false",
 "SERVICE_PORT": "8080",
+"LISTEN_ADDRESS": "0.0.0.0",
+"CONTROL_PORT": "8000",
+"ENABLE_TRACING": "true",
+"LOG_LEVEL": "debug",
 "POSTGRES_HOST": "url to postgresql database"
 ```
 ## CLI flags
  - `functions` - Configuration file for functions (default `/opt/diwise/config/functions.csv`)
+ - `loglevel` - Set the log level (`debug` default; `info`, `warn`/`warning`, `error`)
 
 ## Configuration files
  - `functions.csv` (default `/opt/diwise/config/functions.csv`) - Required at startup, defines the function registry.
@@ -98,6 +106,31 @@ Loggning (CORE-006): `LOG_LEVEL` (`debug` default; `info`, `warn`/`warning`, `er
 Externa Kubernetes- och Compose-definitioner finns inte i detta repo och ar darfor inte inventerade har.
 
 Routern ar `github.com/diwise/service-chassis/pkg/infrastructure/net/http/router` (samma som ovriga API-tjanster). Det tidigare CORS-middlewaren (`rs/cors`) ar borttaget; tjansten satter inga `Access-Control-*`-headers i nulaget.
+
+# Startup
+
+1. Las defaults, miljovariabler och CLI-flaggor (precedens: default < env < CLI).
+2. Oppna `functions.csv` (kraver ratt sokvag; tom sokvag betyder tomt registerunderlag).
+3. Skapa device management-klient, measurements-klient, messaging-kontext och databasanslutning i `OnInit`. Partiellt misslyckande stanger redan oppnade resurser.
+4. Starta messaging och registrera kommandohandlern samt `message.accepted`- och `function.updated`-handlerna i `OnStarting`. Registreringsfel avbryter startup.
+5. Servera funktions-API:t pa `SERVICE_PORT` och liveness/readiness-stubbar pa `CONTROL_PORT`.
+6. Vid shutdown: stang messaging (stoppar inflode), measurements-klient, device management-klient och storage. Idempotent, varje resurs exakt en gang.
+
+# API
+
+Funktions-API:t (`/api/functions`) ar avsiktligt odokumenterat har: ingen OpenAPI skapas inom harmoniseringen och API:t beskrivs inte som fardigt. Rutt- och modelldokumentation hor till den kommande funktionsutbyggnaden.
+
+# Verification
+
+```bash
+gofmt -l cmd/ internal/ pkg/
+go test -count=1 ./...
+go vet ./...
+go build -o /tmp/iot-core ./cmd/...
+docker build -f deployments/Dockerfile .
+```
+
+Database-backed tests skip explicitly when no PostgreSQL is reachable; unit and contract tests always run. Redovisa hoppade integrationstester uttryckligen; ett tyst godkänt integrationstest räknas inte som verifierat.
 
 # Links
 [iot-core](https://diwise.github.io/) on diwise.github.io
