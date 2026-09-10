@@ -90,7 +90,7 @@ func (m *MessageReceived) Replace(r senml.Record, find func(senml.Record) bool) 
 	}
 }
 func (m MessageReceived) Tenant() string {
-	s, ok := m.Pack().GetStringValue(senml.FindByName("tenant"))
+	s, ok := m.Pack().GetStringValue(findShortName("tenant"))
 	if !ok {
 		return ""
 	}
@@ -143,7 +143,7 @@ func (m *MessageAccepted) Replace(r senml.Record, find func(senml.Record) bool) 
 	}
 }
 func (m MessageAccepted) Tenant() string {
-	s, ok := m.Pack().GetStringValue(senml.FindByName("tenant"))
+	s, ok := m.Pack().GetStringValue(findShortName("tenant"))
 	if !ok {
 		return ""
 	}
@@ -196,7 +196,7 @@ func (m *MessageTransformed) Replace(r senml.Record, find func(senml.Record) boo
 	}
 }
 func (m MessageTransformed) Tenant() string {
-	s, ok := m.Pack().GetStringValue(senml.FindByName("tenant"))
+	s, ok := m.Pack().GetStringValue(findShortName("tenant"))
 	if !ok {
 		return ""
 	}
@@ -268,8 +268,31 @@ func Matches(m Message, objectURN string) bool {
 	return (GetObjectURN(m.Pack()) == objectURN)
 }
 
+// findHeader matches object headers by short or resolved (fully qualified)
+// name. Headers carry the object URN; the URN requirement keeps numeric
+// resource records ending in /0 from matching. Pack order guarantees the
+// first match is the first header: Parse requires every resource to follow
+// its header.
+func findHeader() senml.RecordFinder {
+	return func(r senml.Record) bool {
+		if r.Name != "0" && !strings.HasSuffix(r.Name, "/0") {
+			return false
+		}
+		return strings.HasPrefix(r.StringValue, "urn:oma:lwm2m:")
+	}
+}
+
+// findShortName matches records by short or resolved name. For legacy raw
+// packs this is identical to FindByName; resolved records carry their full
+// prefix.
+func findShortName(n string) senml.RecordFinder {
+	return func(r senml.Record) bool {
+		return r.Name == n || strings.HasSuffix(r.Name, "/"+n)
+	}
+}
+
 func GetDeviceID(m senml.Pack) string {
-	r, ok := m.GetRecord(senml.FindByName("0"))
+	r, ok := m.GetRecord(findHeader())
 	if !ok {
 		return ""
 	}
@@ -277,7 +300,7 @@ func GetDeviceID(m senml.Pack) string {
 }
 
 func GetObjectURN(m senml.Pack) string {
-	r, ok := m.GetStringValue(senml.FindByName("0"))
+	r, ok := m.GetStringValue(findHeader())
 	if !ok {
 		return ""
 	}
