@@ -146,7 +146,9 @@ func initialize(ctx context.Context, flags flagMap, cfg *serviceConfig, fconfig 
 				}
 			}()
 
-			messenger.Start()
+			if err := messenger.Start(ctx); err != nil {
+				return fmt.Errorf("failed to start messenger: %w", err)
+			}
 
 			if err := registerHandlers(messenger, app); err != nil {
 				return err
@@ -190,8 +192,8 @@ func registerPublicRoutes(handler *http.ServeMux, api_ *api.API) error {
 
 // ownedResources tracks the resources created during OnInit so shutdown
 // stops inflow before clients and storage, exactly once. Shutdown is
-// nil-safe (partial OnInit) and idempotent: the underlying messenger
-// Close is not safe to call twice, hence the sync.Once guard.
+// nil-safe (partial OnInit) and idempotent via the sync.Once guard, so
+// the messenger is shut down at most once.
 type ownedResources struct {
 	once               sync.Once
 	messenger          messaging.MsgContext
@@ -203,7 +205,9 @@ type ownedResources struct {
 func (o *ownedResources) close(ctx context.Context) {
 	o.once.Do(func() {
 		if o.messenger != nil {
-			o.messenger.Close()
+			if err := o.messenger.Shutdown(ctx); err != nil {
+				logging.GetFromContext(ctx).Debug("failed to shut down messenger", "err", err.Error())
+			}
 		}
 		if o.measurementsClient != nil {
 			o.measurementsClient.Close()
@@ -287,7 +291,10 @@ func createMeasurementsClient(ctx context.Context) (measurements.MeasurementsCli
 func createMessagingContext(ctx context.Context) (messaging.MsgContext, error) {
 	logger := logging.GetFromContext(ctx)
 
-	config := messaging.LoadConfiguration(ctx, serviceName, logger)
+	config, err := messaging.LoadConfiguration(ctx, serviceName, logger)
+	if err != nil {
+		return nil, fmt.Errorf("messaging configuration error: %w", err)
+	}
 	messenger, err := messaging.Initialize(ctx, config)
 	if err != nil {
 		return nil, err
@@ -390,7 +397,7 @@ func newCommandHandler(messenger messaging.MsgContext, app application.App) mess
 }
 
 func newTopicMessageHandler(messenger messaging.MsgContext, app application.App) messaging.TopicMessageHandler {
-	return func(ctx context.Context, msg messaging.IncomingTopicMessage, logger *slog.Logger) {
+	return func(ctx context.Context, msg messaging.IncomingTopicMessage, logger *slog.Logger) error {
 		var err error
 
 		ctx, span := tracer.Start(ctx, "receive-message")
@@ -402,13 +409,13 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 		err = json.Unmarshal(msg.Body(), &evt)
 		if err != nil {
 			logger.Error("unable to unmarshal incoming message", "err", err.Error())
-			return
+			return messaging.Permanent(err)
 		}
 
 		err = evt.Error()
 		if err != nil {
 			logger.Warn("received malformed topic message", "err", err.Error())
-			return
+			return messaging.Permanent(err)
 		}
 
 		logger.Debug(fmt.Sprintf("handling topic message for %s with type %s and content-type %s", evt.DeviceID(), evt.ObjectID(), evt.ContentType()))
@@ -416,25 +423,30 @@ func newTopicMessageHandler(messenger messaging.MsgContext, app application.App)
 		logger = logger.With(slog.String("device_id", evt.DeviceID()), slog.String("object_id", evt.ObjectID()))
 		ctx = logging.NewContextWithLogger(ctx, logger)
 
+		// Bevarad semantik: hanteringsfel loggas och ackas. Klassificering
+		// till Temporary/Permanent kräver verifierad idempotens (TODO steg 1.2).
 		err = app.MessageAccepted(ctx, evt, messenger)
 		if err != nil {
 			logger.Error("failed to handle message", "err", err.Error())
 		}
+		return nil
 	}
 }
 
 func newFunctionUpdatedTopicMessageHandler(messenger messaging.MsgContext) messaging.TopicMessageHandler {
-	return func(ctx context.Context, msg messaging.IncomingTopicMessage, logger *slog.Logger) {
+	return func(ctx context.Context, msg messaging.IncomingTopicMessage, logger *slog.Logger) error {
 		var err error
 
 		ctx, span := tracer.Start(ctx, "receive-function.updated")
 		defer func() { tracing.RecordAnyErrorAndEndSpan(err, span) }()
 		_, ctx, logger = o11y.AddTraceIDToLoggerAndStoreInContext(span, logger, ctx)
 
+		// Bevarad semantik: transformeringsfel loggas och ackas, se ovan.
 		err = functions.Transform(ctx, messenger, msg)
 		if err != nil {
 			logger.Error("failed to transform message", "err", err.Error())
 		}
+		return nil
 	}
 }
 

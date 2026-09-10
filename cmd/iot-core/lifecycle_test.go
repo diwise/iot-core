@@ -102,7 +102,7 @@ func TestCreateMessagingContextDisabled(t *testing.T) {
 	msgCtx, err := createMessagingContext(context.Background())
 	is.NoErr(err)
 	is.True(msgCtx != nil)
-	msgCtx.Close()
+	is.NoErr(msgCtx.Shutdown(context.Background()))
 }
 
 type fakeMeasurementsClient struct {
@@ -165,7 +165,7 @@ func TestShutdownIsOrderedAndIdempotent(t *testing.T) {
 
 	var order []string
 	messenger := &messaging.MsgContextMock{
-		CloseFunc: func() { order = append(order, "messenger") },
+		ShutdownFunc: func(context.Context) error { order = append(order, "messenger"); return nil },
 	}
 	mClient := &fakeMeasurementsClient{onClose: func() { order = append(order, "measurements") }}
 	dmClient := &dmctest.DeviceManagementClientMock{
@@ -187,7 +187,7 @@ func TestShutdownIsOrderedAndIdempotent(t *testing.T) {
 	is.Equal(order, []string{"messenger", "measurements", "dm", "storage"})
 	is.Equal(mClient.closes, 1)
 	is.Equal(store.closes, 1)
-	is.Equal(len(messenger.CloseCalls()), 1)
+	is.Equal(len(messenger.ShutdownCalls()), 1)
 	is.Equal(len(dmClient.CloseCalls()), 1)
 }
 
