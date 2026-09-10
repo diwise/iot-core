@@ -183,6 +183,28 @@ func TestRejects(t *testing.T) {
 	}
 }
 
+func TestContentTypeForPacks(t *testing.T) {
+	single := loadPack(t, "legacy-single-temp.json")
+	if got := ContentTypeFor(single); got != "application/vnd.oma.lwm2m.ext.3303+json" {
+		t.Fatalf("single = %q", got)
+	}
+	if got := NewMessageReceived(single).ContentType(); got != "application/vnd.oma.lwm2m.ext.3303+json" {
+		t.Fatalf("received single = %q", got)
+	}
+	multi := loadPack(t, "multi-temp-humidity-light.json")
+	if got := ContentTypeFor(multi); got != GenericLwM2MContentType {
+		t.Fatalf("multi = %q", got)
+	}
+	if got := NewMessageAccepted(multi).ContentType(); got != GenericLwM2MContentType {
+		t.Fatalf("accepted multi = %q", got)
+	}
+	// Oparsebart pack faller tillbaka på legacy-härledning.
+	broken := senml.Pack{{Name: "5700", Value: ptr(1)}}
+	if got := ContentTypeFor(broken); got != "application/vnd.oma.lwm2m.ext.+json" {
+		t.Fatalf("broken = %q", got)
+	}
+}
+
 func TestLegacyAccessorsDocumentFirstHeaderBehavior(t *testing.T) {
 	// Dokumenterar befintligt beteende för flerobjektspack: singulära
 	// accessorer följer första headern. Kontraktsbrott att förlita sig på

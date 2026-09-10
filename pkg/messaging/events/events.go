@@ -9,6 +9,7 @@ import (
 
 	"github.com/diwise/iot-core/pkg/messaging/topics"
 	"github.com/diwise/senml"
+	diwisepkg "github.com/diwise/senml/diwise"
 )
 
 var ErrBadTimestamp = fmt.Errorf("bad timestamp")
@@ -113,7 +114,7 @@ func (m MessageReceived) Body() []byte {
 	return b
 }
 func (m MessageReceived) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
+	return ContentTypeFor(m.Pack_)
 }
 func (m MessageReceived) TopicName() string {
 	return topics.MessageReceived
@@ -166,7 +167,7 @@ func (m MessageAccepted) Body() []byte {
 	return b
 }
 func (m MessageAccepted) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
+	return ContentTypeFor(m.Pack_)
 }
 func (m MessageAccepted) TopicName() string {
 	return topics.MessageAccepted
@@ -226,6 +227,42 @@ func (m MessageTransformed) TopicName() string {
 }
 
 /*------------*/
+
+// GenericLwM2MContentType är content-typen för pack med flera
+// objektobservationer, där ingen enskild objekttyp kan namnges.
+// Enobjektspack behåller den typade varianten nedan.
+const GenericLwM2MContentType = "application/vnd.oma.lwm2m+json"
+
+// ContentTypeFor härleder transportens content-type ur packet: generisk för
+// flerobjektspack, typad efter observationens URN för enobjektspack (legacy).
+// Oparsebara pack faller tillbaka på legacy-härledning via första headern.
+func ContentTypeFor(pack senml.Pack) string {
+	if parsed, err := diwisepkg.Parse(pack, time.Now().UTC()); err == nil {
+		var urns []string
+		seen := make(map[string]struct{})
+		for _, o := range parsed.Objects() {
+			if _, ok := seen[o.URN()]; !ok {
+				seen[o.URN()] = struct{}{}
+				urns = append(urns, o.URN())
+			}
+		}
+		if len(urns) > 1 {
+			return GenericLwM2MContentType
+		}
+		if len(urns) == 1 {
+			return typedContentType(urns[0])
+		}
+	}
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", GetObjectID(pack))
+}
+
+func typedContentType(urn string) string {
+	if !strings.Contains(urn, ":") {
+		return "application/vnd.oma.lwm2m.ext.+json"
+	}
+	parts := strings.Split(urn, ":")
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", parts[len(parts)-1])
+}
 
 func Matches(m Message, objectURN string) bool {
 	return (GetObjectURN(m.Pack()) == objectURN)

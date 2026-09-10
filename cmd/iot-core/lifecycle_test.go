@@ -200,8 +200,10 @@ func TestShutdownWithoutResourcesIsSafe(t *testing.T) {
 	owned.close(context.Background())
 }
 
-// CORE-004: handler registration keeps the command target and both
-// topics, and every registration error aborts startup.
+// CORE-004: handler registration keeps the command target, and every
+// registration error aborts startup. The function framework is unhooked:
+// no topic handlers are registered (message.accepted is produced, not
+// consumed, by core).
 func TestRegisterHandlersRegistersAllHandlers(t *testing.T) {
 	is := is.New(t)
 	_, dmClient, msgCtx := testSetup(t)
@@ -212,7 +214,7 @@ func TestRegisterHandlersRegistersAllHandlers(t *testing.T) {
 
 	is.NoErr(registerHandlers(msgCtx, app))
 	is.Equal(len(msgCtx.RegisterCommandHandlerCalls()), 1)
-	is.Equal(len(msgCtx.RegisterTopicMessageHandlerCalls()), 2)
+	is.Equal(len(msgCtx.RegisterTopicMessageHandlerCalls()), 0)
 }
 
 func TestRegisterHandlersPropagatesError(t *testing.T) {
