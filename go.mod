@@ -6,7 +6,7 @@ require (
 	github.com/diwise/iot-agent v0.0.0-20260601132607-8006b404c902
 	github.com/diwise/iot-device-mgmt v0.0.0-20260504091030-a34ced3a3fcc
 	github.com/diwise/messaging-golang v0.0.0-20250628135946-f23f34d06003
-	github.com/diwise/senml v0.0.0-20251022134045-d0045d1dd610
+	github.com/diwise/senml v0.0.0-20260909175035-ac3958b9698e
 	github.com/diwise/service-chassis v0.0.0-20260602135046-9f4adf349775
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/matryer/is v1.4.1
