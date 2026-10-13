@@ -15,7 +15,7 @@ func TestValidRule_V_ReturnsOk(t *testing.T) {
 	measurementId := "internal-id-for-device/3424/"
 	deviceId := "internal-id-for-device"
 
-	in := rules.MakeRuleV(t, measurementId, deviceId, rules.F64(3), nil)
+	in := rules.MakeRuleV(t, measurementId, deviceId, new(float64(3)), nil)
 
 	r := newTestRepository()
 

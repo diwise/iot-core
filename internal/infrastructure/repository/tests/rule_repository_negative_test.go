@@ -19,7 +19,7 @@ func TestAdd_Fails_WhenMultipleKindsSet(t *testing.T) {
 	deviceId := "internal-id-for-device"
 
 	r := newTestRepository()
-	in := rules_test.MakeRuleV(t, measurementId, deviceId, rules_test.F64(3), nil)
+	in := rules_test.MakeRuleV(t, measurementId, deviceId, new(float64(3)), nil)
 	in.RuleValues.Vs = &prod.RuleVs{Value: new("oops")}
 
 	err := r.Add(t.Context(), in)

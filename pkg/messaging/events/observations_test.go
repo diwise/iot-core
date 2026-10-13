@@ -199,7 +199,7 @@ func TestContentTypeForPacks(t *testing.T) {
 		t.Fatalf("accepted multi = %q", got)
 	}
 	// Oparsebart pack faller tillbaka på legacy-härledning.
-	broken := senml.Pack{{Name: "5700", Value: ptr(1)}}
+	broken := senml.Pack{{Name: "5700", Value: new(float64(1))}}
 	if got := ContentTypeFor(broken); got != "application/vnd.oma.lwm2m.ext.+json" {
 		t.Fatalf("broken = %q", got)
 	}

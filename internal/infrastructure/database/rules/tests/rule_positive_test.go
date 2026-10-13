@@ -25,7 +25,7 @@ func Test_That_Rule_For_Vs_Verify(t *testing.T) {
 func Test_That_Rule_For_V_Verify(t *testing.T) {
 	is := is.New(t)
 	deviceId := "test"
-	in := MakeRuleV(t, "r-vmax-vmin", deviceId, F64(3), F64(5))
+	in := MakeRuleV(t, "r-vmax-vmin", deviceId, new(float64(3)), new(float64(5)))
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParamsAndValidate(in)
 
 	is.NoErr(err)                   // NormalizedParamsAndValidate
@@ -43,7 +43,7 @@ func Test_That_Rule_For_V_Verify(t *testing.T) {
 func Test_That_Rule_For_VMax_Verify(t *testing.T) {
 	is := is.New(t)
 	deviceId := "test"
-	in := MakeRuleV(t, "r-vmax", deviceId, nil, F64(5))
+	in := MakeRuleV(t, "r-vmax", deviceId, nil, new(float64(5)))
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParamsAndValidate(in)
 
 	is.NoErr(err)                   // NormalizedParamsAndValidate
@@ -58,7 +58,7 @@ func Test_That_Rule_For_VMax_Verify(t *testing.T) {
 func Test_That_Rule_For_VMin_Verify(t *testing.T) {
 	is := is.New(t)
 	deviceId := "test"
-	in := MakeRuleV(t, "r-vmin", deviceId, F64(3), nil)
+	in := MakeRuleV(t, "r-vmin", deviceId, new(float64(3)), nil)
 	vmin, vmax, vs, vb, err := dbrules.NormalizedParamsAndValidate(in)
 
 	is.NoErr(err)                   // NormalizedParamsAndValidate

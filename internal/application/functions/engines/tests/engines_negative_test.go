@@ -14,7 +14,7 @@ func TestAdd_Fails_WhenMultipleKindsSet(t *testing.T) {
 	is := is.New(t)
 	r, _ := resetDbAndStorage(t)
 
-	in := rules_test.MakeRuleV(t, measurementId, deviceId, rules_test.F64(3), nil)
+	in := rules_test.MakeRuleV(t, measurementId, deviceId, new(float64(3)), nil)
 	in.RuleValues.Vs = &prod.RuleVs{Value: new("oops")}
 
 	err := r.Add(t.Context(), in)
@@ -39,7 +39,7 @@ func TestInvalidRule_VMin_ReturnsNonValid(t *testing.T) {
 	r, e := resetDbAndStorage(t)
 
 	msg := newMessageReceivedWithPacks(measurementId)
-	in := rules_test.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, rules_test.F64(30), nil)
+	in := rules_test.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, new(float64(30)), nil)
 
 	err := r.Add(t.Context(), in)
 	is.NoErr(err)
@@ -56,7 +56,7 @@ func TestInvalidRule_VMax_ReturnsNonValid(t *testing.T) {
 	r, e := resetDbAndStorage(t)
 
 	msg := newMessageReceivedWithPacks(measurementId)
-	in := rules_test.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, nil, rules_test.F64(20))
+	in := rules_test.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, nil, new(float64(20)))
 
 	err := r.Add(t.Context(), in)
 	is.NoErr(err)
@@ -73,7 +73,7 @@ func TestInvalidRule_V_Min_Max_Mixed_Up_ReturnsError(t *testing.T) {
 	r, _ := resetDbAndStorage(t)
 
 	msg := newMessageReceivedWithPacks(measurementId)
-	in := rules_test.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, rules_test.F64(30), rules_test.F64(20))
+	in := rules_test.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, new(float64(30)), new(float64(20)))
 
 	err := r.Add(t.Context(), in)
 	is.True(err != nil) // expected error

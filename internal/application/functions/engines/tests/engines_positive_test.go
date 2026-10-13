@@ -12,7 +12,7 @@ func TestValidRule_VMin_ReturnsOk(t *testing.T) {
 	r, e := resetDbAndStorage(t)
 
 	msg := newMessageReceivedWithPacks(measurementId)
-	in := rules.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, rules.F64(3), nil)
+	in := rules.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, new(float64(3)), nil)
 
 	err := r.Add(t.Context(), in)
 	is.NoErr(err)
@@ -29,7 +29,7 @@ func TestValidRule_VMax_ReturnsOk(t *testing.T) {
 	r, e := resetDbAndStorage(t)
 
 	msg := newMessageReceivedWithPacks(measurementId)
-	in := rules.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, nil, rules.F64(30))
+	in := rules.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, nil, new(float64(30)))
 
 	err := r.Add(t.Context(), in)
 	is.NoErr(err)
@@ -46,7 +46,7 @@ func TestValidRule_V_ReturnsOk(t *testing.T) {
 	r, e := resetDbAndStorage(t)
 
 	msg := newMessageReceivedWithPacks(measurementId)
-	in := rules.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, rules.F64(20), rules.F64(30))
+	in := rules.MakeRuleV(t, measurementId+msg.Pack()[1].Name, deviceId, new(float64(20)), new(float64(30)))
 
 	err := r.Add(t.Context(), in)
 	is.NoErr(err)
