@@ -321,6 +321,17 @@ func createDatabaseConnection(ctx context.Context) (database.Storage, error) {
 // buildApplication constructs the function registry, application and API
 // without touching the network. Messaging start and handler registration
 // live in OnStarting via registerHandlers so failures surface with context.
+//
+// TODO (rules-engine, ej inkopplad): koden från develop finns bevarad i
+// trädet (engines/, rules-storage, repository, App.NewWithRules/regel-CRUD,
+// api.RegisterRulesHandlers) men kopplas avsiktligt inte in här ännu.
+// När den ska kopplas in: dela pool via database.GetConnection +
+// database.ConnectWithPool (funktioner) och rules.Connect (regler) ur
+// samma *pgxpool.Pool, anropa även ruleStorage.Initialize, bygg
+// repository.New(ruleStorage) + engines.New(repo) och ersätt
+// application.New med application.NewWithRules(dm, mc, registry, engine,
+// repo, messenger). Glöm inte ägarskap/stängning av regelpoolen
+// (se ownedResources) samt tester för init-fel och omstart.
 func buildApplication(ctx context.Context, dmClient client.DeviceManagementClient, mClient measurements.MeasurementsClient, fconfig io.Reader, storage database.Storage) (application.App, api.API, error) {
 	functionsRegistry, err := functions.NewRegistry(ctx, fconfig, storage)
 	if err != nil {
@@ -339,6 +350,14 @@ func buildApplication(ctx context.Context, dmClient client.DeviceManagementClien
 // message.transformed) is unhooked: core validates and enriches only. The
 // framework remains in the tree for the separate removal/rewrite step and
 // must not be re-registered here.
+//
+// TODO (rules-engine, ej inkopplad): när regler kopplas in ska även
+// message.accepted (app.MessageAccepted med msgctx) och function.updated
+// (app.FunctionUpdated) registreras här, samt api.RegisterRulesHandlers
+// monteras på den publika muxen. Tänk på att muxinit bygger muxar före
+// OnInit (se registerPublicRoutes lathet) så regel-routes måste antingen
+// sparas undan och monteras i OnStarting eller slås upp lat per request
+// via *application.App likt api_ idag.
 func registerHandlers(msgctx messaging.MsgContext, app application.App) error {
 	if err := msgctx.RegisterCommandHandler(func(m messaging.Message) bool {
 		return strings.HasPrefix(m.ContentType(), "application/vnd.oma.lwm2m")
