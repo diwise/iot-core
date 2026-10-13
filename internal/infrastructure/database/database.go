@@ -1,0 +1,260 @@
+package database
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/diwise/service-chassis/pkg/infrastructure/env"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+//go:generate moq -rm -out storage_mock.go . Storage
+//go:generate moq -rm -out func_storage_mock.go . FuncStorage
+
+type Storage interface {
+	Initialize(context.Context) error
+	Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error
+	AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error
+	History(ctx context.Context, id, label string, lastN int) ([]LogValue, error)
+	Close()
+}
+
+// FuncStorage bevaras som alias för develop-kod (rules-engine) som
+// refererar det äldre splittrade namnet. labs-1.27:s sammanslagna
+// Storage är normerande.
+type FuncStorage = Storage
+
+type impl struct {
+	db *pgxpool.Pool
+}
+
+type LogValue struct {
+	Value     float64   `json:"v"`
+	Timestamp time.Time `json:"ts"`
+}
+
+type Config struct {
+	host     string
+	user     string
+	password string
+	port     string
+	dbname   string
+	sslmode  string
+}
+
+// NewConfig bevaras för develop-kod som bygger config explicit från
+// flaggor. labs-1.27:s LoadConfiguration är normerande för env.
+func NewConfig(host, user, password, port, dbname, sslmode string) Config {
+	return Config{
+		host:     host,
+		user:     user,
+		password: password,
+		port:     port,
+		dbname:   dbname,
+		sslmode:  sslmode,
+	}
+}
+
+func (c Config) ConnStr() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", c.user, c.password, c.host, c.port, c.dbname, c.sslmode)
+}
+
+func LoadConfiguration(ctx context.Context) Config {
+	return Config{
+		host:     env.GetVariableOrDefault(ctx, "POSTGRES_HOST", ""),
+		user:     env.GetVariableOrDefault(ctx, "POSTGRES_USER", ""),
+		password: env.GetVariableOrDefault(ctx, "POSTGRES_PASSWORD", ""),
+		port:     env.GetVariableOrDefault(ctx, "POSTGRES_PORT", "5432"),
+		dbname:   env.GetVariableOrDefault(ctx, "POSTGRES_DBNAME", "diwise"),
+		sslmode:  env.GetVariableOrDefault(ctx, "POSTGRES_SSLMODE", "disable"),
+	}
+}
+
+func newPoolConfig(ctx context.Context, cfg Config) (*pgxpool.Config, error) {
+	poolConfig, err := pgxpool.ParseConfig(cfg.ConnStr())
+	if err != nil {
+		return nil, err
+	}
+
+	poolConfig.MaxConns = env.GetVariableOrDefaultAs(ctx, "POSTGRES_MAX_CONNS", int32(10))
+	poolConfig.MinConns = env.GetVariableOrDefaultAs(ctx, "POSTGRES_MIN_CONNS", int32(2))
+	poolConfig.MaxConnLifetime = env.GetVariableOrDefaultAs(ctx, "POSTGRES_MAX_CONN_LIFETIME", 30*time.Minute)
+	poolConfig.MaxConnIdleTime = env.GetVariableOrDefaultAs(ctx, "POSTGRES_MAX_CONN_IDLE_TIME", 5*time.Minute)
+	poolConfig.HealthCheckPeriod = env.GetVariableOrDefaultAs(ctx, "POSTGRES_HEALTH_CHECK_PERIOD", 30*time.Second)
+
+	poolConfig.ConnConfig.RuntimeParams["application_name"] = "iot-core"
+
+	return poolConfig, nil
+}
+
+func Connect(ctx context.Context, cfg Config) (Storage, error) {
+	poolConfig, err := newPoolConfig(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	p, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	err = p.Ping(ctx)
+	if err != nil {
+		p.Close()
+		return nil, err
+	}
+
+	return &impl{
+		db: p,
+	}, nil
+}
+
+// GetConnection bevaras för develop-kod (rules-engine) som delar en rå
+// pool mellan funktionslagring och regellagring. Poolinställningarna är
+// labs-1.27:s (samma som Connect).
+func GetConnection(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
+	poolConfig, err := newPoolConfig(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	err = conn.Ping(ctx)
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	return conn, nil
+}
+
+// ConnectWithPool lindar en befintlig pool (t.ex. delad med
+// regellagringen) i Storage. Namnet avviker från develop:s
+// Connect(*pgxpool.Pool) eftersom labs-1.27:s Connect(ctx, Config)
+// är normerande.
+func ConnectWithPool(conn *pgxpool.Pool) Storage {
+	return &impl{
+		db: conn,
+	}
+}
+
+func (i *impl) Initialize(ctx context.Context) error {
+	return i.createTables(ctx)
+}
+
+func (i *impl) Close() {
+	if i.db != nil {
+		i.db.Close()
+	}
+}
+
+func (i *impl) createTables(ctx context.Context) error {
+	ddl := `
+		CREATE TABLE IF NOT EXISTS fnct (
+			id 		  TEXT PRIMARY KEY NOT NULL,
+			type 	  TEXT NOT NULL,
+			sub_type  TEXT NOT NULL,
+			tenant 	  TEXT NOT NULL,
+			source 	  TEXT NULL,
+			latitude  NUMERIC(7, 5),
+			longitude NUMERIC(7, 5)
+	  	);
+
+		CREATE TABLE IF NOT EXISTS fnct_history (
+			row_id 	bigserial,
+			time 	TIMESTAMPTZ NOT NULL,
+			fnct_id TEXT NOT NULL,
+			label 	TEXT NOT NULL,
+			value 	DOUBLE PRECISION NOT NULL,
+			FOREIGN KEY (fnct_id) REFERENCES fnct (id)
+	  	);
+
+		CREATE INDEX IF NOT EXISTS fnct_history_fnct_id_label_idx ON fnct_history (fnct_id, label);`
+
+	tx, err := i.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, ddl)
+	if err != nil {
+		tx.Rollback(ctx)
+		return err
+	}
+
+	var n int32
+	err = tx.QueryRow(ctx, `
+		SELECT COUNT(*) n
+		FROM timescaledb_information.hypertables
+		WHERE hypertable_name = 'fnct_history';`).Scan(&n)
+	if err != nil {
+		tx.Rollback(ctx)
+		return err
+	}
+
+	if n == 0 {
+		_, err := tx.Exec(ctx, `SELECT create_hypertable('fnct_history', 'time');`)
+		if err != nil {
+			tx.Rollback(ctx)
+			return err
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *impl) AddFnct(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+	_, err := i.db.Exec(ctx, `
+		INSERT INTO fnct(id,type,sub_type,tenant,source,latitude,longitude) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO NOTHING;
+	`, id, fnType, subType, tenant, source, lat, lon)
+
+	return err
+}
+
+func (i *impl) Add(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+	_, err := i.db.Exec(ctx, `
+		INSERT INTO fnct_history (time, fnct_id, label, value) VALUES ($1, $2, $3, $4);
+	`, timestamp, id, label, value)
+
+	return err
+}
+
+func (i *impl) History(ctx context.Context, id, label string, lastN int) ([]LogValue, error) {
+	rows, err := i.db.Query(ctx,
+		`SELECT time, value FROM (
+			SELECT time, value, row_id
+			FROM fnct_history
+			WHERE fnct_id=$1 AND label=$2
+			ORDER BY time DESC, row_id DESC
+			LIMIT $3
+			) as history
+		ORDER BY time ASC, row_id ASC`, id, label, lastN)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	logValues := make([]LogValue, 0)
+
+	for rows.Next() {
+		var t time.Time
+		var v float64
+		err := rows.Scan(&t, &v)
+		if err != nil {
+			return nil, err
+		}
+		logValues = append(logValues, LogValue{Timestamp: t, Value: v})
+	}
+
+	return logValues, nil
+}

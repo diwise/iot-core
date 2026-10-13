@@ -1,0 +1,92 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/diwise/iot-core/internal/infrastructure/database"
+)
+
+// Router migration (chi -> service-chassis router): locks that the API
+// routes resolve, including the {id} path parameter previously read via
+// chi.URLParam.
+func TestAPIRoutesAfterRouterMigration(t *testing.T) {
+	is, dmClient, _ := testSetup(t)
+
+	fconf := bytes.NewBufferString("fid1;name;counter;overflow;sensor1;false\na+b;plusname;counter;overflow;sensor2;false\n100%;percentname;counter;overflow;sensor3;false")
+	_, api, err := buildApplication(context.Background(), dmClient, nil, fconf, &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+		InitializeFunc: func(contextMoqParam context.Context) error {
+			return nil
+		},
+		HistoryFunc: func(ctx context.Context, id, label string, lastN int) ([]database.LogValue, error) {
+			return []database.LogValue{}, nil
+		},
+	})
+	is.NoErr(err)
+
+	server := httptest.NewServer(api.Router())
+	defer server.Close()
+
+	resp, _ := testRequest(server, http.MethodGet, "/api/functions", nil)
+	is.Equal(resp.StatusCode, http.StatusOK)
+
+	resp, body := testRequest(server, http.MethodGet, "/api/functions/fid1/history", nil)
+	is.Equal(resp.StatusCode, http.StatusOK)
+	is.True(strings.Contains(body, `"id": "fid1"`))
+
+	// CORE-005: publik GET /health är borttagen; proberna bor på
+	// kontrollservern.
+	resp, _ = testRequest(server, http.MethodGet, "/health", nil)
+	is.Equal(resp.StatusCode, http.StatusNotFound)
+}
+
+// REV-003: the stdlib router hands over an already-decoded path segment,
+// so no second QueryUnescape may be applied. Encoded plus (%2B) and
+// percent (%25) must resolve exactly once, and a literal plus in the
+// path must be preserved (chi+QueryUnescape used to mangle it to space).
+func TestHistoryRouteDecodesIDExactlyOnce(t *testing.T) {
+	is, dmClient, _ := testSetup(t)
+
+	fconf := bytes.NewBufferString("fid1;name;counter;overflow;sensor1;false\na+b;plusname;counter;overflow;sensor2;false\n100%;percentname;counter;overflow;sensor3;false")
+	_, api, err := buildApplication(context.Background(), dmClient, nil, fconf, &database.StorageMock{
+		AddFnFunc: func(ctx context.Context, id, fnType, subType, tenant, source string, lat, lon float64) error {
+			return nil
+		},
+		AddFunc: func(ctx context.Context, id, label string, value float64, timestamp time.Time) error {
+			return nil
+		},
+		InitializeFunc: func(contextMoqParam context.Context) error {
+			return nil
+		},
+		HistoryFunc: func(ctx context.Context, id, label string, lastN int) ([]database.LogValue, error) {
+			return []database.LogValue{}, nil
+		},
+	})
+	is.NoErr(err)
+
+	server := httptest.NewServer(api.Router())
+	defer server.Close()
+
+	resp, body := testRequest(server, http.MethodGet, "/api/functions/a%2Bb/history", nil)
+	is.Equal(resp.StatusCode, http.StatusOK)
+	is.True(strings.Contains(body, `"id": "a+b"`))
+
+	resp, body = testRequest(server, http.MethodGet, "/api/functions/a+b/history", nil)
+	is.Equal(resp.StatusCode, http.StatusOK)
+	is.True(strings.Contains(body, `"id": "a+b"`))
+
+	resp, body = testRequest(server, http.MethodGet, "/api/functions/100%25/history", nil)
+	is.Equal(resp.StatusCode, http.StatusOK)
+	is.True(strings.Contains(body, `"id": "100%"`))
+}

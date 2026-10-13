@@ -9,6 +9,7 @@ import (
 
 	"github.com/diwise/iot-core/pkg/messaging/topics"
 	"github.com/diwise/senml"
+	diwisepkg "github.com/diwise/senml/diwise"
 )
 
 var ErrBadTimestamp = fmt.Errorf("bad timestamp")
@@ -32,55 +33,9 @@ type MessageAccepted struct {
 	Pack_     senml.Pack `json:"pack"`
 	Timestamp time.Time  `json:"timestamp"`
 }
-
-// Validation
-
-type MessageNotValidated struct {
+type MessageTransformed struct {
 	Pack_     senml.Pack `json:"pack"`
 	Timestamp time.Time  `json:"timestamp"`
-	Reason    []string   `json:"reason"`
-}
-
-func (m MessageNotValidated) Body() []byte {
-	b, _ := json.Marshal(m)
-	return b
-}
-func (m MessageNotValidated) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
-}
-func (m MessageNotValidated) TopicName() string {
-	return topics.MessageReceived
-}
-
-func (m MessageNotValidated) DeviceID() string {
-	return GetDeviceID(m.Pack_)
-}
-func (m MessageNotValidated) ObjectID() string {
-	return GetObjectID(m.Pack_)
-}
-
-func (m MessageAborted) Body() []byte {
-	b, _ := json.Marshal(m)
-	return b
-}
-func (m MessageAborted) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
-}
-func (m MessageAborted) TopicName() string {
-	return topics.MessageReceived
-}
-
-func (m MessageAborted) DeviceID() string {
-	return GetDeviceID(m.Pack_)
-}
-func (m MessageAborted) ObjectID() string {
-	return GetObjectID(m.Pack_)
-}
-
-type MessageAborted struct {
-	Pack_     senml.Pack `json:"pack"`
-	Timestamp time.Time  `json:"timestamp"`
-	Reason    []string   `json:"reason"`
 }
 
 func NewMessageReceived(pack senml.Pack, decorators ...EventDecoratorFunc) *MessageReceived {
@@ -103,23 +58,15 @@ func NewMessageAccepted(pack senml.Pack, decorators ...EventDecoratorFunc) *Mess
 	}
 	return ma
 }
-
-func NewMessageNotValidated(pack senml.Pack, reason []string) *MessageNotValidated {
-	mnv := &MessageNotValidated{
+func NewMessageTransformed(pack senml.Pack, decorators ...EventDecoratorFunc) *MessageTransformed {
+	mt := &MessageTransformed{
 		Pack_:     pack,
 		Timestamp: time.Now().UTC(),
-		Reason:    reason,
 	}
-	return mnv
-}
-
-func NewMessageAborted(pack senml.Pack, reason []string) *MessageAborted {
-	ma := &MessageAborted{
-		Pack_:     pack,
-		Timestamp: time.Now().UTC(),
-		Reason:    reason,
+	for _, d := range decorators {
+		d(mt)
 	}
-	return ma
+	return mt
 }
 
 func (m MessageReceived) DeviceID() string {
@@ -143,7 +90,7 @@ func (m *MessageReceived) Replace(r senml.Record, find func(senml.Record) bool) 
 	}
 }
 func (m MessageReceived) Tenant() string {
-	s, ok := m.Pack().GetStringValue(senml.FindByName("tenant"))
+	s, ok := m.Pack().GetStringValue(findShortName("tenant"))
 	if !ok {
 		return ""
 	}
@@ -157,7 +104,7 @@ func (m MessageReceived) Error() error {
 		return errors.New("device id is missing")
 	}
 	if m.Timestamp.IsZero() {
-		return errors.New("timestamp is mising")
+		return errors.New("timestamp is missing")
 	}
 
 	return nil
@@ -167,7 +114,7 @@ func (m MessageReceived) Body() []byte {
 	return b
 }
 func (m MessageReceived) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
+	return ContentTypeFor(m.Pack_)
 }
 func (m MessageReceived) TopicName() string {
 	return topics.MessageReceived
@@ -196,7 +143,7 @@ func (m *MessageAccepted) Replace(r senml.Record, find func(senml.Record) bool) 
 	}
 }
 func (m MessageAccepted) Tenant() string {
-	s, ok := m.Pack().GetStringValue(senml.FindByName("tenant"))
+	s, ok := m.Pack().GetStringValue(findShortName("tenant"))
 	if !ok {
 		return ""
 	}
@@ -210,7 +157,7 @@ func (m MessageAccepted) Error() error {
 		return errors.New("device id is missing")
 	}
 	if m.Timestamp.IsZero() {
-		return errors.New("timestamp is mising")
+		return errors.New("timestamp is missing")
 	}
 
 	return nil
@@ -220,7 +167,7 @@ func (m MessageAccepted) Body() []byte {
 	return b
 }
 func (m MessageAccepted) ContentType() string {
-	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
+	return ContentTypeFor(m.Pack_)
 }
 func (m MessageAccepted) TopicName() string {
 	return topics.MessageAccepted
@@ -228,12 +175,205 @@ func (m MessageAccepted) TopicName() string {
 
 /*------------*/
 
+func (m MessageTransformed) DeviceID() string {
+	return GetDeviceID(m.Pack_)
+}
+func (m MessageTransformed) ObjectID() string {
+	return GetObjectID(m.Pack_)
+}
+func (m MessageTransformed) Pack() senml.Pack {
+	return m.Pack_
+}
+func (m *MessageTransformed) Append(r senml.Record) {
+	m.Pack_ = append(m.Pack_, r)
+}
+func (m *MessageTransformed) Replace(r senml.Record, find func(senml.Record) bool) {
+	for i, rec := range m.Pack_ {
+		if find(rec) {
+			m.Pack_[i] = r
+			return
+		}
+	}
+}
+func (m MessageTransformed) Tenant() string {
+	s, ok := m.Pack().GetStringValue(findShortName("tenant"))
+	if !ok {
+		return ""
+	}
+	return s
+}
+func (m MessageTransformed) Error() error {
+	if len(m.Pack()) == 0 {
+		return errors.New("pack is empty")
+	}
+	if m.DeviceID() == "" {
+		return errors.New("device id is missing")
+	}
+	if m.Timestamp.IsZero() {
+		return errors.New("timestamp is missing")
+	}
+
+	return nil
+}
+func (m MessageTransformed) Body() []byte {
+	b, _ := json.Marshal(m)
+	return b
+}
+func (m MessageTransformed) ContentType() string {
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
+}
+func (m MessageTransformed) TopicName() string {
+	return topics.MessageTransformed
+}
+
+/*------------*/
+
+// MessageNotValidated och MessageAborted bevaras från develop
+// (rules-engine). De publiceras som TopicMessage på message.received
+// när en regel underkänner ett meddelande. labs-1.27:s
+// MessageTransformed och ContentTypeFor ovan är normerande för
+// övriga flöden.
+
+type MessageNotValidated struct {
+	Pack_     senml.Pack `json:"pack"`
+	Timestamp time.Time  `json:"timestamp"`
+	Reason    []string   `json:"reason"`
+}
+
+func NewMessageNotValidated(pack senml.Pack, reason []string) *MessageNotValidated {
+	mnv := &MessageNotValidated{
+		Pack_:     pack,
+		Timestamp: time.Now().UTC(),
+		Reason:    reason,
+	}
+	return mnv
+}
+
+func (m MessageNotValidated) Body() []byte {
+	b, _ := json.Marshal(m)
+	return b
+}
+func (m MessageNotValidated) ContentType() string {
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
+}
+func (m MessageNotValidated) TopicName() string {
+	return topics.MessageReceived
+}
+func (m MessageNotValidated) DeviceID() string {
+	return GetDeviceID(m.Pack_)
+}
+func (m MessageNotValidated) ObjectID() string {
+	return GetObjectID(m.Pack_)
+}
+
+type MessageAborted struct {
+	Pack_     senml.Pack `json:"pack"`
+	Timestamp time.Time  `json:"timestamp"`
+	Reason    []string   `json:"reason"`
+}
+
+func NewMessageAborted(pack senml.Pack, reason []string) *MessageAborted {
+	ma := &MessageAborted{
+		Pack_:     pack,
+		Timestamp: time.Now().UTC(),
+		Reason:    reason,
+	}
+	return ma
+}
+
+func (m MessageAborted) Body() []byte {
+	b, _ := json.Marshal(m)
+	return b
+}
+func (m MessageAborted) ContentType() string {
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", m.ObjectID())
+}
+func (m MessageAborted) TopicName() string {
+	return topics.MessageReceived
+}
+func (m MessageAborted) DeviceID() string {
+	return GetDeviceID(m.Pack_)
+}
+func (m MessageAborted) ObjectID() string {
+	return GetObjectID(m.Pack_)
+}
+
+/*------------*/
+
+// GenericLwM2MContentType är content-typen för pack med flera
+// objektobservationer, där ingen enskild objekttyp kan namnges.
+// Enobjektspack behåller den typade varianten nedan.
+const GenericLwM2MContentType = "application/vnd.oma.lwm2m+json"
+
+// ContentTypeFor härleder transportens content-type ur packet: generisk för
+// flerobjektspack, typad efter observationens URN för enobjektspack (legacy).
+// Oparsebara pack faller tillbaka på legacy-härledning via första headern.
+func ContentTypeFor(pack senml.Pack) string {
+	if parsed, err := diwisepkg.Parse(pack, time.Now().UTC()); err == nil {
+		var urns []string
+		seen := make(map[string]struct{})
+		for _, o := range parsed.Objects() {
+			if _, ok := seen[o.URN()]; !ok {
+				seen[o.URN()] = struct{}{}
+				urns = append(urns, o.URN())
+			}
+		}
+		if len(urns) > 1 {
+			return GenericLwM2MContentType
+		}
+		if len(urns) == 1 {
+			return typedContentType(urns[0])
+		}
+	}
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", GetObjectID(pack))
+}
+
+func typedContentType(urn string) string {
+	if !strings.Contains(urn, ":") {
+		return "application/vnd.oma.lwm2m.ext.+json"
+	}
+	parts := strings.Split(urn, ":")
+	return fmt.Sprintf("application/vnd.oma.lwm2m.ext.%s+json", parts[len(parts)-1])
+}
+
 func Matches(m Message, objectURN string) bool {
 	return (GetObjectURN(m.Pack()) == objectURN)
 }
 
+// findHeader matches object headers by short or resolved (fully qualified)
+// name. Headers carry the object URN; the URN requirement keeps numeric
+// resource records ending in /0 from matching. Pack order guarantees the
+// first match is the first header: Parse requires every resource to follow
+// its header.
+func findHeader() senml.RecordFinder {
+	return func(r senml.Record) bool {
+		if r.Name != "0" && !strings.HasSuffix(r.Name, "/0") {
+			return false
+		}
+		return strings.HasPrefix(r.StringValue, "urn:oma:lwm2m:")
+	}
+}
+
+// findShortName matches records by short or resolved name. For legacy raw
+// packs this is identical to FindByName; resolved records carry their full
+// prefix.
+func findShortName(n string) senml.RecordFinder {
+	return FindByShortName(n)
+}
+
+// FindByShortName är den exporterade varianten av findShortName för
+// funktionsramverket: matchar kort eller kvalificerat namn så att både
+// råa pack (Name="5700") och berikade pack (Name="device/.../5700")
+// hanteras. Bevarar develop:s funktionskod tillsammans med labs-1.27:s
+// berikning.
+func FindByShortName(n string) senml.RecordFinder {
+	return func(r senml.Record) bool {
+		return r.Name == n || strings.HasSuffix(r.Name, "/"+n)
+	}
+}
+
 func GetDeviceID(m senml.Pack) string {
-	r, ok := m.GetRecord(senml.FindByName("0"))
+	r, ok := m.GetRecord(findHeader())
 	if !ok {
 		return ""
 	}
@@ -241,7 +381,7 @@ func GetDeviceID(m senml.Pack) string {
 }
 
 func GetObjectURN(m senml.Pack) string {
-	r, ok := m.GetStringValue(senml.FindByName("0"))
+	r, ok := m.GetStringValue(findHeader())
 	if !ok {
 		return ""
 	}
